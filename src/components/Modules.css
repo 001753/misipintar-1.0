@@ -1,0 +1,133 @@
+.modules {
+  background: linear-gradient(180deg, transparent, rgba(67, 217, 173, 0.03), transparent);
+}
+
+.modules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.module-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+  cursor: pointer;
+  transition: border-color 0.25s, box-shadow 0.25s;
+  border-left: 3px solid var(--mod-color);
+}
+
+.module-card:hover,
+.module-card.active {
+  border-color: color-mix(in srgb, var(--mod-color) 40%, var(--border));
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.module-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.module-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.module-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.module-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.module-level {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.module-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.module-desc {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+.module-toggle {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  padding-top: 4px;
+  transition: color 0.2s;
+}
+
+.module-card.active .module-toggle {
+  color: var(--primary-light);
+}
+
+.module-topics {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  animation: fadeInUp 0.3s ease;
+}
+
+.topics-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+}
+
+.topics-list {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.topics-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.topic-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+  .topics-list {
+    grid-template-columns: 1fr;
+  }
+  .module-left {
+    flex-direction: column;
+  }
+}
