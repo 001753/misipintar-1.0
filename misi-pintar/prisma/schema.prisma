@@ -1,0 +1,325 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  PARENT
+  SUPERADMIN
+}
+
+enum PlanType {
+  STARTER
+  PRO
+  EDUCATOR
+  SCHOOL
+}
+
+enum SubStatus {
+  TRIAL
+  FREE
+  PRO
+  EDUCATOR
+  SCHOOL
+  EXPIRED
+  CANCELLED
+}
+
+enum InvStatus {
+  PENDING
+  PAID
+  EXPIRED
+  FAILED
+  REFUNDED
+}
+
+enum PayMethod {
+  QRIS
+  GOPAY
+  SHOPEEPAY
+  BANK_TRANSFER
+  CREDIT_CARD
+  VA
+}
+
+enum TaskStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+  REJECTED
+}
+
+enum LedgerType {
+  TASK_REWARD
+  TRANSFER_TO_SAVINGS
+  TRANSFER_FROM_SAVINGS
+  ADJUSTMENT
+  INTEREST
+  TAX
+  PENALTY
+}
+
+// ─── Core Tenant ─────────────────────────────────────────────────────────────
+
+model FamilySpace {
+  id          String   @id @default(cuid())
+  name        String
+  inviteCode  String   @unique @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users         User[]
+  children      Child[]
+  tasks         Task[]
+  transactions  TransactionLedger[]
+  subscription  Subscription?
+  notifications Notification[]
+
+  @@map("family_spaces")
+}
+
+// ─── Users (Parent / SuperAdmin) ─────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  passwordHash  String
+  role          UserRole  @default(PARENT)
+  familySpaceId String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  familySpace   FamilySpace    @relation(fields: [familySpaceId], references: [id])
+  loginAttempts LoginAttempt[]
+  auditLogs     AdminAuditLog[]
+
+  @@index([familySpaceId])
+  @@map("users")
+}
+
+// ─── Children ────────────────────────────────────────────────────────────────
+
+model Child {
+  id            String   @id @default(cuid())
+  username      String
+  passwordHash  String
+  name          String
+  avatar        String?
+  familySpaceId String
+  balance       Int      @default(0)
+  savings       Int      @default(0)
+  totalEarned   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  familySpace  FamilySpace         @relation(fields: [familySpaceId], references: [id])
+  tasks        Task[]
+  transactions TransactionLedger[]
+
+  @@unique([username, familySpaceId])
+  @@index([familySpaceId])
+  @@map("children")
+}
+
+// ─── Tasks ───────────────────────────────────────────────────────────────────
+
+model Task {
+  id            String     @id @default(cuid())
+  title         String
+  description   String?
+  reward        Int
+  status        TaskStatus @default(PENDING)
+  dueDate       DateTime?
+  familySpaceId String
+  childId       String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  approvedAt    DateTime?
+  rejectedAt    DateTime?
+
+  familySpace FamilySpace @relation(fields: [familySpaceId], references: [id])
+  child       Child       @relation(fields: [childId], references: [id])
+
+  @@index([familySpaceId])
+  @@index([childId])
+  @@map("tasks")
+}
+
+// ─── Transaction Ledger (IMMUTABLE) ──────────────────────────────────────────
+
+model TransactionLedger {
+  id            String     @id @default(cuid())
+  familySpaceId String
+  childId       String
+  type          LedgerType
+  amount        Int
+  balanceBefore Int
+  balanceAfter  Int
+  description   String
+  refId         String?
+  createdAt     DateTime   @default(now())
+
+  familySpace FamilySpace @relation(fields: [familySpaceId], references: [id])
+  child       Child       @relation(fields: [childId], references: [id])
+
+  @@index([familySpaceId])
+  @@index([childId])
+  @@map("transaction_ledger")
+}
+
+// ─── Plans ───────────────────────────────────────────────────────────────────
+
+model Plan {
+  id             String   @id @default(cuid())
+  type           PlanType @unique
+  name           String
+  priceMonthly   Int
+  maxChildren    Int
+  maxTasksPerMonth Int
+  hasInterest    Boolean  @default(false)
+  hasTax         Boolean  @default(false)
+  hasPushNotif   Boolean  @default(false)
+  hasPdfReport   Boolean  @default(false)
+  hasClassroom   Boolean  @default(false)
+  hasSso         Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+// ─── Subscriptions ───────────────────────────────────────────────────────────
+
+model Subscription {
+  id            String    @id @default(cuid())
+  familySpaceId String    @unique
+  planId        String
+  status        SubStatus @default(TRIAL)
+  invoiceId     String?   @unique
+  trialEndsAt   DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelledAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  familySpace FamilySpace @relation(fields: [familySpaceId], references: [id])
+  plan        Plan        @relation(fields: [planId], references: [id])
+  invoices    Invoice[]
+
+  @@map("subscriptions")
+}
+
+// ─── Invoices ────────────────────────────────────────────────────────────────
+
+model Invoice {
+  id             String    @id @default(cuid())
+  subscriptionId String
+  orderId        String    @unique
+  amount         Int
+  status         InvStatus @default(PENDING)
+  payMethod      PayMethod?
+  paidAt         DateTime?
+  expiredAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+  paymentLogs  PaymentLog[]
+
+  @@index([subscriptionId])
+  @@map("invoices")
+}
+
+// ─── Payment Logs ────────────────────────────────────────────────────────────
+
+model PaymentLog {
+  id          String    @id @default(cuid())
+  invoiceId   String
+  provider    String
+  status      String
+  rawPayload  Json
+  createdAt   DateTime  @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@map("payment_logs")
+}
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+model Notification {
+  id            String   @id @default(cuid())
+  familySpaceId String
+  recipientId   String
+  recipientType String
+  title         String
+  body          String
+  isRead        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  familySpace FamilySpace @relation(fields: [familySpaceId], references: [id])
+
+  @@index([familySpaceId])
+  @@index([recipientId])
+  @@map("notifications")
+}
+
+// ─── Security: Login Attempts ────────────────────────────────────────────────
+
+model LoginAttempt {
+  id         String   @id @default(cuid())
+  identifier String
+  userId     String?
+  success    Boolean
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([identifier])
+  @@index([createdAt])
+  @@map("login_attempts")
+}
+
+// ─── Admin Audit Log (PERMANENT) ─────────────────────────────────────────────
+
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  adminId     String
+  action      String
+  entityType  String
+  entityId    String
+  beforeValue Json?
+  afterValue  Json?
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  admin User @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([entityType, entityId])
+  @@map("admin_audit_logs")
+}
+
+// ─── App Config ──────────────────────────────────────────────────────────────
+
+model AppConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+
+  @@map("app_config")
+}

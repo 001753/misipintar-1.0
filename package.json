@@ -13,8 +13,19 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@prisma/client": "^7.8.0",
+    "@react-pdf/renderer": "^4.5.1",
+    "bcryptjs": "^3.0.3",
+    "bullmq": "^5.79.0",
+    "date-fns": "^4.4.0",
+    "firebase-admin": "^13.10.0",
+    "ioredis": "^5.11.1",
+    "midtrans-client": "^1.4.3",
+    "nanoid": "^5.1.15",
+    "prisma": "^7.8.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.2",
