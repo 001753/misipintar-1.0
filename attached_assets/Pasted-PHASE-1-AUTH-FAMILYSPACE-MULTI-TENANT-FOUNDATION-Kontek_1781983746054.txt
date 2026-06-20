@@ -1,0 +1,361 @@
+PHASE 1 — AUTH & FAMILYSPACE (MULTI-TENANT FOUNDATION)
+
+Konteks: Membangun tulang punggung multi-tenancy. FamilySpace adalah jangkar SEMUA data.
+Setiap FamilySpace = satu keluarga = satu tenant terisolasi.
+
+TUGAS [1.1] — PRISMA SCHEMA LENGKAP v4.1
+Buat `prisma/schema.prisma` dengan schema berikut PERSIS (jangan kurangi/tambah field tanpa konfirmasi):
+
+```prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────
+enum Role        { PARENT CHILD SUPER_ADMIN }
+enum PlanType    { STARTER PRO EDUCATOR SCHOOL }
+enum SubStatus   { TRIAL FREE PRO EDUCATOR SCHOOL EXPIRED CANCELLED }
+enum InvStatus   { PENDING PAID EXPIRED FAILED REFUNDED }
+enum PayMethod   { QRIS GOPAY SHOPEEPAY BANK_TRANSFER CREDIT_CARD VA }
+enum TaskStatus  { PENDING CLAIMED APPROVED REJECTED }
+enum TxType      { TASK_REWARD SAVINGS_DEPOSIT SAVINGS_WITHDRAW CHARITY INTEREST TAX FINE ADJUSTMENT }
+enum PhaseMode   { FULL_FREE FREEMIUM PAID_ONLY }
+
+// ─── FAMILYSPACE (TENANT UTAMA) ──────────────────────────
+model FamilySpace {
+  id           String       @id @default(uuid())
+  name         String
+  spaceCode    String       @unique  // 6 digit, untuk login anak
+  ownerId      String       @unique
+  owner        User         @relation("FamilyOwner", fields: [ownerId], references: [id])
+  users        User[]       @relation("FamilyMembers")
+  children     Child[]
+  tasks        Task[]
+  ledger       TransactionLedger[]
+  notifications Notification[]
+  subscription Subscription?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+// ─── USER (PARENT & SUPERADMIN) ──────────────────────────
+model User {
+  id              String      @id @default(uuid())
+  email           String      @unique
+  passwordHash    String
+  name            String
+  role            Role        @default(PARENT)
+  familySpaceId   String?
+  familySpace     FamilySpace? @relation("FamilyMembers", fields: [familySpaceId], references: [id])
+  ownedSpace      FamilySpace? @relation("FamilyOwner")
+  fcmTokens       FcmToken[]
+  notifications   Notification[]
+  auditLogs       AdminAuditLog[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([email])
+  @@index([familySpaceId, role])
+}
+
+// ─── CHILD (AKUN ANAK) ───────────────────────────────────
+model Child {
+  id            String      @id @default(uuid())
+  username      String
+  passwordHash  String      // bcrypt, min 6 char (§12.3)
+  name          String
+  avatar        String?
+  familySpaceId String
+  familySpace   FamilySpace @relation(fields: [familySpaceId], references: [id])
+  balance       Int         @default(0)   // saldo utama (poin/Rp virtual)
+  savingsBalance Int        @default(0)   // tabungan
+  charityBalance Int        @default(0)   // sedekah
+  tasks         Task[]
+  ledger        TransactionLedger[]
+  fcmTokens     FcmToken[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@unique([familySpaceId, username])  // username unik per keluarga
+  @@index([familySpaceId])
+}
+
+// ─── TASK ────────────────────────────────────────────────
+model Task {
+  id            String      @id @default(uuid())
+  familySpaceId String
+  familySpace   FamilySpace @relation(fields: [familySpaceId], references: [id])
+  childId       String
+  child         Child       @relation(fields: [childId], references: [id])
+  title         String
+  description   String?
+  rewardAmount  Int
+  status        TaskStatus  @default(PENDING)
+  proofPhotoUrl String?     // Cloudflare R2 URL
+  claimedAt     DateTime?
+  approvedAt    DateTime?
+  rejectedAt    DateTime?
+  rejectedReason String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([familySpaceId, childId, status])
+}
+
+// ─── TRANSACTION LEDGER (IMMUTABLE) ──────────────────────
+model TransactionLedger {
+  id            String      @id @default(uuid())
+  familySpaceId String
+  familySpace   FamilySpace @relation(fields: [familySpaceId], references: [id])
+  childId       String
+  child         Child       @relation(fields: [childId], references: [id])
+  type          TxType
+  amount        Int
+  balanceBefore Int
+  balanceAfter  Int
+  description   String
+  refId         String?     // taskId, dsb.
+  createdAt     DateTime    @default(now())
+
+  @@index([familySpaceId, childId, createdAt(sort: Desc)])
+}
+
+// ─── PLAN ────────────────────────────────────────────────
+model Plan {
+  id          String    @id @default(uuid())
+  type        PlanType  @unique
+  name        String
+  price       Int       // IDR, per bulan
+  yearlyPrice Int
+  currency    String    @default("IDR")
+  isActive    Boolean   @default(true)
+  limits      Json      // { maxChildren, maxTasksPerMonth, hasInterest, hasTax, hasFine, hasReport, hasPush, historyDays }
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  subscriptions Subscription[]
+}
+
+// ─── SUBSCRIPTION ────────────────────────────────────────
+model Subscription {
+  id                 String      @id @default(uuid())
+  familySpaceId      String      @unique
+  familySpace        FamilySpace @relation(fields: [familySpaceId], references: [id])
+  planId             String
+  plan               Plan        @relation(fields: [planId], references: [id])
+  status             SubStatus   @default(FREE)
+  invoiceId          String?     @unique  // anti race condition webhook (§14.2)
+  trialEndsAt        DateTime?
+  currentPeriodStart DateTime    @default(now())
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean     @default(false)
+  cancelReason       String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  invoices           Invoice[]
+
+  @@index([status, currentPeriodEnd])
+}
+
+// ─── INVOICE ─────────────────────────────────────────────
+model Invoice {
+  id               String      @id @default(uuid())
+  subscriptionId   String
+  subscription     Subscription @relation(fields: [subscriptionId], references: [id])
+  amount           Int
+  status           InvStatus   @default(PENDING)
+  midtransOrderId  String?     @unique
+  snapToken        String?
+  paymentMethod    PayMethod?
+  paidAt           DateTime?
+  expiredAt        DateTime
+  createdAt        DateTime    @default(now())
+  paymentLogs      PaymentLog[]
+
+  @@index([subscriptionId])
+  @@index([midtransOrderId])
+  @@index([status, expiredAt])
+}
+
+// ─── PAYMENT LOG ─────────────────────────────────────────
+model PaymentLog {
+  id          String    @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice   @relation(fields: [invoiceId], references: [id])
+  event       String    // "webhook_received", "signature_verified", "status_updated"
+  rawPayload  Json
+  createdAt   DateTime  @default(now())
+
+  @@index([invoiceId])
+}
+
+// ─── NOTIFICATION ─────────────────────────────────────────
+model Notification {
+  id            String      @id @default(uuid())
+  familySpaceId String
+  familySpace   FamilySpace @relation(fields: [familySpaceId], references: [id])
+  userId        String?
+  user          User?       @relation(fields: [userId], references: [id])
+  title         String
+  body          String
+  type          String      // "TASK_CLAIMED", "TASK_APPROVED", "BALANCE_CHANGED", "INVOICE_DUE"
+  isRead        Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@index([userId, isRead, createdAt(sort: Desc)])
+}
+
+// ─── FCM TOKEN ────────────────────────────────────────────
+model FcmToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  childId   String?
+  child     Child?   @relation(fields: [childId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// ─── LOGIN ATTEMPT (§12.2 PRD v4.1) ──────────────────────
+model LoginAttempt {
+  id          String   @id @default(uuid())
+  identifier  String   // email (parent) ATAU spaceCode+username (child)
+  ipAddress   String
+  success     Boolean
+  createdAt   DateTime @default(now())
+
+  @@index([identifier, createdAt(sort: Desc)])
+}
+
+// ─── ADMIN AUDIT LOG (§14.1 PRD v4.1 — WAJIB, bukan opsional) ──
+model AdminAuditLog {
+  id         String     @id @default(uuid())
+  adminId    String
+  admin      User       @relation(fields: [adminId], references: [id])
+  action     String     // "UPDATE_PLAN_LIMIT" | "FORCE_EXPIRE_SUB" | "REFUND" | "UPDATE_APP_CONFIG"
+  targetType String
+  targetId   String
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  createdAt  DateTime   @default(now())
+
+  @@index([adminId])
+  @@index([targetType, targetId])
+}
+
+// ─── APP CONFIG (dikontrol SuperAdmin, zero hardcode) ─────
+model AppConfig {
+  id        String   @id @default("global-config")
+  phaseMode PhaseMode @default(FULL_FREE)
+  data      Json     // konfigurasi dinamis tambahan
+  updatedAt DateTime @updatedAt
+}
+```
+
+Setelah schema dibuat, jalankan:
+```bash
+npx prisma migrate dev --name init_v41_schema
+npx prisma generate
+```
+
+TUGAS [1.2] — PRISMA CLIENT SINGLETON
+Buat `src/lib/prisma.ts`:
+```typescript
+import { PrismaClient } from '@prisma/client'
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  })
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+```
+
+TUGAS [1.3] — REDIS CLIENT SINGLETON
+Buat `src/lib/redis.ts`:
+```typescript
+import Redis from 'ioredis'
+
+const globalForRedis = globalThis as unknown as {
+  redis: Redis | undefined
+}
+
+export const redis =
+  globalForRedis.redis ??
+  new Redis(process.env.REDIS_URL!, {
+    maxRetriesPerRequest: 3,
+    retryStrategy: (times) => Math.min(times * 50, 2000),
+  })
+
+if (process.env.NODE_ENV !== 'production') globalForRedis.redis = redis
+```
+
+TUGAS [1.4] — NEXTAUTH CONFIG
+Buat `src/lib/auth/config.ts` dengan konfigurasi NextAuth yang mendukung:
+- Credentials provider untuk Parent (email + password)
+- Credentials provider untuk Child (spaceCode + username + password)
+- Session menyimpan: userId, role, familySpaceId, childId (jika child)
+- JWT strategy
+- JANGAN simpan password hash di session
+
+TUGAS [1.5] — REGISTER FAMILYSPACE (Server Action)
+Buat `src/actions/auth.ts` dengan fungsi `registerFamilySpace`:
+- Input: ownerName, email, password, familyName
+- Validasi dengan Zod (email valid, password min 8 char)
+- Hash password dengan bcrypt (saltRounds: 12)
+- Generate spaceCode 6 digit unik (cek ke DB, regenerate jika collision)
+- Buat User (role: PARENT) + FamilySpace + Subscription (status: FREE, plan: STARTER) dalam satu `prisma.$transaction()`
+- Set `currentPeriodEnd` = 100 tahun dari sekarang untuk plan FREE
+- Return: { success: true, spaceCode } atau { error: string }
+
+TUGAS [1.6] — MIDDLEWARE PROTEKSI ROUTE
+Buat `src/middleware.ts`:
+- Route `/dashboard/*` → hanya PARENT
+- Route `/child/*` → hanya CHILD
+- Route `/superadmin/*` → hanya SUPER_ADMIN
+- Redirect ke `/login` jika tidak terautentikasi
+- Redirect ke `/unauthorized` jika role salah
+
+TUGAS [1.7] — HALAMAN AUTH (UI)
+Buat halaman berikut (UI minimal, fungsional):
+- `app/(auth)/login/page.tsx` — form login parent (email + password) + link ke child login
+- `app/(auth)/login/child/page.tsx` — form login anak (spaceCode + username + password)
+- `app/(auth)/register/page.tsx` — form register keluarga baru
+- `app/(auth)/unauthorized/page.tsx` — halaman error role salah
+
+TUGAS [1.8] — COMPOSITE INDEX POSTGRESQL
+Setelah migrate berhasil, verifikasi index berikut ADA dengan menjalankan di psql atau Prisma Studio:
+```sql
+-- Verifikasi index ada:
+SELECT indexname, tablename FROM pg_indexes 
+WHERE schemaname = 'public' 
+ORDER BY tablename, indexname;
+```
+Index kritis yang harus muncul:
+- idx pada User(familySpaceId, role)
+- idx pada Task(familySpaceId, childId, status)
+- idx pada TransactionLedger(familySpaceId, childId, createdAt)
+- idx pada LoginAttempt(identifier, createdAt)
+- UNIQUE pada Subscription(invoiceId)
+
+CHECKLIST SEBELUM LANJUT KE PHASE 2:
+☐ `npx prisma migrate dev` berhasil tanpa error
+☐ `npx prisma generate` berhasil
+☐ Login parent berhasil (email + password)
+☐ Login anak berhasil (spaceCode + username + password)
+☐ Register keluarga baru membuat FamilySpace + Subscription FREE dalam 1 transaksi
+☐ Middleware memblokir akses route yang salah role
+☐ Prisma Client singleton tidak membuat multiple connection di dev mode
+☐ Tidak ada query Prisma yang tidak menyertakan familySpaceId (kecuali SuperAdmin)
+
+Laporkan hasil setiap sub-task [1.1] s/d [1.8] sebelum lanjut.

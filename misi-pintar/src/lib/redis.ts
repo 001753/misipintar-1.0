@@ -1,31 +1,15 @@
-import Redis from "ioredis";
+import Redis from 'ioredis'
 
 const globalForRedis = globalThis as unknown as {
-  redis: Redis | undefined;
-};
+  redis: Redis | undefined
+}
 
-function createRedisClient() {
-  const client = new Redis(process.env.REDIS_URL!, {
+export const redis =
+  globalForRedis.redis ??
+  new Redis(process.env.REDIS_URL!, {
     maxRetriesPerRequest: 3,
-    enableReadyCheck: false,
+    retryStrategy: (times) => Math.min(times * 50, 2000),
     lazyConnect: true,
-  });
+  })
 
-  client.on("error", (err) => {
-    console.error("[Redis] connection error:", err);
-  });
-
-  return client;
-}
-
-export const redis = globalForRedis.redis ?? createRedisClient();
-
-if (process.env.NODE_ENV !== "production") globalForRedis.redis = redis;
-
-export async function getRedisPub() {
-  return new Redis(process.env.REDIS_URL!);
-}
-
-export async function getRedisSub() {
-  return new Redis(process.env.REDIS_URL!);
-}
+if (process.env.NODE_ENV !== 'production') globalForRedis.redis = redis
