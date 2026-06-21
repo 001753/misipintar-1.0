@@ -75,9 +75,10 @@ export default async function ParentDashboardPage() {
           </h2>
           <div className="space-y-3">
             {pendingTasks.map((task) => (
-              <div
+              <Link
                 key={task.id}
-                className="bg-white rounded-xl border border-amber-200 p-4 flex items-center justify-between"
+                href="/dashboard/tasks/pending"
+                className="bg-white rounded-xl border border-amber-200 p-4 flex items-center justify-between hover:bg-amber-50 transition-colors"
               >
                 <div>
                   <p className="font-medium text-gray-900">{task.title}</p>
@@ -86,9 +87,9 @@ export default async function ParentDashboardPage() {
                   </p>
                 </div>
                 <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">
-                  Menunggu
+                  Setujui →
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

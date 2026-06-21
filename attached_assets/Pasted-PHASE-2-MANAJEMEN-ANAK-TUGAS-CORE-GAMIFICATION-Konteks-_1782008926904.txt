@@ -1,0 +1,116 @@
+PHASE 2 — MANAJEMEN ANAK & TUGAS (CORE GAMIFICATION)
+
+Konteks: Fitur inti gamifikasi — parent mengelola anak, membuat tugas, anak mengklaim tugas.
+Semua Server Actions. Semua validasi familySpaceId dari SESSION (bukan dari input user).
+
+TUGAS [2.1] — SERVER ACTION: MANAJEMEN ANAK
+Buat/tambahkan ke `src/actions/child.ts`:
+
+createChild(input):
+- Input: name, username, password, avatar?
+- Ambil familySpaceId dari session (JANGAN dari parameter)
+- Validasi: cek limit maxChildren sesuai plan aktif subscription
+- Validasi password: min 6 char, tidak boleh sama dengan username
+- Hash password dengan bcrypt (saltRounds: 12)
+- Cek unique constraint [familySpaceId, username] sebelum insert
+- Buat Child dengan balance=0, savingsBalance=0, charityBalance=0
+- Return { success, childId } atau { error }
+
+updateChild(childId, input):
+- Validasi child.familySpaceId === session.familySpaceId (anti cross-tenant)
+- Update name, avatar saja — password update via fungsi terpisah
+- Return { success } atau { error }
+
+changeChildPassword(childId, newPassword):
+- Validasi kepemilikan (familySpaceId match)
+- Validasi: min 6 char, tidak sama username
+- Hash dan update — JANGAN simpan plaintext
+
+deleteChild(childId):
+- Validasi kepemilikan
+- Soft delete: tambahkan field `deletedAt` (jangan hapus ledger history)
+
+TUGAS [2.2] — SERVER ACTION: MANAJEMEN TUGAS
+Buat `src/actions/task.ts`:
+
+createTask(input):
+- Input: childId, title, description?, rewardAmount
+- Ambil familySpaceId dari session
+- Validasi child.familySpaceId === session.familySpaceId
+- Validasi: cek limit maxTasksPerMonth sesuai plan (hitung task bulan ini)
+- Validasi rewardAmount: positif, tidak nol
+- Buat Task dengan status PENDING
+- Return { success, taskId }
+
+claimTask(taskId, proofPhotoUrl?):
+- Dipanggil dari session CHILD
+- Ambil childId dari session (BUKAN dari parameter)
+- Validasi task.childId === session.childId DAN task.familySpaceId === session.familySpaceId
+- Validasi status: hanya PENDING yang bisa diklaim
+- Update status → CLAIMED, set claimedAt
+- Kirim notifikasi ke parent via FCM + tulis ke tabel Notification
+- Return { success }
+
+approveTask(taskId):
+- Dipanggil dari session PARENT
+- Validasi task.familySpaceId === session.familySpaceId
+- Validasi status: hanya CLAIMED yang bisa di-approve
+- WAJIB gunakan prisma.$transaction():
+  1. Update Task status → APPROVED, set approvedAt
+  2. Baca Child.balance saat ini (dalam transaksi yang sama)
+  3. Update Child.balance += task.rewardAmount
+  4. Buat 1 baris TransactionLedger dengan:
+     - type: TASK_REWARD
+     - amount: task.rewardAmount
+     - balanceBefore: nilai sebelum
+     - balanceAfter: nilai setelah
+     - refId: taskId
+  5. Buat Notification untuk child
+- Kirim FCM ke child setelah transaksi berhasil
+- Return { success, newBalance }
+
+rejectTask(taskId, reason):
+- Validasi kepemilikan (familySpaceId)
+- Validasi status: hanya CLAIMED
+- Update status → REJECTED, set rejectedAt, rejectedReason
+- Kirim notifikasi ke child
+- Return { success }
+
+TUGAS [2.3] — UPLOAD FOTO BUKTI TUGAS
+Buat `src/app/api/upload/proof/route.ts`:
+- Endpoint: POST /api/upload/proof
+- Validasi: hanya CHILD yang terautentikasi
+- Validasi file: max 5MB, hanya image/jpeg, image/png, image/webp
+- Upload ke Cloudflare R2 dengan path: `proofs/{familySpaceId}/{childId}/{timestamp}-{nanoid}.jpg`
+- Return { url } — URL CDN Cloudflare R2
+- JANGAN simpan file di server Next.js
+
+TUGAS [2.4] — UI PARENT DASHBOARD
+Buat halaman di `app/(dashboard)/`:
+- `/dashboard/page.tsx` — overview: daftar anak + ringkasan saldo + tugas menunggu approval
+- `/dashboard/children/page.tsx` — CRUD anak
+- `/dashboard/tasks/page.tsx` — buat tugas baru + daftar tugas per anak
+- `/dashboard/tasks/pending/page.tsx` — daftar tugas CLAIMED yang menunggu approval (prioritas tampil pertama)
+
+TUGAS [2.5] — UI CHILD PORTAL
+Buat halaman di `app/(child)/`:
+- `/child/page.tsx` — dashboard anak: saldo, tabungan, tugas tersedia
+- `/child/tasks/page.tsx` — daftar tugas PENDING yang bisa diklaim
+- `/child/tasks/[taskId]/claim/page.tsx` — form klaim tugas + upload foto bukti
+
+ATURAN WAJIB UNTUK PHASE 2:
+1. SEMUA Server Actions validasi familySpaceId dari session — tidak ada exception
+2. approveTask WAJIB pakai prisma.$transaction() — tidak ada approval tanpa transaksi atomik
+3. TransactionLedger adalah IMMUTABLE — tidak ada fungsi delete/update pada tabel ini
+4. Limit tugas/bulan dihitung dari DB secara real-time, bukan dari cache yang bisa stale
+
+CHECKLIST SEBELUM LANJUT KE PHASE 3:
+☐ createTask, claimTask, approveTask, rejectTask semua berjalan tanpa error
+☐ approveTask: saldo anak bertambah PERSIS rewardAmount
+☐ approveTask: 1 baris TransactionLedger terbuat dengan balanceBefore dan balanceAfter yang benar
+☐ Task limit sesuai plan (STARTER: max 10/bulan) — coba buat task ke-11 harus error
+☐ Child tidak bisa approve task milik anak lain
+☐ Upload foto: file > 5MB ditolak
+☐ Notifikasi parent muncul saat task diklaim anak
+
+Laporkan hasil setiap sub-task [2.1] s/d [2.5] sebelum lanjut.

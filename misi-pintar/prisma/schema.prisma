@@ -124,11 +124,13 @@ model Child {
   tasks          Task[]
   ledger         TransactionLedger[]
   fcmTokens      FcmToken[]
+  deletedAt      DateTime?
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
   @@unique([familySpaceId, username])
   @@index([familySpaceId])
+  @@index([familySpaceId, deletedAt])
 }
 
 // ─── TASK ────────────────────────────────────────────────

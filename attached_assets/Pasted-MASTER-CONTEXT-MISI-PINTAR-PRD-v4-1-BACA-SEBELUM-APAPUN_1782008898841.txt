@@ -1,0 +1,128 @@
+MASTER CONTEXT — MISI PINTAR PRD v4.1 (BACA SEBELUM APAPUN)
+
+Kamu adalah Replit AI yang sedang mengerjakan proyek "Misi Pintar" — sebuah Multi-Tenant Gamified Family Ledger & Financial Literacy Platform. Sebelum menulis satu baris kode pun, kamu WAJIB memahami dan mematuhi seluruh aturan di bawah ini. Jangan berasumsi, jangan mengarang fitur, jangan mengubah arsitektur dari yang sudah ditetapkan.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IDENTITAS PROYEK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Nama Produk    : Misi Pintar
+Dokumen Acuan  : PRD v4.1 FINAL (gabungan v4.0 + Addendum Kelayakan & Keamanan)
+Status         : PRODUCTION READY DENGAN SYARAT — ada checklist §16 yang wajib selesai sebelum go-live
+Skor Kelayakan : 92/100 (Lulus Bersyarat)
+Tanggal PRD    : Juni 2026
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TECH STACK — TIDAK BOLEH DIGANTI TANPA PERSETUJUAN EKSPLISIT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Framework   : Next.js 14 dengan App Router (BUKAN Pages Router)
+- ORM         : Prisma ORM
+- Database    : PostgreSQL 16 (Primary write + 2 Read Replicas)
+- Cache       : Redis 7 (session, rate-limit, plan limits, cron mutex, login-attempt counter)
+- Payment     : Midtrans (QRIS, GoPay, ShopeePay, Bank Transfer, VA, Credit Card)
+- Push Notif  : Firebase FCM (mobile) + SSE via Redis pub/sub (web)
+- Queue/Cron  : BullMQ (Redis-backed)
+- File Storage: Cloudflare R2 (kompatibel S3)
+- Testing     : Vitest (wajib, bukan opsional)
+- Connection  : PgBouncer (transaction mode, max 200 conn per instance)
+- Monitoring  : Grafana + Prometheus + Loki + Sentry
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ARSITEKTUR INTI — WAJIB DIPATUHI SETIAP SAAT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. MULTI-TENANT: Jangkar data adalah FamilySpace (Tenant ID). SETIAP query Prisma WAJIB menyertakan filter `familySpaceId` yang diambil dari SESSION SERVER — BUKAN dari parameter klien/URL.
+2. ZERO CLIENT-SIDE MATH: Semua kalkulasi keuangan (bunga, pajak, denda, saldo) HANYA di server. Tidak ada kalkulasi angka finansial di browser/komponen React.
+3. SERVER ACTIONS ONLY untuk mutasi data — tidak ada API route untuk operasi yang menyentuh saldo/transaksi.
+4. ATOMICITY: Setiap operasi yang menyentuh saldo menggunakan `prisma.$transaction()` — tidak ada operasi saldo tanpa transaksi database.
+5. AUDIT LOG PERMANEN: Setiap aksi superadmin (ubah harga, limit, force expire, refund) WAJIB menulis ke tabel `AdminAuditLog` di database — BUKAN console.log.
+6. NO E-MONEY: Platform ini adalah sistem pencatatan edukatif (virtual ledger), BUKAN penyelenggara jasa pembayaran. Payment gateway Midtrans hanya untuk biaya LANGGANAN PLATFORM — bukan transfer saldo anak.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ATURAN KEAMANAN — TIDAK BOLEH DIKOMPROMIKAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Rate limiting login: MAX 5 percobaan gagal dalam 15 menit per identifier → blokir. Gunakan tabel `LoginAttempt` di DB + Redis counter.
+- Password anak: minimal 6 karakter, tidak boleh sama dengan username, tidak boleh kosong, selalu di-hash bcrypt.
+- Cookie secure: isSecureContext() hanya percaya header x-forwarded-proto jika env `TRUST_PROXY=true` — default TIDAK percaya header klien.
+- Webhook Midtrans: WAJIB validasi signature SHA-512 server-to-server. JANGAN aktivasi subscription dari callback client-side (Snap.js onSuccess).
+- Idempotency webhook: Gunakan `Subscription.invoiceId` UNIQUE constraint di database sebagai jaring pengaman race condition — jangan hanya mengandalkan pengecekan status di kode.
+- Cross-tenant: DILARANG KERAS query tanpa filter `familySpaceId`. Pelanggaran = data leakage antar keluarga.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SCHEMA DATABASE — VERSI FINAL v4.1
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Tabel utama yang ADA dan WAJIB digunakan:
+- FamilySpace (tenant utama, semua data berelasi ke sini)
+- User (parent & admin, dengan role)
+- Child (akun anak, relasi ke FamilySpace)
+- Task (tugas untuk anak)
+- TransactionLedger (catatan setiap perubahan saldo, IMMUTABLE)
+- Subscription (langganan per FamilySpace, field `invoiceId` UNIQUE — v4.1)
+- Plan (konfigurasi paket: STARTER/PRO/EDUCATOR/SCHOOL)
+- Invoice (tagihan, relasi ke Subscription)
+- PaymentLog (log detail pembayaran)
+- Notification (inbox notifikasi in-app)
+- LoginAttempt (audit percobaan login — BARU v4.1)
+- AdminAuditLog (audit permanen aksi superadmin — WAJIB v4.1)
+- AppConfig (konfigurasi global, dikelola SuperAdmin)
+
+Enums yang berlaku:
+- PlanType: STARTER | PRO | EDUCATOR | SCHOOL
+- SubStatus: TRIAL | FREE | PRO | EDUCATOR | SCHOOL | EXPIRED | CANCELLED
+- InvStatus: PENDING | PAID | EXPIRED | FAILED | REFUNDED
+- PayMethod: QRIS | GOPAY | SHOPEEPAY | BANK_TRANSFER | CREDIT_CARD | VA
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PAKET LANGGANAN (DEFAULT — BISA DIUBAH SUPERADMIN)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- STARTER : Gratis | 2 anak | 10 tugas/bulan | tanpa fitur premium
+- PRO     : Rp 29.000/bln | 5 anak | unlimited tugas | bunga+pajak virtual, push notif, laporan PDF
+- EDUCATOR: Rp 99.000/bln | ≥30 keluarga | + dashboard guru/kelas
+- SCHOOL  : Custom | unlimited | + SSO/integrasi sekolah
+(Catatan: harga masih asumsi, wajib validasi willingness-to-pay §16.2 sebelum dikunci)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ATURAN PERUBAHAN SCHEMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SETIAP perubahan schema Prisma WAJIB:
+1. Dikonfirmasi product owner terlebih dahulu
+2. Dijalankan dengan `npx prisma migrate dev --name <nama_jelas>`
+3. TIDAK boleh langsung `prisma db push` di environment produksi
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ATURAN TESTING — WAJIB, BUKAN OPSIONAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+JANGAN tandai fase/fitur yang menyentuh saldo sebagai "selesai" tanpa bukti `npm run test` PASS. Minimal wajib ada test untuk:
+- approveTask: saldo bertambah benar + 1 baris TransactionLedger tercipta
+- transferToSavings: transfer melebihi saldo ditolak; transfer valid atomik
+- Webhook Midtrans: signature invalid → 403; 2 webhook paralel = 1 Subscription
+- Rate limiting login: percobaan ke-6 dalam 15 menit SELALU ditolak
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ANTI-HALUSINASI — ATURAN KERAS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. JANGAN menambah fitur yang tidak ada di PRD (contoh: "kirim saldo ke teman" — TIDAK ADA di scope, harus kajian hukum terpisah).
+2. JANGAN mengganti tech stack tanpa instruksi eksplisit dari user.
+3. JANGAN menulis kalkulasi finansial di komponen React/client.
+4. JANGAN menggunakan console.log sebagai pengganti AdminAuditLog.
+5. JANGAN mengaktifkan subscription dari Snap.js onSuccess.
+6. JANGAN membuat query Prisma tanpa filter familySpaceId untuk data tenant.
+7. JANGAN menganggap fase selesai tanpa automated test PASS.
+8. Jika kamu tidak yakin tentang sesuatu → TANYA user, jangan berasumsi dan mengarang.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FASE PENGEMBANGAN (URUTAN WAJIB)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Phase 0 : Setup Proyek & Infrastruktur Dasar
+Phase 1 : Auth & FamilySpace (Multi-Tenant Foundation)
+Phase 2 : Manajemen Anak & Tugas (Core Gamification)
+Phase 3 : Ledger & Saldo Virtual (Core Financial Logic)
+Phase 4 : Monetisasi & Subscription (Midtrans Integration)
+Phase 5 : Notifikasi Real-time (FCM + SSE)
+Phase 6 : SuperAdmin Dashboard
+Phase 7 : Keamanan Login Anak & Rate Limiting (§12 PRD v4.1)
+Phase 8 : Automated Testing Wajib (§13 PRD v4.1)
+Phase 9 : Audit Log & Hardening Webhook (§14 PRD v4.1)
+Phase 10: Kepatuhan Hukum & Checklist Pre-Launch (§15-17 PRD v4.1)
+
+Saat ini kita sedang mengerjakan: [USER WAJIB MENGISI INI SEBELUM LANJUT]
+
+Konfirmasi pemahamanmu dengan menjawab: "Siap. Saya memahami konteks Misi Pintar PRD v4.1. Kita sedang di Phase [X]. Silakan berikan instruksi fase berikutnya."
