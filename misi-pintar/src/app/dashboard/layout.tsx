@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { logoutAction } from '@/actions/auth'
+import { getUnreadCount } from '@/lib/notifications/sse'
 
 export default async function DashboardLayout({
   children,
@@ -10,6 +11,8 @@ export default async function DashboardLayout({
 }) {
   const session = await auth()
   if (!session || session.user.role !== 'PARENT') redirect('/login')
+
+  const unreadCount = await getUnreadCount(session.user.id)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -36,8 +39,33 @@ export default async function DashboardLayout({
             <Link href="/dashboard/billing" className="text-gray-600 hover:text-emerald-600 font-medium">
               Billing
             </Link>
+            {/* [5.5] Notifikasi dengan badge counter */}
+            <Link
+              href="/dashboard/notifications"
+              className="relative text-gray-600 hover:text-emerald-600 font-medium"
+            >
+              Notifikasi
+              {unreadCount > 0 && (
+                <span className="absolute -top-2 -right-3 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </Link>
           </nav>
           <div className="flex items-center gap-3">
+            {/* Badge mobile */}
+            <Link
+              href="/dashboard/notifications"
+              className="relative md:hidden text-gray-600 hover:text-emerald-600"
+              aria-label="Notifikasi"
+            >
+              <span className="text-xl">🔔</span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </Link>
             <span className="text-sm text-gray-600 hidden md:block">
               {session.user.name}
             </span>

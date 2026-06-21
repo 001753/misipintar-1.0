@@ -1,0 +1,57 @@
+PHASE 5 — NOTIFIKASI REAL-TIME (FCM + SSE)
+
+Konteks: Tiga lapis notifikasi sesuai PRD §6.
+JANGAN gunakan polling database untuk SSE — gunakan Redis pub/sub.
+
+TUGAS [5.1] — FIREBASE ADMIN SDK SETUP
+Buat `src/lib/notifications/fcm.ts`:
+- Init Firebase Admin SDK dari env variables
+- Fungsi sendPushNotification(tokens[], title, body, data?):
+  - Gunakan sendEachForMulticast untuk multiple tokens
+  - Handle token tidak valid (remove dari DB)
+  - Return { successCount, failureCount }
+
+TUGAS [5.2] — SSE VIA REDIS PUB/SUB
+Buat `src/app/api/sse/route.ts`:
+- Subscribe ke Redis channel: `sse:family:{familySpaceId}`
+- Stream event ke client via SSE (text/event-stream)
+- Kirim heartbeat setiap 30 detik (cegah timeout)
+- Cleanup subscription saat client disconnect
+- JANGAN polling database — hanya Redis pub/sub
+
+Buat helper `src/lib/notifications/sse.ts`:
+```typescript
+export async function publishToFamily(familySpaceId: string, event: object) {
+  await redis.publish(`sse:family:${familySpaceId}`, JSON.stringify(event))
+}
+```
+
+TUGAS [5.3] — INTEGRASI NOTIFIKASI KE SERVER ACTIONS
+Update Server Actions yang sudah ada untuk mengirim notifikasi:
+- approveTask → FCM ke child + SSE ke parent dashboard
+- claimTask → FCM ke parent + SSE ke parent dashboard
+- rejectTask → FCM ke child
+- Subscription activated → FCM ke parent
+- Balance changed → SSE ke parent dashboard (real-time update)
+
+TUGAS [5.4] — FCM TOKEN MANAGEMENT
+Buat endpoint `src/app/api/fcm/register/route.ts`:
+- POST: simpan FCM token ke tabel FcmToken, relasi ke userId atau childId dari session
+- DELETE: hapus token (logout)
+Buat client-side hook `src/hooks/useFcmToken.ts` untuk request permission + register token.
+
+TUGAS [5.5] — IN-APP NOTIFICATION CENTER
+Buat `app/(dashboard)/dashboard/notifications/page.tsx`:
+- List semua Notification dari DB untuk userId dari session
+- Tandai semua sebagai read saat halaman dibuka (Server Action)
+- Badge counter di navbar menggunakan Redis: key = `notif:unread:{userId}`
+- Badge update real-time via SSE
+
+CHECKLIST SEBELUM LANJUT KE PHASE 6:
+☐ SSE menggunakan Redis pub/sub, BUKAN polling database
+☐ Push notifikasi FCM diterima di device (test dengan Postman → trigger claimTask)
+☐ Dashboard parent update real-time saat anak klaim tugas (tanpa refresh)
+☐ Badge counter unread akurat
+☐ Token FCM tidak valid dibersihkan dari DB otomatis
+
+Laporkan hasil setiap sub-task [5.1] s/d [5.5] sebelum lanjut.

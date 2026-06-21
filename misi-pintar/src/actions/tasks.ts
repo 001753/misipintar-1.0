@@ -6,6 +6,8 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { startOfMonth, endOfMonth } from 'date-fns'
 import type { ActionResult } from '@/types'
+import { sendPushNotification, getUserFcmTokens, getChildFcmTokens } from '@/lib/notifications/fcm'
+import { publishToFamily, incrementUnreadBadge } from '@/lib/notifications/sse'
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -92,6 +94,7 @@ export async function createTask(
 }
 
 // ─── [2.2b] claimTask ────────────────────────────────────
+// [5.3] claimTask → FCM ke parent + SSE ke parent dashboard
 
 export async function claimTask(
   taskId: string,
@@ -118,25 +121,49 @@ export async function claimTask(
     },
   })
 
-  // Tulis notifikasi ke parent (non-fatal)
+  // Notifikasi ke parent (non-fatal — gagal tidak membatalkan klaim)
   try {
     const familySpace = await prisma.familySpace.findUnique({
       where: { id: familySpaceId },
-      select: { ownerId: true },
+      select: { ownerId: true, name: true },
     })
-    if (familySpace?.ownerId) {
+    const parentId = familySpace?.ownerId
+
+    if (parentId) {
+      const notifTitle = 'Tugas Diklaim! 📋'
+      const notifBody = `${task.title} sedang menunggu persetujuan Anda.`
+
+      // 1. Simpan ke DB Notification
       await prisma.notification.create({
         data: {
           familySpaceId,
-          userId: familySpace.ownerId,
-          title: 'Tugas Diklaim!',
-          body: `${task.title} sedang menunggu persetujuan Anda.`,
+          userId: parentId,
+          title: notifTitle,
+          body: notifBody,
           type: 'TASK_CLAIMED',
         },
       })
+
+      // 2. Increment unread badge counter di Redis
+      await incrementUnreadBadge(parentId)
+
+      // 3. SSE real-time ke parent dashboard
+      await publishToFamily(familySpaceId, {
+        type: 'task_claimed',
+        payload: { taskId, taskTitle: task.title },
+      })
+
+      // 4. FCM push ke perangkat parent
+      const tokens = await getUserFcmTokens(parentId)
+      if (tokens.length > 0) {
+        await sendPushNotification(tokens, notifTitle, notifBody, {
+          type: 'TASK_CLAIMED',
+          taskId,
+        })
+      }
     }
-  } catch {
-    // Notifikasi gagal tidak membatalkan klaim
+  } catch (err) {
+    console.error('[claimTask] Notification error (non-fatal):', err)
   }
 
   return { success: true, data: null }
@@ -144,6 +171,7 @@ export async function claimTask(
 
 // ─── [2.2c] approveTask ───────────────────────────────────
 // WAJIB: prisma.$transaction() — saldo + ledger atomik
+// [5.3] approveTask → FCM ke child + SSE ke parent dashboard
 
 export async function approveTask(
   taskId: string
@@ -196,7 +224,7 @@ export async function approveTask(
       },
     })
 
-    // 5. Buat notifikasi untuk anak
+    // 5. Notifikasi DB untuk child (tanpa userId karena child bukan User)
     await tx.notification.create({
       data: {
         familySpaceId,
@@ -206,13 +234,43 @@ export async function approveTask(
       },
     })
 
-    return balanceAfter
+    return { balanceAfter, childId: task.childId }
   })
 
-  return { success: true, data: { newBalance: result } }
+  // Non-fatal: FCM + SSE setelah transaksi selesai
+  try {
+    const notifTitle = 'Tugas Disetujui! 🎉'
+    const notifBody = `Kamu mendapat Rp ${task.rewardAmount.toLocaleString('id-ID')} dari tugas "${task.title}"`
+
+    // SSE real-time (balance update ke parent dashboard)
+    await publishToFamily(familySpaceId, {
+      type: 'task_approved',
+      payload: {
+        taskId,
+        taskTitle: task.title,
+        reward: task.rewardAmount,
+        newBalance: result.balanceAfter,
+        childId: result.childId,
+      },
+    })
+
+    // FCM ke perangkat child
+    const childTokens = await getChildFcmTokens(result.childId)
+    if (childTokens.length > 0) {
+      await sendPushNotification(childTokens, notifTitle, notifBody, {
+        type: 'TASK_APPROVED',
+        taskId,
+      })
+    }
+  } catch (err) {
+    console.error('[approveTask] Notification error (non-fatal):', err)
+  }
+
+  return { success: true, data: { newBalance: result.balanceAfter } }
 }
 
 // ─── [2.2d] rejectTask ───────────────────────────────────
+// [5.3] rejectTask → FCM ke child
 
 export async function rejectTask(
   taskId: string,
@@ -237,17 +295,30 @@ export async function rejectTask(
     },
   })
 
+  // Non-fatal: Notifikasi DB + FCM ke child
   try {
+    const notifTitle = 'Tugas Ditolak 😔'
+    const notifBody = `Tugas "${task.title}" ditolak. Alasan: ${reason.trim() || 'Tidak ada alasan.'}`
+
     await prisma.notification.create({
       data: {
         familySpaceId,
-        title: 'Tugas Ditolak',
-        body: `Tugas "${task.title}" ditolak. Alasan: ${reason.trim() || 'Tidak ada alasan.'}`,
+        title: notifTitle,
+        body: notifBody,
         type: 'TASK_REJECTED',
       },
     })
-  } catch {
-    // Notifikasi gagal tidak membatalkan penolakan
+
+    // FCM ke child
+    const childTokens = await getChildFcmTokens(task.childId)
+    if (childTokens.length > 0) {
+      await sendPushNotification(childTokens, notifTitle, notifBody, {
+        type: 'TASK_REJECTED',
+        taskId,
+      })
+    }
+  } catch (err) {
+    console.error('[rejectTask] Notification error (non-fatal):', err)
   }
 
   return { success: true, data: null }

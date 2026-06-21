@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateMidtransSignature } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
 import { planTypeToSubStatus } from "@/actions/subscription";
+import { sendPushNotification, getUserFcmTokens } from "@/lib/notifications/fcm";
+import { publishToFamily, incrementUnreadBadge } from "@/lib/notifications/sse";
 
 // POST /api/webhooks/midtrans
 // WAJIB: Validasi signature SHA-512 sebelum apapun — tolak jika tidak valid
@@ -46,12 +48,16 @@ export async function POST(req: NextRequest) {
   const invoice = await prisma.invoice.findUnique({
     where: { midtransOrderId: order_id },
     include: {
-      subscription: { include: { plan: true } },
+      subscription: {
+        include: {
+          plan: true,
+          familySpace: { select: { id: true, name: true, ownerId: true } },
+        },
+      },
     },
   });
 
   if (!invoice) {
-    // Order tidak dikenal — log dan balas OK agar Midtrans tidak retry terus
     console.warn(`[Webhook] Unknown order_id: ${order_id}`);
     return NextResponse.json({ message: "OK — unknown order" });
   }
@@ -98,8 +104,8 @@ export async function POST(req: NextRequest) {
     transaction_status === "refund" || transaction_status === "partial_refund";
 
   if (isSuccess) {
-    // Hitung periode baru berdasarkan amount vs plan price
     const plan = invoice.subscription.plan;
+    const familySpace = invoice.subscription.familySpace;
     const isYearly = invoice.amount >= plan.yearlyPrice && plan.yearlyPrice > 0;
     const durationMs = isYearly
       ? 365 * 24 * 60 * 60 * 1000
@@ -108,6 +114,9 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const periodEnd = new Date(now.getTime() + durationMs);
     const newStatus = planTypeToSubStatus(plan.type);
+
+    const notifTitle = "Langganan Aktif! ✅";
+    const notifBody = `Langganan ${plan.name} keluarga ${familySpace.name} aktif hingga ${periodEnd.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}.`;
 
     await prisma.$transaction([
       prisma.invoice.update({
@@ -129,17 +138,46 @@ export async function POST(req: NextRequest) {
           cancelReason: null,
         },
       }),
+      // [5.3] Notifikasi in-app ke parent
+      prisma.notification.create({
+        data: {
+          familySpaceId: familySpace.id,
+          userId: familySpace.ownerId,
+          title: notifTitle,
+          body: notifBody,
+          type: "SUBSCRIPTION_ACTIVATED",
+        },
+      }),
     ]);
 
     console.log(
       `[Webhook] Payment SUCCESS: order=${order_id} plan=${plan.name} period=${isYearly ? "yearly" : "monthly"}`
     );
+
+    // [5.3] FCM + SSE setelah transaksi — non-fatal
+    try {
+      await incrementUnreadBadge(familySpace.ownerId);
+
+      await publishToFamily(familySpace.id, {
+        type: "subscription_activated",
+        payload: { planName: plan.name, periodEnd: periodEnd.toISOString() },
+      });
+
+      const tokens = await getUserFcmTokens(familySpace.ownerId);
+      if (tokens.length > 0) {
+        await sendPushNotification(tokens, notifTitle, notifBody, {
+          type: "SUBSCRIPTION_ACTIVATED",
+          planName: plan.name,
+        });
+      }
+    } catch (err) {
+      console.error("[Webhook] Post-payment notification error (non-fatal):", err);
+    }
   } else if (isFailure) {
     await prisma.invoice.update({
       where: { id: invoice.id },
       data: {
-        status:
-          transaction_status === "expire" ? "EXPIRED" : "FAILED",
+        status: transaction_status === "expire" ? "EXPIRED" : "FAILED",
         paymentMethod: payMethod as never,
       },
     });
@@ -153,7 +191,6 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Webhook] Payment REFUNDED: order=${order_id}`);
   }
-  // "pending" → tidak ada perubahan status Invoice
 
   return NextResponse.json({ message: "OK" });
 }
