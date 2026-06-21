@@ -33,6 +33,9 @@ export default async function DashboardLayout({
             <Link href="/dashboard/ledger" className="text-gray-600 hover:text-emerald-600 font-medium">
               Saldo
             </Link>
+            <Link href="/dashboard/billing" className="text-gray-600 hover:text-emerald-600 font-medium">
+              Billing
+            </Link>
           </nav>
           <div className="flex items-center gap-3">
             <span className="text-sm text-gray-600 hidden md:block">

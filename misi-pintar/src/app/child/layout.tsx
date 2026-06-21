@@ -21,6 +21,9 @@ export default async function ChildLayout({ children }: { children: React.ReactN
           <Link href="/child/tasks" className="text-emerald-100 hover:text-white text-xs font-medium">
             Tugas
           </Link>
+          <Link href="/child/transfer" className="text-emerald-100 hover:text-white text-xs font-medium">
+            Transfer
+          </Link>
           <Link href="/child/history" className="text-emerald-100 hover:text-white text-xs font-medium">
             Riwayat
           </Link>
