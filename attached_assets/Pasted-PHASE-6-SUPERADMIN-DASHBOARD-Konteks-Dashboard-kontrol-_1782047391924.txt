@@ -1,0 +1,90 @@
+PHASE 6 — SUPERADMIN DASHBOARD
+
+Konteks: Dashboard kontrol penuh untuk SuperAdmin. Zero hardcode — semua konfigurasi
+dikelola dari sini. SETIAP aksi sensitif WAJIB tercatat di AdminAuditLog (§14.1 PRD).
+
+TUGAS [6.1] — MIDDLEWARE SUPERADMIN
+Pastikan route `/superadmin/*` hanya bisa diakses role SUPER_ADMIN.
+Tambahkan IP allowlist opsional via env `SUPERADMIN_ALLOWED_IPS`.
+
+TUGAS [6.2] — PLAN MANAGEMENT
+Buat `src/actions/admin.ts` dengan:
+
+updatePlanPrice(planId, price, yearlyPrice):
+- Validasi role SUPER_ADMIN dari session
+- Ambil before = Plan saat ini dari DB
+- Update Plan
+- WAJIB tulis ke AdminAuditLog: action "UPDATE_PLAN_PRICE", before, after, adminId, ipAddress
+- Invalidate Redis cache plan limits
+- Return { success }
+
+updatePlanLimits(planId, limits):
+- Sama dengan updatePlanPrice tapi untuk field limits (JSON)
+- action: "UPDATE_PLAN_LIMITS"
+
+togglePlanActive(planId, isActive):
+- action: "TOGGLE_PLAN_ACTIVE"
+
+TUGAS [6.3] — PHASE CONTROL
+updatePhaseMode(mode: PhaseMode):
+- Update AppConfig.phaseMode
+- action: "UPDATE_PHASE_MODE"
+- Middleware di route publik membaca phaseMode dari AppConfig (cache Redis 5 menit)
+
+TUGAS [6.4] — USER MANAGEMENT
+Fungsi admin untuk:
+- searchFamilySpace(query): cari by email/spaceCode/nama
+- getFamilySpaceDetail(familySpaceId): detail lengkap + subscription + invoice history
+- forceUpgradeSubscription(familySpaceId, planType): manual upgrade
+  - action: "FORCE_UPGRADE_SUB"
+- forceExpireSubscription(familySpaceId):
+  - action: "FORCE_EXPIRE_SUB"
+- suspendFamilySpace(familySpaceId, reason):
+  - action: "SUSPEND_FAMILY"
+
+TUGAS [6.5] — REVENUE ANALYTICS
+Buat `app/(superadmin)/superadmin/analytics/page.tsx`:
+- MRR (Monthly Recurring Revenue) dari Subscription aktif
+- ARR (Annual Run Rate)
+- Churn rate (subscription cancelled / expired bulan lalu)
+- Distribusi per plan type
+- Grafik pertumbuhan subscriber (pakai chart library — recharts atau chart.js)
+- SEMUA kalkulasi di server (Server Action atau Route Handler), tidak ada di client
+
+TUGAS [6.6] — PAYMENT OPERATIONS
+- Daftar semua Invoice dengan filter status, tanggal
+- Lihat detail PaymentLog per Invoice
+- Manual refund: panggil Midtrans refund API, update Invoice status REFUNDED
+  - action: "MANUAL_REFUND"
+
+TUGAS [6.7] — AUDIT LOG VIEWER
+Buat `app/(superadmin)/superadmin/audit/page.tsx`:
+- List semua AdminAuditLog dengan pagination
+- Filter by adminId, action, targetType, tanggal
+- Tampilkan before/after sebagai JSON diff yang mudah dibaca
+- TIDAK ada tombol delete/edit di halaman ini — audit log adalah permanen
+
+TUGAS [6.8] — LOGIN SECURITY LOG (§12.2 PRD v4.1)
+Buat `app/(superadmin)/superadmin/security/login-attempts/page.tsx`:
+- Daftar LoginAttempt gagal per identifier
+- Filter: identifier, IP, tanggal
+- Tombol "Unblock Manual" → hapus LoginAttempt untuk identifier tersebut (dengan konfirmasi)
+  - action: "MANUAL_UNBLOCK_LOGIN"
+  - Tulis ke AdminAuditLog
+
+ATURAN WAJIB PHASE 6:
+SETIAP fungsi di admin.ts yang mengubah data sensitif WAJIB:
+1. Validasi role SUPER_ADMIN
+2. Ambil state `before` dari DB
+3. Lakukan perubahan
+4. Tulis ke AdminAuditLog dengan before/after/adminId/ipAddress
+5. Return { success }
+
+CHECKLIST SEBELUM LANJUT KE PHASE 7:
+☐ Update harga plan → AdminAuditLog terbuat dengan before/after yang benar
+☐ Force expire subscription → AdminAuditLog terbuat
+☐ TIDAK ada aksi superadmin yang menggunakan console.log sebagai pengganti audit log
+☐ Halaman audit log hanya bisa dibuka role SUPER_ADMIN
+☐ Phase mode toggle berhasil mengubah behavior aplikasi
+
+Laporkan hasil setiap sub-task [6.1] s/d [6.8] sebelum lanjut.

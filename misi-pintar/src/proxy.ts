@@ -1,6 +1,19 @@
 import { auth } from '@/lib/auth/config'
 import { NextResponse } from 'next/server'
 
+// [6.1] IP allowlist opsional untuk /superadmin/*
+// Set SUPERADMIN_ALLOWED_IPS=1.2.3.4,5.6.7.8 di env untuk membatasi akses
+function checkSuperadminIP(req: Parameters<typeof auth>[0] & { headers: Headers }): boolean {
+  const raw = process.env.SUPERADMIN_ALLOWED_IPS
+  if (!raw) return true // tidak ada allowlist = semua IP boleh
+  const allowed = raw.split(',').map((ip) => ip.trim()).filter(Boolean)
+  const clientIP =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    req.headers.get('x-real-ip') ??
+    'unknown'
+  return allowed.includes(clientIP)
+}
+
 export default auth((req) => {
   const { pathname } = req.nextUrl
   const session = req.auth
@@ -30,9 +43,14 @@ export default auth((req) => {
     return NextResponse.redirect(new URL('/unauthorized', req.url))
   }
 
-  // ─── Route /superadmin/* → hanya SUPER_ADMIN ─────────
-  if (pathname.startsWith('/superadmin') && role !== 'SUPER_ADMIN') {
-    return NextResponse.redirect(new URL('/unauthorized', req.url))
+  // ─── Route /superadmin/* → hanya SUPER_ADMIN + IP allowlist ─────────
+  if (pathname.startsWith('/superadmin')) {
+    if (role !== 'SUPER_ADMIN') {
+      return NextResponse.redirect(new URL('/unauthorized', req.url))
+    }
+    if (!checkSuperadminIP(req as Parameters<typeof auth>[0] & { headers: Headers })) {
+      return NextResponse.json({ error: 'Forbidden — IP not allowed' }, { status: 403 })
+    }
   }
 
   // ─── Redirect ke dashboard jika sudah login ───────────
