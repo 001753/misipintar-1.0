@@ -6,13 +6,26 @@ import { redis } from '@/lib/redis'
 import { z } from 'zod'
 
 const RATE_LIMIT_MAX = 5
-const RATE_LIMIT_WINDOW = 15 * 60 // 15 menit dalam detik
+const RATE_LIMIT_WINDOW = 15 * 60
 
 async function checkRateLimit(identifier: string): Promise<boolean> {
-  const key = `login_attempts:${identifier}`
-  const attempts = await redis.incr(key)
-  if (attempts === 1) await redis.expire(key, RATE_LIMIT_WINDOW)
-  return attempts > RATE_LIMIT_MAX
+  if (!redis) return false
+  try {
+    const key = `login_attempts:${identifier}`
+    const attempts = await redis.incr(key)
+    if (attempts === 1) await redis.expire(key, RATE_LIMIT_WINDOW)
+    return attempts > RATE_LIMIT_MAX
+  } catch {
+    return false
+  }
+}
+
+async function clearRateLimit(identifier: string): Promise<void> {
+  if (!redis) return
+  try {
+    await redis.del(`login_attempts:${identifier}`)
+  } catch {
+  }
 }
 
 async function recordLoginAttempt(
@@ -20,9 +33,12 @@ async function recordLoginAttempt(
   ipAddress: string,
   success: boolean
 ) {
-  await prisma.loginAttempt.create({
-    data: { identifier, ipAddress, success },
-  })
+  try {
+    await prisma.loginAttempt.create({
+      data: { identifier, ipAddress, success },
+    })
+  } catch {
+  }
 }
 
 const parentLoginSchema = z.object({
@@ -38,7 +54,6 @@ const childLoginSchema = z.object({
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
-    // ─── Provider 1: Parent login (email + password) ───
     Credentials({
       id: 'parent-credentials',
       name: 'Parent',
@@ -77,7 +92,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         await recordLoginAttempt(email, ip, true)
-        await redis.del(`login_attempts:${email}`)
+        await clearRateLimit(email)
 
         return {
           id: user.id,
@@ -90,7 +105,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
 
-    // ─── Provider 2: Child login (spaceCode + username + password) ───
     Credentials({
       id: 'child-credentials',
       name: 'Child',
@@ -143,7 +157,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         await recordLoginAttempt(identifier, ip, true)
-        await redis.del(`login_attempts:${identifier}`)
+        await clearRateLimit(identifier)
 
         return {
           id: child.id,
@@ -181,5 +195,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: '/login',
   },
   session: { strategy: 'jwt' },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET ?? process.env.SESSION_SECRET,
 })

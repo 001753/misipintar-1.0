@@ -1,4 +1,4 @@
-modules = ["nodejs-20"]
+modules = ["nodejs-20", "web"]
 [agent]
 expertMode = true
 stack = "BEST_EFFORT_FALLBACK"
@@ -38,3 +38,8 @@ externalPort = 80
 deploymentTarget = "static"
 build = ["npm", "run", "build"]
 publicDir = "dist"
+
+[userenv]
+
+[userenv.shared]
+NEXTAUTH_URL = "https://8b8079e5-aeb6-4c1b-bafb-7ec2a8d3f27b-00-9aqob6n30rfc.pike.replit.dev"
