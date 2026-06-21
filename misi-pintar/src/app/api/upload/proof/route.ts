@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth/config'
 import { NextRequest, NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
+import { rateLimit } from '@/lib/rate-limit'
 
 const MAX_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
@@ -13,6 +14,19 @@ export async function POST(req: NextRequest) {
 
   const childId = session.user.childId!
   const familySpaceId = session.user.familySpaceId!
+
+  // [7] Rate limit: max 10 upload per 1 jam per anak
+  const rl = await rateLimit({
+    key: `upload:${childId}`,
+    max: 10,
+    windowSeconds: 60 * 60,
+  })
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: `Terlalu banyak upload. Coba lagi dalam ${Math.ceil((rl.retryAfterSeconds ?? 3600) / 60)} menit.` },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSeconds ?? 3600) } }
+    )
+  }
 
   let formData: FormData
   try {

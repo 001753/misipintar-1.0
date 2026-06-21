@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { rateLimit } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   token: z.string().min(10),
@@ -16,6 +17,13 @@ const bodySchema = z.object({
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // [7] Rate limit: max 20 registrasi token per jam per user
+  const uid = session.user.childId ?? session.user.id;
+  const rl = await rateLimit({ key: `fcm:${uid}`, max: 20, windowSeconds: 3600 });
+  if (!rl.success) {
+    return NextResponse.json({ error: "Terlalu banyak permintaan." }, { status: 429 });
+  }
 
   let body: unknown;
   try {

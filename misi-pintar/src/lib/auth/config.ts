@@ -9,12 +9,25 @@ const RATE_LIMIT_MAX = 5
 const RATE_LIMIT_WINDOW = 15 * 60
 
 async function checkRateLimit(identifier: string): Promise<boolean> {
-  if (!redis) return false
+  // ── Redis path ────────────────────────────────────────
+  if (redis) {
+    try {
+      const key = `login_attempts:${identifier}`
+      const attempts = await redis.incr(key)
+      if (attempts === 1) await redis.expire(key, RATE_LIMIT_WINDOW)
+      return attempts > RATE_LIMIT_MAX
+    } catch {
+      // fallback ke DB
+    }
+  }
+
+  // ── DB fallback: hitung gagal dalam 15 menit terakhir ─
   try {
-    const key = `login_attempts:${identifier}`
-    const attempts = await redis.incr(key)
-    if (attempts === 1) await redis.expire(key, RATE_LIMIT_WINDOW)
-    return attempts > RATE_LIMIT_MAX
+    const since = new Date(Date.now() - RATE_LIMIT_WINDOW * 1000)
+    const count = await prisma.loginAttempt.count({
+      where: { identifier, success: false, createdAt: { gte: since } },
+    })
+    return count >= RATE_LIMIT_MAX
   } catch {
     return false
   }
@@ -196,4 +209,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: { strategy: 'jwt' },
   secret: process.env.NEXTAUTH_SECRET ?? process.env.SESSION_SECRET,
+  // [7] trustHost — diperlukan untuk secure cookies di balik reverse proxy (Replit / Vercel)
+  trustHost: true,
 })

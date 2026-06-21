@@ -27,6 +27,9 @@ export default async function ChildLayout({ children }: { children: React.ReactN
           <Link href="/child/history" className="text-emerald-100 hover:text-white text-xs font-medium">
             Riwayat
           </Link>
+          <Link href="/child/settings" className="text-emerald-100 hover:text-white text-xs font-medium">
+            ⚙️
+          </Link>
           <form action={logoutAction}>
             <button type="submit" className="text-emerald-100 hover:text-white text-xs">
               Keluar
