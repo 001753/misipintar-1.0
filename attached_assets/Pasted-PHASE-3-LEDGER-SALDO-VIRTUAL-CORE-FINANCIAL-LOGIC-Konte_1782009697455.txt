@@ -1,0 +1,81 @@
+PHASE 3 — LEDGER & SALDO VIRTUAL (CORE FINANCIAL LOGIC)
+
+Konteks: Membangun semua logika finansial virtual — transfer, tabungan, interest engine.
+ZERO client-side math. Semua di server. Semua atomik.
+
+TUGAS [3.1] — SERVER ACTION: TRANSFER SALDO
+Buat di `src/actions/ledger.ts`:
+
+transferToSavings(childId, amount):
+- Ambil familySpaceId dari session (PARENT atau CHILD yang bersangkutan)
+- Validasi kepemilikan
+- WAJIB prisma.$transaction():
+  1. Baca Child saat ini (lock for update jika PostgreSQL mendukung)
+  2. Validasi: amount > 0 DAN child.balance >= amount → jika tidak, THROW error tanpa ubah apapun
+  3. Update Child: balance -= amount, savingsBalance += amount
+  4. Buat 2 baris TransactionLedger:
+     - Baris 1: type SAVINGS_DEPOSIT, amount positif di savingsBalance
+     - Baris 2: type ADJUSTMENT (pengurangan dari balance utama), amount negatif
+  5. Buat Notification
+- Return { success, newBalance, newSavingsBalance } atau { error: "INSUFFICIENT_BALANCE" }
+
+transferToCharity(childId, amount):
+- Sama dengan transferToSavings tapi ke charityBalance
+- type: CHARITY
+
+withdrawFromSavings(childId, amount):
+- Validasi child.savingsBalance >= amount
+- Atomik: savingsBalance -= amount, balance += amount
+- Ledger: type SAVINGS_WITHDRAW
+
+TUGAS [3.2] — INTEREST ENGINE (CRON JOB)
+Buat `src/lib/queue/workers/interest.worker.ts`:
+
+Logika:
+- Berjalan setiap hari (BullMQ repeatable job, cron: "0 0 * * *")
+- Distributed lock via Redis: key = "cron:mutex:interest", TTL = 5 menit
+  - Jika lock ada → skip (sudah berjalan di instance lain)
+  - Jika tidak ada → ambil lock, jalankan, release setelah selesai
+- Proses dalam batch 500 user:
+  1. Ambil semua Child yang familySpace.subscription.plan.limits.hasInterest === true
+  2. Hitung bunga: savingsBalance * (interestRate / 100) — interestRate dari AppConfig
+  3. Jika bunga > 0: update savingsBalance, buat TransactionLedger type INTEREST
+  4. Lanjut batch berikutnya
+- Log hasil ke console DAN tulis summary ke AdminAuditLog
+
+Buat `src/app/api/queue/worker/route.ts` untuk start workers.
+
+TUGAS [3.3] — TAX ENGINE (OPSIONAL per plan)
+Buat logika pajak virtual (hanya untuk plan PRO ke atas, hasTax = true):
+- Berjalan bersamaan dengan interest engine (atau cron terpisah)
+- Potong balance sebesar taxRate% dari reward yang diterima bulan lalu
+- Buat TransactionLedger type TAX
+- Logika pemotongan HANYA di server, tidak pernah di frontend
+
+TUGAS [3.4] — HALAMAN RIWAYAT TRANSAKSI
+Buat `app/(dashboard)/dashboard/history/[childId]/page.tsx`:
+- Ambil TransactionLedger dari DB dengan filter familySpaceId + childId dari session
+- Tampilkan dengan pagination (20 per halaman)
+- Filter by type, filter by date range
+- Tampilkan balanceBefore dan balanceAfter untuk setiap baris
+- JANGAN tampilkan data anak lain
+
+Buat `app/(child)/child/history/page.tsx`:
+- Versi anak: tampilkan riwayat childId dari session saja
+- Tampilkan label human-readable per TxType
+
+ATURAN WAJIB PHASE 3:
+1. transferToSavings dengan amount > balance.WAJIB gagal tanpa mengubah saldo sedikitpun
+2. Semua operasi finansial menggunakan prisma.$transaction()
+3. TransactionLedger tidak pernah diedit atau dihapus
+4. Interest engine menggunakan distributed Redis lock — jangan jalankan tanpa lock
+5. Batch size tetap 500 — jangan proses semua sekaligus (OOM risk)
+
+CHECKLIST SEBELUM LANJUT KE PHASE 4:
+☐ transferToSavings: transfer melebihi saldo → balance TIDAK berubah, error "INSUFFICIENT_BALANCE"
+☐ transferToSavings valid: balance turun, savingsBalance naik, 2 baris ledger terbuat
+☐ Interest engine: tidak jalan dua kali jika dua instance cron aktif bersamaan (Redis lock)
+☐ Riwayat transaksi hanya menampilkan data milik keluarga sendiri
+☐ Tidak ada kalkulasi angka finansial di komponen React/client
+
+Laporkan hasil setiap sub-task [3.1] s/d [3.4] sebelum lanjut.

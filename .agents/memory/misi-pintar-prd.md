@@ -17,11 +17,13 @@ description: Non-negotiable architecture rules from PRD v4.1 for Misi Pintar
 ## Phase order (must be followed)
 Phase 0 Setup → 1 Auth/FamilySpace → 2 Child/Task → 3 Ledger → 4 Midtrans → 5 FCM/SSE → 6 SuperAdmin → 7 Rate Limiting → 8 Tests → 9 Audit/Webhook → 10 Legal
 
-## Current status (as of Phase 2 completion)
-- Phase 0-2 complete: auth, family space, child management, task management, approveTask with atomic ledger
-- 9/9 vitest tests passing
+## Current status (as of Phase 3 completion)
+- Phase 0-3 complete: auth, family space, child management, task management, ledger transfer, interest/tax engine, history pages
+- 9/9 vitest tests passing (Phase 2 suite)
 - Plans seeded (Starter/Pro/Educator/School)
 - Child `deletedAt` soft delete field added to schema
+- AdminAuditLog.adminId is required (not nullable) — cron workers cannot write to it; use console.log only
+- BullMQ v5 uses `pattern` not `cron` in RepeatOptions
 
 ## Plan limits JSON shape
 ```json

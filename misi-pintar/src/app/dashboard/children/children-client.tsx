@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createChild, updateChild, changeChildPassword, deleteChild } from '@/actions/children'
 
 type Child = {
@@ -126,6 +127,14 @@ export default function ChildrenClient({ children, maxChildren, avatars }: Props
                     {child.charityBalance.toLocaleString('id-ID')}
                   </p>
                 </div>
+              </div>
+              <div className="flex gap-2 mb-2">
+                <Link
+                  href={`/dashboard/history/${child.id}`}
+                  className="flex-1 text-xs py-1.5 border border-emerald-200 rounded-lg hover:bg-emerald-50 text-emerald-600 text-center transition-colors"
+                >
+                  📋 Riwayat
+                </Link>
               </div>
               <div className="flex gap-2">
                 <button
