@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { interestQueue } from "@/queues";
+import { interestQueue, subscriptionQueue } from "@/queues";
 import { redis } from "@/lib/redis";
 
 let workersStarted = false;
@@ -20,9 +20,14 @@ export async function POST() {
     const { startInterestWorker } = await import(
       "@/queues/workers/interest.worker"
     );
-    startInterestWorker();
+    const { startSubscriptionWorker } = await import(
+      "@/queues/workers/subscription.worker"
+    );
 
-    // Register repeatable cron: interest harian jam 00:00
+    startInterestWorker();
+    startSubscriptionWorker();
+
+    // Cron: interest harian jam 00:00
     await interestQueue.add(
       "daily-interest",
       { type: "INTEREST" },
@@ -32,7 +37,7 @@ export async function POST() {
       }
     );
 
-    // Register repeatable cron: tax bulanan jam 01:00 tgl 1
+    // Cron: tax bulanan jam 01:00 tgl 1
     await interestQueue.add(
       "monthly-tax",
       { type: "TAX" },
@@ -42,12 +47,26 @@ export async function POST() {
       }
     );
 
+    // [4.6] Cron: expire subscription — setiap jam
+    await subscriptionQueue.add(
+      "expire-subscriptions",
+      { type: "EXPIRE" },
+      {
+        repeat: { pattern: "0 * * * *" },
+        jobId: "expire-subscriptions",
+      }
+    );
+
     workersStarted = true;
-    console.log("[Workers] Interest & Tax workers started");
+    console.log("[Workers] Interest, Tax & Subscription Expiry workers started");
 
     return NextResponse.json({
       message: "Workers started successfully",
-      jobs: ["daily-interest (0 0 * * *)", "monthly-tax (0 1 1 * *)"],
+      jobs: [
+        "daily-interest (0 0 * * *)",
+        "monthly-tax (0 1 1 * *)",
+        "expire-subscriptions (0 * * * *)",
+      ],
     });
   } catch (err) {
     console.error("[Workers] Failed to start:", err);
@@ -62,6 +81,12 @@ export async function GET() {
   if (!redis) {
     return NextResponse.json({ status: "disabled", reason: "Redis not configured" });
   }
-  const repeatable = await interestQueue.getRepeatableJobs();
-  return NextResponse.json({ status: "ok", jobs: repeatable });
+  const [interestJobs, subJobs] = await Promise.all([
+    interestQueue.getRepeatableJobs(),
+    subscriptionQueue.getRepeatableJobs(),
+  ]);
+  return NextResponse.json({
+    status: "ok",
+    jobs: { interest: interestJobs, subscription: subJobs },
+  });
 }

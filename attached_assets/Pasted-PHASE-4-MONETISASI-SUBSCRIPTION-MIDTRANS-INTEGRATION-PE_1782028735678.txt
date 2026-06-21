@@ -1,0 +1,148 @@
+PHASE 4 — MONETISASI & SUBSCRIPTION (MIDTRANS INTEGRATION)
+
+PERINGATAN KEAMANAN KRITIS:
+- JANGAN aktivasi subscription dari callback client-side Snap.js onSuccess
+- SELALU validasi dari webhook server-to-server dengan signature SHA-512
+- Gunakan Midtrans SANDBOX untuk semua testing di phase ini
+- invoiceId UNIQUE constraint adalah jaring pengaman race condition — jangan dihapus
+
+TUGAS [4.1] — SEED DATA PLAN
+Buat `prisma/seed.ts`:
+- Buat 4 Plan sesuai PRD: STARTER (gratis), PRO (29000), EDUCATOR (99000), SCHOOL (0/custom)
+- Buat AppConfig dengan phaseMode: FULL_FREE
+- Buat SuperAdmin user awal
+- Jalankan: `npx prisma db seed`
+- Tambahkan ke package.json: `"prisma": { "seed": "ts-node prisma/seed.ts" }`
+
+TUGAS [4.2] — MIDTRANS CLIENT
+Buat `src/lib/payment/midtrans.ts`:
+```typescript
+import midtransClient from 'midtrans-client'
+import crypto from 'crypto'
+
+export const snap = new midtransClient.Snap({
+  isProduction: process.env.NODE_ENV === 'production',
+  serverKey: process.env.MIDTRANS_SERVER_KEY!,
+  clientKey: process.env.MIDTRANS_CLIENT_KEY!,
+})
+
+export function verifyMidtransSignature(
+  orderId: string,
+  statusCode: string,
+  grossAmount: string,
+  serverKey: string,
+  receivedSignature: string
+): boolean {
+  const rawString = `${orderId}${statusCode}${grossAmount}${serverKey}`
+  const computedHash = crypto.createHash('sha512').update(rawString).digest('hex')
+  return computedHash === receivedSignature
+}
+```
+
+TUGAS [4.3] — SERVER ACTION: BUAT INVOICE & SNAP TOKEN
+Buat di `src/actions/subscription.ts`:
+
+createInvoice(planType):
+- Ambil familySpaceId dari session
+- Ambil Plan dari DB berdasarkan planType
+- Buat Invoice dengan status PENDING, expiredAt = 24 jam dari sekarang
+- Generate midtransOrderId: `INV-{familySpaceId}-{timestamp}`
+- Panggil Midtrans Snap API untuk dapat snapToken
+- Update Invoice dengan snapToken dan midtransOrderId
+- Return { snapToken, orderId }
+
+TUGAS [4.4] — WEBHOOK HANDLER (KRITIS)
+Buat `src/app/api/webhooks/midtrans/route.ts`:
+
+```typescript
+export async function POST(request: Request) {
+  const body = await request.json()
+  
+  // Step 1: Verifikasi signature SHA-512 (WAJIB, jangan skip)
+  const isValid = verifyMidtransSignature(
+    body.order_id,
+    body.status_code,
+    body.gross_amount,
+    process.env.MIDTRANS_SERVER_KEY!,
+    body.signature_key
+  )
+  
+  if (!isValid) {
+    // Log percobaan webhook invalid
+    console.error('Invalid webhook signature', { order_id: body.order_id })
+    return Response.json({ error: 'Invalid signature' }, { status: 403 })
+  }
+  
+  // Step 2: Hanya proses jika status settlement atau capture
+  if (!['settlement', 'capture'].includes(body.transaction_status)) {
+    return Response.json({ status: 'ignored' })
+  }
+  
+  // Step 3: Atomik update dengan idempotency (§14.2 PRD)
+  try {
+    await prisma.$transaction(async (tx) => {
+      const invoice = await tx.invoice.update({
+        where: { midtransOrderId: body.order_id },
+        data: { 
+          status: 'PAID', 
+          paidAt: new Date(),
+          paymentMethod: mapPaymentMethod(body.payment_type)
+        },
+      })
+      
+      await tx.subscription.update({
+        where: { id: invoice.subscriptionId },
+        data: { 
+          status: plan.type, 
+          invoiceId: invoice.id,  // UNIQUE constraint — anti race condition
+          currentPeriodEnd: addMonths(new Date(), 1)
+        },
+      })
+      
+      // Log ke PaymentLog
+      await tx.paymentLog.create({
+        data: {
+          invoiceId: invoice.id,
+          event: 'webhook_settlement',
+          rawPayload: body,
+        }
+      })
+    })
+    
+    return Response.json({ status: 'ok' })
+    
+  } catch (err: any) {
+    if (err.code === 'P2002') {
+      // Unique constraint invoiceId — webhook duplikat, sudah diproses
+      // INI BUKAN ERROR — idempotency bekerja sesuai desain
+      return Response.json({ status: 'already_processed' })
+    }
+    throw err
+  }
+}
+```
+
+TUGAS [4.5] — UI HALAMAN UPGRADE PLAN
+Buat `app/(dashboard)/dashboard/subscription/page.tsx`:
+- Tampilkan plan aktif saat ini + tanggal expired
+- Tampilkan 4 pilihan plan dengan fitur dan harga
+- Tombol "Upgrade" → panggil createInvoice → tampilkan Midtrans Snap popup
+- JANGAN menganggap pembayaran berhasil dari Snap.js callback — tampilkan pesan "Menunggu konfirmasi pembayaran" dan refresh status subscription setelah 3 detik (polling maksimal 10x)
+- Tampilkan riwayat invoice
+
+TUGAS [4.6] — CRON EXPIRED SUBSCRIPTION
+Buat BullMQ worker untuk:
+- Setiap jam: cari Subscription dengan currentPeriodEnd < now() DAN status != EXPIRED/CANCELLED
+- Update status → EXPIRED
+- Kirim notifikasi ke parent
+- Gunakan distributed Redis lock: "cron:mutex:expire-subs"
+
+CHECKLIST SEBELUM LANJUT KE PHASE 5:
+☐ Webhook dengan signature invalid → 403 (test dengan signature salah)
+☐ Webhook valid: Subscription ter-update ke status plan yang dibeli
+☐ Dua webhook paralel dengan order_id sama → hanya 1 Subscription ter-update (test paralel)
+☐ Snap popup muncul dengan benar di staging Midtrans
+☐ UI tidak mengaktifkan subscription dari Snap.js onSuccess
+☐ Invoice expired setelah 24 jam (test dengan waktu dipercepat)
+
+Laporkan hasil setiap sub-task [4.1] s/d [4.6] sebelum lanjut.

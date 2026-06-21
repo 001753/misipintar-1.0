@@ -108,13 +108,43 @@ export default function BillingClient({
   const [toast, setToast] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const snapLoaded = useRef(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (toast) {
-      const t = setTimeout(() => setToast(null), 4000);
+      const t = setTimeout(() => setToast(null), 6000);
       return () => clearTimeout(t);
     }
   }, [toast]);
+
+  // PRD §4.5: Polling status subscription maks 10x, interval 3 detik
+  // Jangan aktifkan subscription dari Snap.js onSuccess — hanya polling
+  function startPolling() {
+    let attempts = 0;
+    const MAX_ATTEMPTS = 10;
+    const INTERVAL_MS = 3000;
+
+    if (pollRef.current) clearInterval(pollRef.current);
+
+    pollRef.current = setInterval(() => {
+      attempts++;
+      router.refresh();
+
+      if (attempts >= MAX_ATTEMPTS) {
+        clearInterval(pollRef.current!);
+        pollRef.current = null;
+        setToast(
+          "Konfirmasi pembayaran sedang diproses. Refresh halaman ini dalam beberapa menit."
+        );
+      }
+    }, INTERVAL_MS);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   const currentStatus = subscription?.status ?? "FREE";
   const currentPlanType = subscription?.plan?.type ?? "STARTER";
@@ -135,20 +165,22 @@ export default function BillingClient({
       }
       window.snap.pay(result.snapToken, {
         onSuccess: () => {
-          setToast(
-            "Pembayaran berhasil! Langganan akan aktif dalam beberapa detik..."
-          );
-          setTimeout(() => router.refresh(), 2000);
+          // WAJIB PRD: Jangan aktifkan subscription dari sini.
+          // Aktifasi hanya via webhook Midtrans server-to-server.
+          // Tampilkan pesan menunggu dan polling status maksimal 10x.
+          setToast("Menunggu konfirmasi pembayaran dari server...");
+          startPolling();
         },
         onPending: () => {
           setToast("Pembayaran sedang diproses. Kami akan mengonfirmasi segera.");
-          router.refresh();
+          startPolling();
         },
         onError: () => {
           setError("Pembayaran gagal. Silakan coba lagi.");
         },
         onClose: () => {
-          setToast("Pembayaran dibatalkan.");
+          setToast("Jendela pembayaran ditutup. Jika sudah bayar, tunggu konfirmasi otomatis.");
+          router.refresh();
         },
       });
     } finally {

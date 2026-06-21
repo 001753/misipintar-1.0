@@ -5,7 +5,7 @@ export default defineConfig({
   datasource: {
     url: process.env.DATABASE_URL!,
   },
-  migrate: {
-    async beforeApply() {},
+  migrations: {
+    seed: "tsx prisma/seed.ts",
   },
 });
