@@ -15,14 +15,14 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   allowedDevOrigins: [
     "*.pike.replit.dev",
     "*.replit.dev",
     "*.sisko.replit.dev",
   ],
+  turbopack: {
+    root: ".",
+  },
   experimental: {
     serverActions: {
       allowedOrigins: ["*"],
