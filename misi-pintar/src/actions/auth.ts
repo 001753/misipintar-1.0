@@ -169,6 +169,48 @@ export async function loginChild(
   }
 }
 
+// ─── Login SuperAdmin (dedicated — untuk /adm-panel) ─────
+
+export async function loginSuperAdmin(
+  formData: FormData
+): Promise<ActionResult<null>> {
+  const email = formData.get('email')?.toString().trim() ?? ''
+  const password = formData.get('password')?.toString() ?? ''
+
+  if (!email || !password) {
+    return { success: false, error: 'Email dan password wajib diisi.' }
+  }
+
+  // Validasi role di DB sebelum signIn — cegah non-admin masuk ke panel ini
+  const user = await prisma.user.findUnique({ where: { email } }).catch(() => null)
+  if (!user || user.role !== 'SUPER_ADMIN') {
+    // Tulis LoginAttempt tetap untuk audit, tapi kembalikan pesan generik
+    const ip = '0.0.0.0'
+    await import('@/lib/auth/loginGuard').then((m) =>
+      m.recordLoginAttempt(email || 'unknown', ip, false).catch(() => {})
+    )
+    return { success: false, error: 'Email atau password salah.' }
+  }
+
+  try {
+    await signIn('parent-credentials', {
+      email,
+      password,
+      redirect: false,
+    })
+    return { success: true, data: null }
+  } catch (err: any) {
+    const msg = err?.message ?? ''
+    if (msg.includes('TOO_MANY_ATTEMPTS') || msg.includes('RATE_LIMITED')) {
+      return {
+        success: false,
+        error: 'Terlalu banyak percobaan login. Coba lagi dalam 15 menit.',
+      }
+    }
+    return { success: false, error: 'Email atau password salah.' }
+  }
+}
+
 // ─── Logout ───────────────────────────────────────────────
 
 export async function logoutAction() {
