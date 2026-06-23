@@ -20,9 +20,6 @@ const nextConfig: NextConfig = {
     "*.replit.dev",
     "*.sisko.replit.dev",
   ],
-  turbopack: {
-    root: ".",
-  },
   experimental: {
     serverActions: {
       allowedOrigins: ["*"],
