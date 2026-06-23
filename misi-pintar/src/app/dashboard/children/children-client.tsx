@@ -117,8 +117,12 @@ export default function ChildrenClient({ children, maxChildren, avatars }: Props
           {children.map((child) => (
             <div key={child.id} className="bg-white rounded-2xl border border-gray-200 p-5">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-2xl">
-                  {child.avatar ?? '🧒'}
+                <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-2xl overflow-hidden flex-shrink-0">
+                  {child.avatar?.startsWith('data:image/') ? (
+                    <img src={child.avatar} alt={child.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{child.avatar ?? '🧒'}</span>
+                  )}
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">{child.name}</p>
