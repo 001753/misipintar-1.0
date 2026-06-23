@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
@@ -21,6 +22,9 @@ const nextConfig: NextConfig = {
     "*.replit.dev",
     "*.sisko.replit.dev",
   ],
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
   experimental: {
     serverActions: {
       allowedOrigins: ["*"],

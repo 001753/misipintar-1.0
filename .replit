@@ -27,7 +27,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd misi-pintar && node_modules/.bin/next dev --port 5000"
+args = "cd misi-pintar && node_modules/.bin/next dev --webpack --port 5000"
 waitForPort = 5000
 
 [[ports]]
@@ -43,3 +43,4 @@ publicDir = "dist"
 
 [userenv.shared]
 NEXTAUTH_URL = "https://1e0fc9d7-a661-49cb-9685-45ddec337660-00-32v08gvanj33t.sisko.replit.dev"
+APP_URL = "https://1e0fc9d7-a661-49cb-9685-45ddec337660-00-32v08gvanj33t.sisko.replit.dev"
