@@ -5,6 +5,8 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { signIn, signOut } from '@/lib/auth/config'
 import { validateParentPassword } from '@/lib/auth/passwordPolicy'
+import { normalizePhone, validatePhone, sendWhatsAppOtp } from '@/lib/whatsapp'
+import { createOtp, verifyOtp, markOtpUsedAndCreateResetToken, validateResetToken } from '@/lib/otp'
 import type { ActionResult } from '@/types'
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -24,8 +26,7 @@ async function generateUniqueSpaceCode(): Promise<string> {
 
 const registerSchema = z.object({
   ownerName: z.string().min(2, 'Nama minimal 2 karakter'),
-  email: z.string().email('Email tidak valid'),
-  // [7.3] Basic length check dulu — detail divalidasi via validateParentPassword
+  phone: z.string().min(8, 'Nomor WhatsApp tidak valid'),
   password: z.string().min(8, 'Password minimal 8 karakter'),
   familyName: z.string().min(2, 'Nama keluarga minimal 2 karakter'),
 })
@@ -35,35 +36,38 @@ export async function registerFamilySpace(
 ): Promise<ActionResult<{ spaceCode: string }>> {
   const parsed = registerSchema.safeParse({
     ownerName: formData.get('ownerName'),
-    email: formData.get('email'),
+    phone: formData.get('phone'),
     password: formData.get('password'),
     familyName: formData.get('familyName'),
   })
 
   if (!parsed.success) {
-    const firstError = parsed.error.issues[0]?.message ?? 'Data tidak valid'
-    return { success: false, error: firstError }
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Data tidak valid' }
   }
 
-  const { ownerName, email, password, familyName } = parsed.data
+  const { ownerName, phone, password, familyName } = parsed.data
 
-  // [7.3] Validasi password parent via passwordPolicy
+  if (!validatePhone(phone)) {
+    return { success: false, error: 'Format nomor WhatsApp tidak valid.' }
+  }
+
+  const normalizedPhone = normalizePhone(phone)
+
   try {
     validateParentPassword(password)
   } catch (err: any) {
-    const msg = err?.errors?.[0]?.message ?? err?.message ?? 'Password tidak memenuhi syarat.'
-    return { success: false, error: msg }
+    return { success: false, error: err?.errors?.[0]?.message ?? err?.message ?? 'Password tidak memenuhi syarat.' }
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } })
+  const existing = await prisma.user.findUnique({ where: { phone: normalizedPhone } })
   if (existing) {
-    return { success: false, error: 'Email sudah terdaftar.' }
+    return { success: false, error: 'Nomor WhatsApp sudah terdaftar.' }
   }
 
   const [passwordHash, spaceCode, starterPlan] = await Promise.all([
     bcrypt.hash(password, 12),
     generateUniqueSpaceCode(),
-    prisma.plan.findUnique({ where: { type: 'STARTER' } }),
+    prisma.plan.findFirst({ where: { type: 'STARTER' } }),
   ])
 
   if (!starterPlan) {
@@ -72,17 +76,15 @@ export async function registerFamilySpace(
 
   try {
     await prisma.$transaction(async (tx) => {
-      // 1. Buat User dulu (perlu id untuk FamilySpace.ownerId)
       const owner = await tx.user.create({
         data: {
           name: ownerName,
-          email,
+          phone: normalizedPhone,
           passwordHash,
           role: 'PARENT',
         },
       })
 
-      // 2. Buat FamilySpace dengan ownerId
       const familySpace = await tx.familySpace.create({
         data: {
           name: familyName,
@@ -92,13 +94,11 @@ export async function registerFamilySpace(
         },
       })
 
-      // 3. Update user dengan familySpaceId
       await tx.user.update({
         where: { id: owner.id },
         data: { familySpaceId: familySpace.id },
       })
 
-      // 4. Buat Subscription FREE — currentPeriodEnd 100 tahun
       const hundredYearsLater = new Date()
       hundredYearsLater.setFullYear(hundredYearsLater.getFullYear() + 100)
 
@@ -127,20 +127,17 @@ export async function loginParent(
 ): Promise<ActionResult<null>> {
   try {
     await signIn('parent-credentials', {
-      email: formData.get('email'),
+      phone: formData.get('phone'),
       password: formData.get('password'),
       redirect: false,
     })
     return { success: true, data: null }
   } catch (err: any) {
     const msg = err?.message ?? ''
-    if (msg.includes('TOO_MANY_ATTEMPTS')) {
-      return {
-        success: false,
-        error: 'Terlalu banyak percobaan login. Coba lagi dalam 15 menit.',
-      }
+    if (msg.includes('TOO_MANY_ATTEMPTS') || msg.includes('RATE_LIMITED')) {
+      return { success: false, error: 'Terlalu banyak percobaan login. Coba lagi dalam 15 menit.' }
     }
-    return { success: false, error: 'Email atau password salah.' }
+    return { success: false, error: 'Nomor WhatsApp atau password salah.' }
   }
 }
 
@@ -159,11 +156,8 @@ export async function loginChild(
     return { success: true, data: null }
   } catch (err: any) {
     const msg = err?.message ?? ''
-    if (msg.includes('TOO_MANY_ATTEMPTS')) {
-      return {
-        success: false,
-        error: 'Terlalu banyak percobaan login. Coba lagi dalam 15 menit.',
-      }
+    if (msg.includes('TOO_MANY_ATTEMPTS') || msg.includes('RATE_LIMITED')) {
+      return { success: false, error: 'Terlalu banyak percobaan login. Coba lagi dalam 15 menit.' }
     }
     return { success: false, error: 'Kode keluarga, username, atau password salah.' }
   }
@@ -181,10 +175,8 @@ export async function loginSuperAdmin(
     return { success: false, error: 'Email dan password wajib diisi.' }
   }
 
-  // Validasi role di DB sebelum signIn — cegah non-admin masuk ke panel ini
   const user = await prisma.user.findUnique({ where: { email } }).catch(() => null)
   if (!user || user.role !== 'SUPER_ADMIN') {
-    // Tulis LoginAttempt tetap untuk audit, tapi kembalikan pesan generik
     const ip = '0.0.0.0'
     await import('@/lib/auth/loginGuard').then((m) =>
       m.recordLoginAttempt(email || 'unknown', ip, false).catch(() => {})
@@ -192,9 +184,11 @@ export async function loginSuperAdmin(
     return { success: false, error: 'Email atau password salah.' }
   }
 
+  // SuperAdmin login: masukkan email sebagai "phone" field di credentials
+  // (auth config handles email fallback via OR query)
   try {
     await signIn('parent-credentials', {
-      email,
+      phone: email,
       password,
       redirect: false,
     })
@@ -202,12 +196,143 @@ export async function loginSuperAdmin(
   } catch (err: any) {
     const msg = err?.message ?? ''
     if (msg.includes('TOO_MANY_ATTEMPTS') || msg.includes('RATE_LIMITED')) {
-      return {
-        success: false,
-        error: 'Terlalu banyak percobaan login. Coba lagi dalam 15 menit.',
-      }
+      return { success: false, error: 'Terlalu banyak percobaan login. Coba lagi dalam 15 menit.' }
     }
     return { success: false, error: 'Email atau password salah.' }
+  }
+}
+
+// ─── OTP: Kirim OTP lupa password via WhatsApp ───────────
+
+export async function sendForgotPasswordOtp(
+  formData: FormData
+): Promise<ActionResult<{ phone: string }>> {
+  const rawPhone = formData.get('phone')?.toString().trim() ?? ''
+
+  if (!validatePhone(rawPhone)) {
+    return { success: false, error: 'Format nomor WhatsApp tidak valid.' }
+  }
+
+  const phone = normalizePhone(rawPhone)
+
+  // Pastikan nomor terdaftar
+  const user = await prisma.user.findUnique({ where: { phone } })
+  if (!user) {
+    // Kembalikan pesan generik — jangan bocorkan apakah nomor ada atau tidak
+    return {
+      success: true,
+      data: { phone },
+    }
+  }
+
+  try {
+    const { code } = await createOtp(phone, 'RESET_PASSWORD')
+    await sendWhatsAppOtp(phone, code)
+    return { success: true, data: { phone } }
+  } catch (err: any) {
+    const msg = err?.message ?? ''
+    if (msg.startsWith('COOLDOWN:')) {
+      const secs = msg.split(':')[1]
+      return { success: false, error: `Tunggu ${secs} detik sebelum minta OTP baru.` }
+    }
+    console.error('[sendForgotPasswordOtp]', err)
+    return { success: false, error: 'Gagal mengirim OTP. Coba beberapa saat lagi.' }
+  }
+}
+
+// ─── OTP: Verifikasi OTP lupa password ───────────────────
+
+export async function verifyForgotPasswordOtp(
+  formData: FormData
+): Promise<ActionResult<{ resetToken: string }>> {
+  const phone = formData.get('phone')?.toString().trim() ?? ''
+  const code = formData.get('code')?.toString().trim() ?? ''
+
+  if (!phone || code.length !== 6) {
+    return { success: false, error: 'Data tidak lengkap.' }
+  }
+
+  try {
+    const { otpId } = await verifyOtp(phone, code, 'RESET_PASSWORD')
+    const resetToken = await markOtpUsedAndCreateResetToken(otpId)
+    return { success: true, data: { resetToken } }
+  } catch (err: any) {
+    return { success: false, error: err?.message ?? 'Verifikasi gagal.' }
+  }
+}
+
+// ─── Reset Password dengan token ─────────────────────────
+
+const resetPasswordSchema = z.object({
+  resetToken: z.string().min(10),
+  password: z.string().min(8, 'Password minimal 8 karakter'),
+})
+
+export async function resetPasswordWithToken(
+  formData: FormData
+): Promise<ActionResult<null>> {
+  const parsed = resetPasswordSchema.safeParse({
+    resetToken: formData.get('resetToken'),
+    password: formData.get('password'),
+  })
+
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Data tidak valid.' }
+  }
+
+  const { resetToken, password } = parsed.data
+
+  try {
+    validateParentPassword(password)
+  } catch (err: any) {
+    return { success: false, error: err?.errors?.[0]?.message ?? err?.message ?? 'Password tidak memenuhi syarat.' }
+  }
+
+  try {
+    const phone = await validateResetToken(resetToken)
+
+    const user = await prisma.user.findUnique({ where: { phone } })
+    if (!user) return { success: false, error: 'Akun tidak ditemukan.' }
+
+    const passwordHash = await bcrypt.hash(password, 12)
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    })
+
+    return { success: true, data: null }
+  } catch (err: any) {
+    return { success: false, error: err?.message ?? 'Reset password gagal.' }
+  }
+}
+
+// ─── Update Email dari Dashboard ─────────────────────────
+
+export async function updateUserEmail(
+  userId: string,
+  email: string
+): Promise<ActionResult<null>> {
+  const parsed = z.string().email('Format email tidak valid').safeParse(email.trim())
+  if (!parsed.success) {
+    return { success: false, error: 'Format email tidak valid.' }
+  }
+
+  const normalized = parsed.data.toLowerCase()
+
+  try {
+    const existing = await prisma.user.findUnique({ where: { email: normalized } })
+    if (existing && existing.id !== userId) {
+      return { success: false, error: 'Email sudah digunakan akun lain.' }
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { email: normalized },
+    })
+
+    return { success: true, data: null }
+  } catch (err) {
+    return { success: false, error: 'Gagal menyimpan email.' }
   }
 }
 

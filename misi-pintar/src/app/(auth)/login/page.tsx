@@ -57,7 +57,7 @@ export default function LoginPage() {
           setIsRateLimited(true)
           setCountdown(LOCKOUT_SECONDS)
         }
-        setError(result.error)
+        setError(result.error ?? 'Terjadi kesalahan.')
       }
     })
   }
@@ -67,7 +67,6 @@ export default function LoginPage() {
 
   return (
     <div className="animate-fade-up">
-      {/* Logo */}
       <div className="text-center mb-6">
         <div className="animate-pop-in inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 mb-3 shadow-lg shadow-emerald-200">
           <span className="text-3xl">🎯</span>
@@ -76,9 +75,7 @@ export default function LoginPage() {
         <p className="text-gray-500 text-sm mt-1">Platform keuangan keluarga yang menyenangkan</p>
       </div>
 
-      {/* Card */}
       <div className="bg-white rounded-3xl shadow-xl shadow-gray-100 border border-gray-100 p-6">
-        {/* Tab switcher */}
         <div className="flex rounded-2xl bg-gray-100 p-1 mb-6 gap-1">
           {(['parent', 'child'] as Tab[]).map((t) => (
             <button
@@ -96,7 +93,6 @@ export default function LoginPage() {
           ))}
         </div>
 
-        {/* Rate limit banner */}
         {isRateLimited && (
           <div className="animate-scale-in mb-4 p-4 rounded-2xl bg-amber-50 border border-amber-200">
             <p className="text-amber-800 text-sm font-bold mb-1">🔒 Akun terkunci sementara</p>
@@ -107,7 +103,6 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Error */}
         {error && !isRateLimited && (
           <div className="animate-scale-in mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm flex items-center gap-2">
             <span>⚠️</span> {error}
@@ -118,14 +113,46 @@ export default function LoginPage() {
           {tab === 'parent' ? (
             <>
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">Email</label>
-                <input name="email" type="email" required autoComplete="email"
-                  placeholder="nama@email.com" disabled={isRateLimited} className={inputClass} />
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">
+                  No. WhatsApp
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm select-none">
+                    📱
+                  </span>
+                  <input
+                    name="phone"
+                    type="tel"
+                    required
+                    autoComplete="tel"
+                    placeholder="0812-3456-7890"
+                    disabled={isRateLimited}
+                    className={`${inputClass} pl-10`}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 px-1">Nomor WhatsApp yang didaftarkan</p>
               </div>
               <div className="space-y-1">
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide px-1">Password</label>
-                <input name="password" type="password" required autoComplete="current-password"
-                  placeholder="••••••••" disabled={isRateLimited} className={inputClass} />
+                <div className="flex items-center justify-between px-1">
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Password
+                  </label>
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold"
+                  >
+                    Lupa password?
+                  </Link>
+                </div>
+                <input
+                  name="password"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  disabled={isRateLimited}
+                  className={inputClass}
+                />
               </div>
             </>
           ) : (
@@ -178,6 +205,11 @@ export default function LoginPage() {
           </p>
         )}
       </div>
+
+      {/* WhatsApp branding */}
+      <p className="text-center text-xs text-gray-400 mt-4 flex items-center justify-center gap-1">
+        <span>🔐</span> Login aman via nomor WhatsApp
+      </p>
     </div>
   )
 }

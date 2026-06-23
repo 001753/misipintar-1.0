@@ -73,6 +73,11 @@ enum PhaseMode {
   PAID_ONLY
 }
 
+enum OtpPurpose {
+  RESET_PASSWORD
+  VERIFY_PHONE
+}
+
 // ─── FAMILYSPACE (TENANT UTAMA) ──────────────────────────
 model FamilySpace {
   id            String              @id @default(uuid())
@@ -93,7 +98,8 @@ model FamilySpace {
 // ─── USER (PARENT & SUPERADMIN) ──────────────────────────
 model User {
   id            String          @id @default(uuid())
-  email         String          @unique
+  phone         String?         @unique
+  email         String?         @unique
   passwordHash  String
   name          String
   role          Role            @default(PARENT)
@@ -106,8 +112,26 @@ model User {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
+  @@index([phone])
   @@index([email])
   @@index([familySpaceId, role])
+}
+
+// ─── OTP CODES ───────────────────────────────────────────
+model OtpCode {
+  id         String     @id @default(uuid())
+  phone      String
+  code       String
+  purpose    OtpPurpose
+  attempts   Int        @default(0)
+  resetToken String?    @unique
+  usedAt     DateTime?
+  expiresAt  DateTime
+  createdAt  DateTime   @default(now())
+
+  @@index([phone, purpose])
+  @@index([resetToken])
+  @@index([expiresAt])
 }
 
 // ─── CHILD (AKUN ANAK) ───────────────────────────────────

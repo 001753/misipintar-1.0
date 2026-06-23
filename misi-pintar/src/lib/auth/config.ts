@@ -3,6 +3,7 @@ import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { normalizePhone } from '@/lib/whatsapp'
 import {
   checkLoginRateLimit,
   clearLoginRateLimit,
@@ -10,7 +11,7 @@ import {
 } from '@/lib/auth/loginGuard'
 
 const parentLoginSchema = z.object({
-  email: z.string().email(),
+  phone: z.string().min(8),
   password: z.string().min(1),
 })
 
@@ -26,46 +27,50 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       id: 'parent-credentials',
       name: 'Parent',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        phone: { label: 'No. WhatsApp', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials, request) {
         const parsed = parentLoginSchema.safeParse(credentials)
         if (!parsed.success) return null
 
-        const { email, password } = parsed.data
+        const { phone, password } = parsed.data
+        const normalizedPhone = normalizePhone(phone)
         const ip =
           request?.headers?.get?.('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0'
 
-        // [7.2] Cek rate limit — throw RATE_LIMITED jika terkunci
-        await checkLoginRateLimit(email, ip)
+        await checkLoginRateLimit(normalizedPhone, ip)
 
-        const user = await prisma.user.findUnique({
-          where: { email },
+        // Cari user via phone (parent baru) atau email (superadmin legacy)
+        const user = await prisma.user.findFirst({
+          where: {
+            OR: [{ phone: normalizedPhone }, { email: phone }],
+          },
           include: { familySpace: true },
         })
 
-        if (!user || user.role === 'CHILD') {
-          await recordLoginAttempt(email, ip, false)
+        if (!user) {
+          await recordLoginAttempt(normalizedPhone, ip, false)
           return null
         }
 
         const valid = await bcrypt.compare(password, user.passwordHash)
         if (!valid) {
-          await recordLoginAttempt(email, ip, false)
+          await recordLoginAttempt(normalizedPhone, ip, false)
           return null
         }
 
-        await recordLoginAttempt(email, ip, true)
-        await clearLoginRateLimit(email)
+        await recordLoginAttempt(normalizedPhone, ip, true)
+        await clearLoginRateLimit(normalizedPhone)
 
         return {
           id: user.id,
-          email: user.email,
+          email: user.email ?? user.phone ?? '',
           name: user.name,
           role: user.role,
           familySpaceId: user.familySpaceId,
           childId: null,
+          phone: user.phone,
         }
       },
     }),
@@ -83,12 +88,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null
 
         const { spaceCode, username, password } = parsed.data
-        // [7.2] Identifier gabungan untuk rate limit anak
         const identifier = `${spaceCode}:${username}`
         const ip =
           request?.headers?.get?.('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0'
 
-        // [7.2] Cek rate limit
         await checkLoginRateLimit(identifier, ip)
 
         const familySpace = await prisma.familySpace.findUnique({
@@ -129,6 +132,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role: 'CHILD' as const,
           familySpaceId: familySpace.id,
           childId: child.id,
+          phone: null,
         }
       },
     }),
@@ -141,6 +145,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = (user as any).role
         token.familySpaceId = (user as any).familySpaceId ?? null
         token.childId = (user as any).childId ?? null
+        token.phone = (user as any).phone ?? null
       }
       return token
     },
@@ -149,6 +154,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.role = token.role
       session.user.familySpaceId = token.familySpaceId
       session.user.childId = token.childId
+      session.user.phone = token.phone
       return session
     },
   },
@@ -159,6 +165,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: { strategy: 'jwt' },
   secret: process.env.NEXTAUTH_SECRET ?? process.env.SESSION_SECRET,
-  // [7.4] trustHost — secure cookies di balik reverse proxy (Replit / Vercel)
   trustHost: true,
 })
