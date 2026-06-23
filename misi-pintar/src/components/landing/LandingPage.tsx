@@ -4,6 +4,7 @@ import HeroSection from './HeroSection'
 import StatsBar from './StatsBar'
 import PainSection from './PainSection'
 import MisiPintarSection from './MisiPintarSection'
+import PahlawanRumahSection from './PahlawanRumahSection'
 import TabunganSection from './TabunganSection'
 import HowItWorks from './HowItWorks'
 import TestimoniSection from './TestimoniSection'
@@ -21,6 +22,7 @@ export default function LandingPage() {
       <StatsBar />
       <PainSection />
       <MisiPintarSection />
+      <PahlawanRumahSection />
       <TabunganSection />
       <HowItWorks />
       <TestimoniSection />
