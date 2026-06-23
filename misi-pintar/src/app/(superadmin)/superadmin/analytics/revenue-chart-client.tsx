@@ -47,7 +47,7 @@ export default function RevenueChartClient({ data }: Props) {
           width={72}
         />
         <Tooltip
-          formatter={(v: number) => [`Rp ${v.toLocaleString("id-ID")}`, "Revenue"]}
+          formatter={(v) => [`Rp ${Number(v).toLocaleString("id-ID")}`, "Revenue"]}
           contentStyle={{
             background: "#1F2937",
             border: "1px solid #374151",

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateMidtransSignature } from "@/lib/midtrans";
 import { prisma } from "@/lib/prisma";
-import { planTypeToSubStatus } from "@/actions/subscription";
+import { planTypeToSubStatus } from "@/lib/utils";
 import { sendPushNotification, getUserFcmTokens } from "@/lib/notifications/fcm";
 import { publishToFamily, incrementUnreadBadge } from "@/lib/notifications/sse";
 

@@ -26,7 +26,6 @@ async function getPlanLimits(familySpaceId: string) {
   return (sub?.plan.limits ?? { maxChildren: 2, maxTasksPerMonth: 10 }) as Record<string, number>
 }
 
-export const AVATARS = ['🧒', '👦', '👧', '🧑', '🐱', '🐶', '🦁', '🐼', '🦊', '🐯']
 
 // ─── Schemas ──────────────────────────────────────────────
 
@@ -55,7 +54,7 @@ export async function createChild(
     avatar: formData.get('avatar') || undefined,
   })
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0]?.message ?? 'Data tidak valid' }
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Data tidak valid' }
   }
 
   const { name, username, password, avatar } = parsed.data

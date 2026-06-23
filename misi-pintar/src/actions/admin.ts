@@ -109,7 +109,7 @@ export async function updatePlanLimits(
 
   const after = await prisma.plan.update({
     where: { id: planId },
-    data: { limits },
+    data: { limits: limits as import("@prisma/client").Prisma.InputJsonValue },
   });
 
   await writeAuditLog({

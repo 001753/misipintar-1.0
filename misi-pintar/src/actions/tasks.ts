@@ -57,7 +57,7 @@ export async function createTask(
     rewardAmount: formData.get('rewardAmount'),
   })
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0]?.message ?? 'Data tidak valid' }
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Data tidak valid' }
   }
 
   const { childId, title, description, rewardAmount } = parsed.data

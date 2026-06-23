@@ -44,7 +44,7 @@ export async function childChangeOwnPassword(
     confirmPassword: formData.get('confirmPassword'),
   })
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0]?.message ?? 'Data tidak valid' }
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Data tidak valid' }
   }
 
   const { currentPassword, newPassword } = parsed.data

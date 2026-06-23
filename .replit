@@ -42,4 +42,4 @@ publicDir = "dist"
 [userenv]
 
 [userenv.shared]
-NEXTAUTH_URL = "https://8b8079e5-aeb6-4c1b-bafb-7ec2a8d3f27b-00-9aqob6n30rfc.pike.replit.dev"
+NEXTAUTH_URL = "https://1e0fc9d7-a661-49cb-9685-45ddec337660-00-32v08gvanj33t.sisko.replit.dev"

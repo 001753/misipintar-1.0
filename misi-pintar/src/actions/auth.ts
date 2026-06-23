@@ -41,7 +41,7 @@ export async function registerFamilySpace(
   })
 
   if (!parsed.success) {
-    const firstError = parsed.error.errors[0]?.message ?? 'Data tidak valid'
+    const firstError = parsed.error.issues[0]?.message ?? 'Data tidak valid'
     return { success: false, error: firstError }
   }
 

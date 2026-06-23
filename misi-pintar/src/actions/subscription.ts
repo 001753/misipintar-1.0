@@ -8,20 +8,9 @@ import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { snap } from "@/lib/midtrans";
+import type { BillingCycle } from "@/lib/utils";
 
-export type BillingCycle = "MONTHLY" | "YEARLY";
-
-export function planTypeToSubStatus(
-  planType: string
-): "FREE" | "PRO" | "EDUCATOR" | "SCHOOL" | "CANCELLED" | "EXPIRED" {
-  const map: Record<string, "FREE" | "PRO" | "EDUCATOR" | "SCHOOL"> = {
-    STARTER: "FREE",
-    PRO: "PRO",
-    EDUCATOR: "EDUCATOR",
-    SCHOOL: "SCHOOL",
-  };
-  return map[planType] ?? "FREE";
-}
+export type { BillingCycle } from "@/lib/utils";
 
 async function requireParentSession() {
   const session = await auth();

@@ -5,6 +5,22 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export type BillingCycle = "MONTHLY" | "YEARLY";
+
+export function planTypeToSubStatus(
+  planType: string
+): "FREE" | "PRO" | "EDUCATOR" | "SCHOOL" | "CANCELLED" | "EXPIRED" {
+  const map: Record<string, "FREE" | "PRO" | "EDUCATOR" | "SCHOOL"> = {
+    STARTER: "FREE",
+    PRO: "PRO",
+    EDUCATOR: "EDUCATOR",
+    SCHOOL: "SCHOOL",
+  };
+  return map[planType] ?? "FREE";
+}
+
+export const AVATARS = ['🧒', '👦', '👧', '🧑', '🐱', '🐶', '🦁', '🐼', '🦊', '🐯']
+
 export function formatRupiah(amount: number): string {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
