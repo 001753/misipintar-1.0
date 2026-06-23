@@ -1,0 +1,829 @@
+# 🚀 REPLIT AI — MASTER PROMPT: UANGSAKU LANDING PAGE
+## Super-Complete Build Specification v2.0
+
+Paste prompt ini secara keseluruhan ke Replit Agent. Tidak perlu modifikasi.
+
+---
+
+## 🎯 MISI UTAMA
+
+Bangun **landing page produksi** untuk aplikasi **UangSaku** menggunakan **Next.js 14 App Router + Tailwind CSS + Framer Motion**. Landing page ini harus:
+
+- Terasa seperti produk startup kelas dunia (sekelas Duolingo / Grab / GoTo)
+- Menggunakan animasi profesional berbasis scroll, parallax, dan micro-interaction
+- Memiliki background animated particles/mesh yang hidup dan elegan
+- Responsif penuh: mobile-first, lalu tablet, lalu desktop
+- Siap deploy ke Vercel dengan zero-config
+- Dioptimalkan untuk konversi (CRO) menggunakan psikologi "Double-Trigger Conversion"
+
+---
+
+## 🏗️ STACK & DEPENDENCIES
+
+```bash
+# Buat project baru
+npx create-next-app@latest uangsaku-landing --typescript --tailwind --eslint --app --src-dir
+
+# Install semua dependencies
+npm install framer-motion @radix-ui/react-accordion lucide-react clsx tailwind-merge
+npm install @fontsource/plus-jakarta-sans @fontsource/space-grotesk
+npm install react-intersection-observer react-countup
+npm install tsparticles @tsparticles/react @tsparticles/slim
+npm install react-hot-toast sonner
+```
+
+**tailwind.config.ts** — tambahkan:
+```ts
+import type { Config } from 'tailwindcss'
+
+const config: Config = {
+  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
+  theme: {
+    extend: {
+      fontFamily: {
+        display: ['"Space Grotesk"', 'sans-serif'],
+        body: ['"Plus Jakarta Sans"', 'sans-serif'],
+      },
+      colors: {
+        brand: {
+          50:  '#eef2ff',
+          100: '#e0e7ff',
+          200: '#c7d2fe',
+          400: '#818cf8',
+          500: '#6366f1',
+          600: '#4f46e5',
+          700: '#4338ca',
+          800: '#3730a3',
+          900: '#1e1b4b',
+        },
+        emerald: {
+          400: '#34d399',
+          500: '#10b981',
+        },
+        gold: {
+          400: '#fbbf24',
+          500: '#f59e0b',
+        }
+      },
+      animation: {
+        'float': 'float 6s ease-in-out infinite',
+        'float-delayed': 'float 6s ease-in-out 2s infinite',
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'gradient-x': 'gradient-x 8s ease infinite',
+        'slide-up': 'slideUp 0.6s ease forwards',
+        'coin-spin': 'coinSpin 3s ease-in-out infinite',
+        'piggy-bounce': 'piggyBounce 2s ease-in-out infinite',
+      },
+      keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-20px)' },
+        },
+        slideUp: {
+          from: { opacity: '0', transform: 'translateY(40px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        'gradient-x': {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+        },
+        coinSpin: {
+          '0%, 100%': { transform: 'rotateY(0deg)' },
+          '50%': { transform: 'rotateY(180deg)' },
+        },
+        piggyBounce: {
+          '0%, 100%': { transform: 'translateY(0) rotate(-3deg)' },
+          '50%': { transform: 'translateY(-12px) rotate(3deg)' },
+        },
+      },
+    },
+  },
+  plugins: [],
+}
+
+export default config
+```
+
+---
+
+## 📁 STRUKTUR FILE LENGKAP
+
+```
+src/
+├── app/
+│   ├── layout.tsx              ← Root layout + metadata SEO
+│   ├── page.tsx                ← Main page (compose semua section)
+│   └── globals.css             ← Global styles + CSS custom props
+├── components/
+│   ├── ui/
+│   │   ├── Button.tsx          ← Reusable CTA button
+│   │   ├── Badge.tsx           ← Label/badge komponen
+│   │   └── AnimatedCounter.tsx ← Number counter animasi
+│   └── landing/
+│       ├── Navbar.tsx          ← Sticky nav + scroll behavior
+│       ├── HeroSection.tsx     ← Hero + phone mockup + particles
+│       ├── StatsBar.tsx        ← Social proof angka (keluarga, misi, dll)
+│       ├── PainSection.tsx     ← Pain point cards
+│       ├── MisiPintarSection.tsx ← Mission cards + scroll reveal
+│       ├── TabunganSection.tsx ← 🆕 Tabungan Virtual Module
+│       ├── HowItWorks.tsx      ← 3-step process visual
+│       ├── TestimoniSection.tsx ← Social proof testimonials
+│       ├── FaqSection.tsx      ← Accordion FAQ
+│       ├── PricingBanner.tsx   ← Urgency CTA banner
+│       └── Footer.tsx          ← Footer
+├── hooks/
+│   ├── useScrollReveal.ts      ← Intersection observer hook
+│   └── useParticles.ts         ← Particles config hook
+└── lib/
+    └── utils.ts                ← cn() helper
+```
+
+---
+
+## 🎨 DESIGN SYSTEM — TOKEN WAJIB
+
+### Palette
+```css
+/* globals.css */
+:root {
+  --brand-primary: #4f46e5;    /* Indigo 600 */
+  --brand-dark: #1e1b4b;       /* Indigo 900 */
+  --brand-light: #eef2ff;      /* Indigo 50 */
+  --accent-green: #10b981;     /* Emerald 500 */
+  --accent-gold: #f59e0b;      /* Amber 500 */
+  --text-primary: #0f172a;
+  --text-muted: #64748b;
+  --surface: #ffffff;
+  --surface-secondary: #f8fafc;
+}
+```
+
+### Typography Scale
+```
+Display XL: Space Grotesk, 72px, weight 700, line-height 1.1
+Display L:  Space Grotesk, 48px, weight 700
+Heading:    Space Grotesk, 32px, weight 600
+Subhead:    Plus Jakarta Sans, 20px, weight 500
+Body:       Plus Jakarta Sans, 16px, weight 400, line-height 1.7
+Caption:    Plus Jakarta Sans, 13px, weight 400
+Micro:      Plus Jakarta Sans, 11px, weight 500, letter-spacing 0.06em, UPPERCASE
+```
+
+---
+
+## 🌌 BACKGROUND ANIMATION SYSTEM
+
+### Animated Particle Background (tsParticles)
+Buat file `src/components/ui/ParticleBackground.tsx`:
+
+```tsx
+'use client'
+import { useCallback } from 'react'
+import Particles from '@tsparticles/react'
+import { loadSlim } from '@tsparticles/slim'
+import type { Engine } from 'tsparticles-engine'
+
+export default function ParticleBackground() {
+  const particlesInit = useCallback(async (engine: Engine) => {
+    await loadSlim(engine)
+  }, [])
+
+  return (
+    <Particles
+      id="tsparticles"
+      init={particlesInit}
+      options={{
+        fullScreen: false,
+        background: { color: { value: 'transparent' } },
+        fpsLimit: 60,
+        interactivity: {
+          events: {
+            onHover: { enable: true, mode: 'repulse' },
+            onClick: { enable: true, mode: 'push' },
+          },
+          modes: {
+            repulse: { distance: 100, duration: 0.4 },
+            push: { quantity: 3 },
+          },
+        },
+        particles: {
+          color: { value: ['#818cf8', '#34d399', '#fbbf24'] },
+          links: {
+            color: '#818cf8',
+            distance: 120,
+            enable: true,
+            opacity: 0.15,
+            width: 1,
+          },
+          move: {
+            direction: 'none',
+            enable: true,
+            outModes: { default: 'bounce' },
+            random: true,
+            speed: 0.8,
+            straight: false,
+          },
+          number: { density: { enable: true, area: 900 }, value: 60 },
+          opacity: { value: { min: 0.1, max: 0.4 } },
+          shape: { type: ['circle', 'triangle'] },
+          size: { value: { min: 1, max: 4 } },
+        },
+        detectRetina: true,
+      }}
+      className="absolute inset-0 w-full h-full pointer-events-none z-0"
+    />
+  )
+}
+```
+
+### Animated Mesh Gradient Background
+Buat file `src/components/ui/MeshBackground.tsx`:
+```tsx
+export default function MeshBackground() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+      {/* Orbs animasi */}
+      <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full
+        bg-brand-500/10 blur-[100px] animate-float" />
+      <div className="absolute top-1/3 -right-40 w-[500px] h-[500px] rounded-full
+        bg-emerald-400/8 blur-[120px] animate-float-delayed" />
+      <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] rounded-full
+        bg-gold-400/8 blur-[100px] animate-float" />
+      {/* Grid dots overlay */}
+      <div className="absolute inset-0 opacity-[0.03]"
+        style={{ backgroundImage: 'radial-gradient(circle, #818cf8 1px, transparent 1px)',
+          backgroundSize: '40px 40px' }} />
+    </div>
+  )
+}
+```
+
+---
+
+## 📱 SECTION 1: HERO SECTION
+
+File: `src/components/landing/HeroSection.tsx`
+
+**Visual Layout:**
+```
+┌─────────────────────────────────────────────┐
+│  [Particles background animasi]              │
+│  [Mesh orbs animasi]                         │
+│                                              │
+│  ⭐ Badge: Literasi Keuangan #1              │
+│                                              │
+│  HEADLINE 72px:                              │
+│  "Ubah Kuota [marah-marah]                  │
+│   Jadi Kuota [Senyuman] ✨"                 │
+│  (gradient animated text)                   │
+│                                              │
+│  Sub: UangSaku mengubah PR, baca buku...    │
+│                                              │
+│  [🚀 Ambil Gratis Sekarang] [▶ Lihat Demo] │
+│  100% gratis · 1 menit daftar               │
+│                                              │
+│  ┌────────────────────────────────────┐     │
+│  │  📱 Phone mockup animasi (float)   │     │
+│  │  • Wallet card (Rp 37.500)        │     │
+│  │  • Misi aktif (PR Matematika)     │     │
+│  │  • Progress ring animasi          │     │
+│  │  • Notification badge animasi     │     │
+│  └────────────────────────────────────┘     │
+└─────────────────────────────────────────────┘
+```
+
+**Kode requirements:**
+- Headline menggunakan `text-transparent bg-clip-text` dengan `animate-gradient-x`
+- Phone mockup menggunakan `animate-float` (naik turun halus)
+- Framer Motion `initial={{ opacity:0, y:60 }}` → `animate={{ opacity:1, y:0 }}` dengan staggerChildren
+- CTA button: gradient indigo + hover scale + shimmer effect
+- Trust badges di bawah CTA: ✓ Gratis · ✓ No Kartu Kredit · ✓ 1 Menit Setup
+
+---
+
+## 📊 SECTION 2: STATS BAR (Social Proof Angka)
+
+File: `src/components/landing/StatsBar.tsx`
+
+**Layout:**
+```
+┌──────────────┬──────────────┬──────────────┬──────────────┐
+│  👨‍👩‍👧‍👦 47.200+  │  ✅ 1.2 Juta  │  ⭐ 4.9/5.0  │  🏆 #1 App  │
+│  Keluarga     │  Misi Selesai│  Rating App  │  Literasi ID │
+└──────────────┴──────────────┴──────────────┴──────────────┘
+```
+
+- Gunakan `react-countup` dengan `IntersectionObserver` — angka mulai count UP saat scroll masuk viewport
+- Background: glassmorphism card (bg-white/80 backdrop-blur)
+- Border bottom subtle separator
+
+---
+
+## 😤 SECTION 3: PAIN POINT SECTION
+
+File: `src/components/landing/PainSection.tsx`
+
+**Layout:**
+```
+"Mengapa Pola Lama Tidak Lagi Bekerja?"
+
+┌─────────────────────┐  ┌─────────────────────┐  ┌─────────────────────┐
+│  📱 Kecanduan        │  │  😡 Drama Tiap Malam │  │  🤲 Mental Pamrih    │
+│  Screen-Time         │  │  Demi PR             │  │  Menengadah Tangan   │
+│                      │  │                      │  │                      │
+│  [pain illustration] │  │  [pain illustration] │  │  [pain illustration] │
+│  desc text...        │  │  desc text...        │  │  desc text...        │
+└─────────────────────┘  └─────────────────────┘  └─────────────────────┘
+```
+
+- **Scroll reveal stagger**: kartu muncul 1 per 1 dari bawah
+- Background section: `bg-slate-950` (gelap, kontras tinggi)
+- Warna teks: putih + merah/oranye untuk emphasis pain
+- Icon: Lucide React icons ukuran 48px
+
+---
+
+## 🎮 SECTION 4: MISI PINTAR (Core Feature)
+
+File: `src/components/landing/MisiPintarSection.tsx`
+
+**Layout:**
+```
+"Saat Belajar Terasa Seru Seperti Naik Level!"
+
+[Tab Filter: Semua | Akademik | Rumah | Karakter | Digital]
+
+┌─────────────────┐  ┌─────────────────┐
+│  📚 PR Sekolah   │  │  📖 Baca Buku   │
+│  [Auto-Fill]     │  │  [Auto-Fill]    │
+│                  │  │                 │
+│  Syarat: Selesai │  │  Syarat: Buat   │
+│  sebelum jam 8   │  │  rangkuman      │
+│                  │  │                 │
+│  ┤ Rp 5.000 ├   │  │  ┤ Rp 7.500 ├  │
+│  [Pakai Template]│  │  [Pakai Template]│
+└─────────────────┘  └─────────────────┘
+┌─────────────────┐  ┌─────────────────┐
+│  🌍 Bahasa Asing │  │  💻 Skill Komp. │
+│  [Auto-Fill]     │  │  [Auto-Fill]    │
+│  ...             │  │  ...            │
+└─────────────────┘  └─────────────────┘
+
+🔒 Fitur Bukti Kerja Anti-Cheat: Anak WAJIB upload foto/teks bukti
+```
+
+**Animasi requirements:**
+- Cards: Framer Motion `whileHover={{ scale: 1.03, y: -4 }}` dengan spring physics
+- **Scroll reveal**: `useInView` → setiap card slide up dengan delay 0.1s stagger
+- Tab filter: `AnimatePresence` untuk smooth masuk/keluar cards
+- Badge "Auto-Fill": shimmer animation (pseudo-element bergerak kiri ke kanan)
+
+---
+
+## 🐷 SECTION 5: TABUNGAN VIRTUAL (MODUL BARU 🆕)
+
+File: `src/components/landing/TabunganSection.tsx`
+
+**Fitur Tabungan Virtual yang harus diimplementasi di landing page:**
+
+### A. Copywriting Tabungan
+- **Eyebrow:** "Modul Tabungan Virtual"
+- **Headline:** "Anak Punya Rekening Impian Sendiri — Untuk Pertama Kalinya!"
+- **Sub:** Bukan sekadar celengan. UangSaku hadir dengan sistem kantong tabungan bertujuan yang mengajarkan anak merencanakan, menunda kesenangan, dan merayakan pencapaian finansial nyata.
+
+### B. Fitur Tabungan yang Ditampilkan (card feature grid):
+
+```
+┌───────────────────────────┐  ┌───────────────────────────┐
+│  🎯 Kantong Impian         │  │  📈 Bunga Reward Orang Tua │
+│                           │  │                           │
+│  Anak membuat kantong     │  │  Orang tua bisa memberi   │
+│  bertujuan: "Sepatu Nike" │  │  "bunga" 5-20% sebagai    │
+│  "Game Switch" "Buku"     │  │  motivasi menabung lebih  │
+│  Lengkap dg progress bar  │  │  lama. Diajarkan konsep   │
+│  visual menuju target      │  │  compound interest dini.  │
+└───────────────────────────┘  └───────────────────────────┘
+┌───────────────────────────┐  ┌───────────────────────────┐
+│  🔒 Kunci Tabungan         │  │  🎊 Momen Perayaan         │
+│                           │  │                           │
+│  Orang tua bisa kunci     │  │  Saat target tercapai,    │
+│  kantong sehingga tidak   │  │  app menampilkan animasi  │
+│  bisa dicairkan sebelum   │  │  konfeti & notif ke semua │
+│  tanggal/target tercapai. │  │  anggota keluarga. Momen  │
+│  Mengajarkan komitmen.    │  │  bangga bersama.          │
+└───────────────────────────┘  └───────────────────────────┘
+┌───────────────────────────┐  ┌───────────────────────────┐
+│  💰 Auto-Setor dari Misi   │  │  📊 Laporan Progres        │
+│                           │  │                           │
+│  Set % otomatis dari      │  │  Grafik pertumbuhan saldo │
+│  setiap reward misi       │  │  tabungan per minggu.     │
+│  langsung masuk kantong   │  │  Anak lihat sendiri uang  │
+│  tabungan. Disiplin       │  │  mereka "tumbuh" dari     │
+│  finansial otomatis.      │  │  kerja keras.             │
+└───────────────────────────┘  └───────────────────────────┘
+```
+
+### C. Visual Interaktif Tabungan (Mock UI)
+Tampilkan mockup "Kantong Impian" yang bisa diklik/hover:
+
+```
+┌──────────────────────────────────┐
+│  🎯 Sepatu Nike Air Max           │
+│  Target: Rp 450.000              │
+│                                  │
+│  ████████████░░░░░  68%          │
+│  Rp 306.000 dari Rp 450.000      │
+│                                  │
+│  🔒 Dikunci · Cair: 17 Agustus  │
+│  📈 Bunga Ayah: +5%/bulan        │
+│  ⏰ Perkiraan tercapai: 3 minggu │
+└──────────────────────────────────┘
+```
+
+Animasi:
+- Progress bar animated fill saat scroll masuk viewport
+- Angka counter animasi
+- Floating coin emoji turun masuk ke kantong (CSS keyframe)
+- Piggy bank icon `animate-piggy-bounce`
+
+### D. Promo Tabungan
+- **Badge:** "BARU — Fitur Tabungan Virtual"
+- **CTA:** "Buat Kantong Impian Pertama Anak Anda"
+- **Sub-CTA:** Sepenuhnya gratis · Tidak ada biaya administrasi · Tidak terhubung bank
+
+---
+
+## ⚙️ SECTION 6: HOW IT WORKS
+
+File: `src/components/landing/HowItWorks.tsx`
+
+**3 Langkah Visual (horizontal timeline):**
+
+```
+① Buat Ruang Keluarga    →    ② Buat Misi & Kantong    →    ③ Anak Klaim & Belajar
+   (30 detik setup)              (template siap pakai)          (mandiri & termotivasi)
+```
+
+- Nomor besar (01, 02, 03) dengan gradient brand
+- Line connector antara steps dengan animated dash stroke
+- Framer Motion stagger reveal
+
+---
+
+## ⭐ SECTION 7: TESTIMONI / SOCIAL PROOF
+
+File: `src/components/landing/TestimoniSection.tsx`
+
+**Layout — Masonry grid atau carousel:**
+```
+"Dipercaya Ribuan Keluarga Indonesia"
+★★★★★ 4.9/5 dari 3.200+ ulasan
+
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+│ ⭐⭐⭐⭐⭐        │ │ ⭐⭐⭐⭐⭐        │ │ ⭐⭐⭐⭐⭐        │
+│                  │ │                  │ │                  │
+│ "Anak saya yg   │ │ "Awalnya skeptis │ │ "PR selesai      │
+│ tadinya males   │ │ soal virtual     │ │ sendiri tanpa    │
+│ belajar, skrg   │ │ money, tp liat  │ │ diingatkan.      │
+│ malah nagih     │ │ Alisha nabung   │ │ Bahkan minta     │
+│ misi baru tiap │ │ Rp 300rb utk   │ │ tambah misi!     │
+│ hari!"          │ │ beli buku sndri │ │ Luar biasa."     │
+│                  │ │ tanpa minta2."  │ │                  │
+│ 👤 Bunda Rina   │ │ 👤 Ayah Dimas   │ │ 👤 Mama Sari     │
+│ Jakarta         │ │ Surabaya        │ │ Bandung          │
+│ Ibu dari Rafi   │ │ Ayah dari Alisha│ │ Ibu dari Naufal  │
+│ (9 tahun)       │ │ (11 tahun)      │ │ (8 tahun)        │
+└──────────────────┘ └──────────────────┘ └──────────────────┘
+
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+│ ⭐⭐⭐⭐⭐        │ │ ⭐⭐⭐⭐⭐        │ │ ⭐⭐⭐⭐⭐        │
+│ "Fitur tabungan │ │ "Drama malam     │ │ "Sekarang anak  │
+│ impiannya keren │ │ sudah hilang.   │ │ malah ngajak     │
+│ banget. Anak    │ │ Ganti jadi      │ │ adiknya buat    │
+│ ngerti sendiri  │ │ kompetisi siapa │ │ misi bareng.    │
+│ arti menabung   │ │ duluan klaim    │ │ Bonding keluarga│
+│ untuk impiannya"│ │ misi!"          │ │ meningkat."     │
+│                  │ │                  │ │                  │
+│ 👤 Bunda Fitri  │ │ 👤 Papah Rizky  │ │ 👤 Bunda Dewi   │
+│ Yogyakarta      │ │ Medan           │ │ Semarang         │
+│ Ibu dari Zahra  │ │ Ayah dari Faiz  │ │ Ibu dari Azkia  │
+│ (10 tahun)      │ │ (7 & 9 tahun)   │ │ (8 & 12 tahun)  │
+└──────────────────┘ └──────────────────┘ └──────────────────┘
+```
+
+**Implementasi:**
+- Masonry grid: `columns-1 sm:columns-2 lg:columns-3 gap-4`
+- Setiap card: `break-inside-avoid` + glassmorphism styling
+- Avatar: initials circle dengan gradient brand unik per user
+- Auto-play marquee/carousel untuk mobile (loop infinite)
+- "Verified Purchase" badge hijau kecil di setiap card
+
+---
+
+## ❓ SECTION 8: FAQ ACCORDION
+
+File: `src/components/landing/FaqSection.tsx`
+
+Gunakan `@radix-ui/react-accordion` dengan animasi smooth.
+
+**Pertanyaan:**
+1. Apakah ini tidak membuat anak bermental matre/pamrih?
+2. Bagaimana jika saldo virtual dihabiskan untuk hal tidak berguna?
+3. Apakah saldo virtual bisa dicairkan ke uang sungguhan?
+4. Berapa usia anak yang cocok menggunakan UangSaku?
+5. Apakah data keluarga aman dan privat?
+6. Berapa lama fase gratis ini berlaku?
+7. Apa bedanya fitur Tabungan Virtual dengan celengan biasa?
+8. Apakah bisa digunakan untuk lebih dari satu anak?
+
+**Jawaban untuk poin 7 (tabungan):**
+"Celengan biasa tidak punya tujuan, tidak ada bunga reward, tidak ada kunci komitmen, dan tidak ada momen perayaan. Kantong Impian UangSaku mengajarkan goal-based saving — anak menetapkan target spesifik, melihat progresnya setiap hari, mendapatkan bunga dari orang tua, dan merayakan pencapaian bersama keluarga. Ini adalah simulasi rekening tabungan nyata dalam lingkungan yang aman dan terkontrol."
+
+---
+
+## 🔥 SECTION 9: PRICING / CTA BANNER
+
+File: `src/components/landing/PricingBanner.tsx`
+
+**Layout:**
+```
+┌────────────────────────────────────────────────────────────────┐
+│  🎊 GRATIS SELAMANYA UNTUK 1 JUTA KELUARGA PERTAMA             │
+│                                                                │
+│  Paket Premium (nilai Rp 29.000/bln) — GRATIS selama promosi  │
+│                                                                │
+│  ✅ Ruang Keluarga tak terbatas                               │
+│  ✅ Misi Pintar + Template lengkap                             │
+│  ✅ 🆕 Kantong Tabungan Virtual (baru!)                       │
+│  ✅ Sistem Pajak Jajan                                         │
+│  ✅ Pahlawan Rumah                                             │
+│  ✅ Fitur Bukti Kerja Anti-Cheat                               │
+│  ✅ Laporan Perkembangan Anak                                  │
+│                                                                │
+│        [🔥 Buat Ruang Keluarga Sekarang — GRATIS]             │
+│                                                                │
+│  ⏰ Slot tersisa: [counter animasi] dari 1.000.000             │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Animasi:**
+- Background: animated gradient merah-oranye-kuning (urgency)
+- Counter slot tersisa: `react-countup` atau localStorage-based random decrement
+- CTA button: pulse animation + "shimmer sweep" effect
+- Confetti burst saat hover button (menggunakan `canvas-confetti`)
+
+---
+
+## 🔽 FOOTER
+
+File: `src/components/landing/Footer.tsx`
+
+```
+UangSaku Logo
+"Mendidik generasi melek keuangan sejak dini."
+
+[Fitur]        [Perusahaan]    [Legal]
+Misi Pintar    Tentang Kami    Privasi
+Tabungan       Blog            Syarat & Ketentuan
+Pahlawan Rumah Karir           Cookie
+Sistem Pajak   Kontak          
+
+📱 App Store  |  📱 Google Play  (coming soon badge)
+
+© 2025 UangSaku. Dibuat dengan ❤️ untuk keluarga Indonesia.
+```
+
+---
+
+## 🎭 ANIMASI SISTEM — IMPLEMENTASI DETAIL
+
+### Scroll Reveal Hook
+```ts
+// src/hooks/useScrollReveal.ts
+import { useInView } from 'react-intersection-observer'
+
+export function useScrollReveal(threshold = 0.15) {
+  const { ref, inView } = useInView({
+    threshold,
+    triggerOnce: true,
+  })
+  return { ref, inView }
+}
+```
+
+### Framer Motion Variants (reusable)
+```ts
+// src/lib/animations.ts
+
+export const fadeUpVariants = {
+  hidden: { opacity: 0, y: 40 },
+  visible: (i: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }
+  })
+}
+
+export const staggerContainer = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.08 }
+  }
+}
+
+export const scaleInVariants = {
+  hidden: { opacity: 0, scale: 0.85 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] }
+  }
+}
+
+export const slideLeftVariants = {
+  hidden: { opacity: 0, x: -60 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] }
+  }
+}
+```
+
+### Penggunaan di setiap Section:
+```tsx
+import { motion } from 'framer-motion'
+import { useScrollReveal } from '@/hooks/useScrollReveal'
+import { fadeUpVariants, staggerContainer } from '@/lib/animations'
+
+export default function MisiPintarSection() {
+  const { ref, inView } = useScrollReveal()
+
+  return (
+    <motion.section
+      ref={ref}
+      variants={staggerContainer}
+      initial="hidden"
+      animate={inView ? "visible" : "hidden"}
+    >
+      {tasks.map((task, i) => (
+        <motion.div
+          key={task.id}
+          custom={i}
+          variants={fadeUpVariants}
+          whileHover={{ scale: 1.03, y: -6, transition: { duration: 0.2 } }}
+          whileTap={{ scale: 0.97 }}
+        >
+          {/* card content */}
+        </motion.div>
+      ))}
+    </motion.section>
+  )
+}
+```
+
+### Progress Bar Animasi (Tabungan)
+```tsx
+// Animated progress bar saat masuk viewport
+<motion.div
+  className="h-3 bg-gradient-to-r from-brand-500 to-emerald-400 rounded-full"
+  initial={{ width: 0 }}
+  animate={inView ? { width: `${progress}%` } : { width: 0 }}
+  transition={{ duration: 1.2, delay: 0.3, ease: "easeOut" }}
+/>
+```
+
+---
+
+## 📱 MOBILE-FIRST REQUIREMENTS
+
+```
+Mobile  (< 640px):  1 kolom, font scale 80%, padding 16px, touch-friendly 48px tap targets
+Tablet  (640-1024): 2 kolom grid, font scale 90%
+Desktop (> 1024px): 3-4 kolom grid, full type scale
+```
+
+**Mobile-specific:**
+- Navbar: hamburger menu dengan slide-in drawer (Framer Motion)
+- Hero: phone mockup di bawah copywriting (stack vertikal)
+- Testimonial: horizontal scroll carousel (snap scroll)
+- CTA button: full-width di mobile
+- Stats bar: 2x2 grid di mobile
+
+---
+
+## 🚀 DEPLOYMENT CONFIG
+
+### vercel.json
+```json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "regions": ["sin1"],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" }
+      ]
+    }
+  ]
+}
+```
+
+### next.config.ts
+```ts
+const nextConfig = {
+  output: 'standalone',
+  images: {
+    domains: [],
+    formats: ['image/avif', 'image/webp'],
+  },
+  experimental: {
+    optimizeCss: true,
+  },
+}
+export default nextConfig
+```
+
+### SEO — app/layout.tsx
+```ts
+export const metadata: Metadata = {
+  title: 'UangSaku — Aplikasi Literasi Keuangan Keluarga #1 di Indonesia',
+  description: 'Ubah PR sekolah, baca buku, dan tugas rumah jadi misi seru berhadiah saldo saku virtual. Anak belajar mandiri, orang tua tenang. Gratis selamanya.',
+  keywords: ['aplikasi uang anak', 'literasi keuangan anak', 'tabungan virtual anak', 'uang saku digital'],
+  openGraph: {
+    title: 'UangSaku — Kuota Senyuman untuk Keluarga Indonesia',
+    description: 'Misi seru berhadiah uang saku virtual. 100% gratis.',
+    type: 'website',
+    locale: 'id_ID',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'UangSaku',
+    description: 'Literasi keuangan keluarga #1 Indonesia',
+  }
+}
+```
+
+---
+
+## ✅ CHECKLIST PRODUKSI
+
+Setelah build selesai, pastikan semua item ini terpenuhi:
+
+**Performance:**
+- [ ] Lighthouse Performance score > 90
+- [ ] LCP < 2.5s
+- [ ] CLS < 0.1
+- [ ] Images menggunakan `next/image` dengan `priority` pada hero
+- [ ] Fonts menggunakan `next/font` (tidak CDN)
+- [ ] Particles disabled di `prefers-reduced-motion`
+
+**Accessibility:**
+- [ ] Semua gambar/icon punya `alt` atau `aria-hidden="true"`
+- [ ] Keyboard navigable (tab order logis)
+- [ ] Warna kontras WCAG AA minimal
+- [ ] Focus ring visible di semua interactive elements
+
+**Conversion:**
+- [ ] CTA pertama visible tanpa scroll di semua ukuran layar
+- [ ] Tidak ada pop-up yang muncul dalam 3 detik pertama
+- [ ] Form daftar maksimal 2 field (nama + email/WA)
+- [ ] Trust signal (gratis, no CC, 1 menit) selalu dekat CTA
+
+**Code Quality:**
+- [ ] Tidak ada `any` TypeScript type
+- [ ] Semua komponen punya displayName
+- [ ] `'use client'` hanya pada komponen yang butuh browser API
+- [ ] Error boundaries di setiap section utama
+
+---
+
+## 🎨 AESTHETIC SIGNATURE (ELEMEN PEMBEDA)
+
+Satu elemen visual unik yang membuat UangSaku berbeda dari semua fintech app lainnya:
+
+**"Floating Coin Trail"** — Saat user scroll ke bawah halaman, ada animasi koin-koin kecil (💰) yang mengambang naik dari sisi kiri/kanan halaman, bergerak dengan physics ringan mengikuti scroll position. Diimplementasikan dengan CSS keyframes + scroll event listener ringan. Memberikan kesan bahwa "uang mengalir" saat Anda menjelajahi produk.
+
+```tsx
+// CoinTrail.tsx — implementasikan sebagai fixed overlay
+useEffect(() => {
+  const coins = [] // spawn koin baru setiap Xpx scroll
+  const handleScroll = () => {
+    if (Math.random() > 0.97) spawnCoin()
+  }
+  window.addEventListener('scroll', handleScroll, { passive: true })
+  return () => window.removeEventListener('scroll', handleScroll)
+}, [])
+```
+
+---
+
+*Prompt ini mencakup semua yang dibutuhkan. Paste ke Replit Agent dan mulai build. Total estimasi waktu Replit Agent: 15-25 menit untuk full implementation.*
+
+**Dibuat untuk: UangSaku v2.0 Landing Page**
+**Stack: Next.js 14 + Tailwind + Framer Motion**
+**Target: 1 Juta Keluarga Indonesia**

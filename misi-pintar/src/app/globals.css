@@ -157,6 +157,31 @@ html {
   scroll-behavior: smooth;
 }
 
+/* ─── Landing page extra keyframes ──────────────────────── */
+@keyframes gradientX {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+@keyframes piggyBounce {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%       { transform: translateY(-12px) rotate(3deg); }
+}
+@keyframes float-delayed {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-20px); }
+}
+@keyframes coinFloat {
+  0%   { bottom: -40px; opacity: 0; }
+  10%  { opacity: 0.8; }
+  90%  { opacity: 0.6; }
+  100% { bottom: 110vh; opacity: 0; }
+}
+.animate-float-delayed { animation: float-delayed 6s ease-in-out 2s infinite; }
+.animate-gradient-x {
+  background-size: 200% auto;
+  animation: gradientX 4s ease infinite;
+}
+
 /* ─── Focus visible only ─────────────────────────────────── */
 :focus:not(:focus-visible) { outline: none; }
 :focus-visible { outline: 2px solid #059669; outline-offset: 2px; }
