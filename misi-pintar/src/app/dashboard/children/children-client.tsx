@@ -28,6 +28,13 @@ type Modal =
   | { type: 'delete'; child: Child }
   | null
 
+const SUCCESS_MESSAGES: Record<string, string> = {
+  create: '✅ Akun anak berhasil ditambahkan!',
+  edit: '✅ Data anak berhasil diperbarui.',
+  password: '✅ Password anak berhasil diubah.',
+  delete: '✅ Akun anak berhasil dihapus.',
+}
+
 export default function ChildrenClient({ children, maxChildren, avatars }: Props) {
   const router = useRouter()
   const [modal, setModal] = useState<Modal>(null)
@@ -35,14 +42,24 @@ export default function ChildrenClient({ children, maxChildren, avatars }: Props
   const [success, setSuccess] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [selectedAvatar, setSelectedAvatar] = useState(avatars[0])
+  const [usernameValue, setUsernameValue] = useState('')
 
   function closeModal() {
     setModal(null)
     setError(null)
     setSelectedAvatar(avatars[0])
+    setUsernameValue('')
   }
 
-  function handleSubmit(action: (fd: FormData) => Promise<{ success: boolean; error?: string }>) {
+  function showSuccess(msg: string) {
+    setSuccess(msg)
+    setTimeout(() => setSuccess(null), 4000)
+  }
+
+  function handleSubmit(
+    action: (fd: FormData) => Promise<{ success: boolean; error?: string }>,
+    actionType: string
+  ) {
     return (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault()
       setError(null)
@@ -52,8 +69,7 @@ export default function ChildrenClient({ children, maxChildren, avatars }: Props
         const res = await action(fd)
         if (res.success) {
           closeModal()
-          setSuccess('Berhasil!')
-          setTimeout(() => setSuccess(null), 3000)
+          showSuccess(SUCCESS_MESSAGES[actionType] ?? '✅ Berhasil!')
           router.refresh()
         } else {
           setError(res.error ?? 'Terjadi kesalahan.')
@@ -67,15 +83,16 @@ export default function ChildrenClient({ children, maxChildren, avatars }: Props
   return (
     <>
       {success && (
-        <div className="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl">
-          {success}
+        <div className="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl flex items-center justify-between">
+          <span>{success}</span>
+          <button onClick={() => setSuccess(null)} className="ml-3 text-emerald-500 hover:text-emerald-700 font-bold">×</button>
         </div>
       )}
 
       {/* Add button */}
       <div className="mb-6">
         <button
-          onClick={() => { setSelectedAvatar(avatars[0]); setModal({ type: 'create' }) }}
+          onClick={() => { setSelectedAvatar(avatars[0]); setUsernameValue(''); setModal({ type: 'create' }) }}
           disabled={!canAdd}
           className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
@@ -167,13 +184,25 @@ export default function ChildrenClient({ children, maxChildren, avatars }: Props
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
             {/* Create Modal */}
             {modal.type === 'create' && (
-              <form onSubmit={handleSubmit(createChild)} className="p-6 space-y-4">
+              <form onSubmit={handleSubmit(createChild, 'create')} className="p-6 space-y-4">
                 <h2 className="text-lg font-bold text-gray-900">Tambah Anak</h2>
                 <AvatarPicker avatars={avatars} selected={selectedAvatar} onChange={setSelectedAvatar} />
                 <Field label="Nama Lengkap" name="name" placeholder="Contoh: Budi Santoso" required />
-                <Field label="Username" name="username" placeholder="Contoh: budi (huruf kecil)" required />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                  <input
+                    name="username"
+                    type="text"
+                    placeholder="Contoh: budi123"
+                    required
+                    value={usernameValue}
+                    onChange={(e) => setUsernameValue(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">Huruf kecil, angka, dan underscore saja. Min. 3 karakter.</p>
+                </div>
                 <Field label="Password" name="password" type="password" placeholder="Min. 6 karakter" required />
-                {error && <p className="text-sm text-red-600">{error}</p>}
+                {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">{error}</p>}
                 <ModalActions onCancel={closeModal} isPending={isPending} submitLabel="Tambah Anak" />
               </form>
             )}
@@ -181,27 +210,29 @@ export default function ChildrenClient({ children, maxChildren, avatars }: Props
             {/* Edit Modal */}
             {modal.type === 'edit' && (
               <form
-                onSubmit={handleSubmit((fd) => updateChild(modal.child.id, fd))}
+                onSubmit={handleSubmit((fd) => updateChild(modal.child.id, fd), 'edit')}
                 className="p-6 space-y-4"
               >
-                <h2 className="text-lg font-bold text-gray-900">Edit Anak</h2>
+                <h2 className="text-lg font-bold text-gray-900">Edit Profil Anak</h2>
+                <p className="text-sm text-gray-500">Mengubah profil <strong>{modal.child.name}</strong></p>
                 <AvatarPicker avatars={avatars} selected={selectedAvatar} onChange={setSelectedAvatar} />
                 <Field label="Nama Lengkap" name="name" defaultValue={modal.child.name} required />
-                {error && <p className="text-sm text-red-600">{error}</p>}
-                <ModalActions onCancel={closeModal} isPending={isPending} submitLabel="Simpan" />
+                {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">{error}</p>}
+                <ModalActions onCancel={closeModal} isPending={isPending} submitLabel="Simpan Perubahan" />
               </form>
             )}
 
             {/* Change Password Modal */}
             {modal.type === 'password' && (
               <form
-                onSubmit={handleSubmit((fd) => changeChildPassword(modal.child.id, fd))}
+                onSubmit={handleSubmit((fd) => changeChildPassword(modal.child.id, fd), 'password')}
                 className="p-6 space-y-4"
               >
                 <h2 className="text-lg font-bold text-gray-900">Ganti Password</h2>
                 <p className="text-sm text-gray-500">Ganti password untuk <strong>{modal.child.name}</strong></p>
                 <Field label="Password Baru" name="newPassword" type="password" placeholder="Min. 6 karakter" required />
-                {error && <p className="text-sm text-red-600">{error}</p>}
+                <p className="text-xs text-gray-400">Password tidak boleh sama dengan username anak.</p>
+                {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">{error}</p>}
                 <ModalActions onCancel={closeModal} isPending={isPending} submitLabel="Simpan Password" />
               </form>
             )}
@@ -209,16 +240,25 @@ export default function ChildrenClient({ children, maxChildren, avatars }: Props
             {/* Delete Modal */}
             {modal.type === 'delete' && (
               <div className="p-6 space-y-4">
-                <h2 className="text-lg font-bold text-gray-900">Hapus Anak</h2>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-xl">⚠️</div>
+                  <h2 className="text-lg font-bold text-gray-900">Hapus Akun Anak</h2>
+                </div>
                 <p className="text-sm text-gray-600">
-                  Yakin ingin menghapus akun <strong>{modal.child.name}</strong>? Riwayat transaksi akan tetap tersimpan.
+                  Yakin ingin menghapus akun <strong>{modal.child.name}</strong>?
                 </p>
-                {error && <p className="text-sm text-red-600">{error}</p>}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <p className="text-xs text-amber-700">
+                    Akun akan dinonaktifkan. Riwayat transaksi tetap tersimpan untuk catatan keluarga.
+                  </p>
+                </div>
+                {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">{error}</p>}
                 <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={closeModal}
-                    className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50"
+                    disabled={isPending}
+                    className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
                   >
                     Batal
                   </button>
@@ -231,15 +271,21 @@ export default function ChildrenClient({ children, maxChildren, avatars }: Props
                         const res = await deleteChild(modal.child.id)
                         if (res.success) {
                           closeModal()
+                          showSuccess(SUCCESS_MESSAGES.delete)
                           router.refresh()
                         } else {
                           setError(res.error ?? 'Terjadi kesalahan.')
                         }
                       })
                     }}
-                    className="flex-1 py-2 bg-red-500 text-white rounded-xl text-sm font-medium hover:bg-red-600 disabled:opacity-50"
+                    className="flex-1 py-2 bg-red-500 text-white rounded-xl text-sm font-medium hover:bg-red-600 disabled:opacity-50 flex items-center justify-center gap-1"
                   >
-                    {isPending ? 'Menghapus...' : 'Ya, Hapus'}
+                    {isPending ? (
+                      <>
+                        <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Menghapus...
+                      </>
+                    ) : 'Ya, Hapus Akun'}
                   </button>
                 </div>
               </div>
@@ -299,16 +345,22 @@ function ModalActions({ onCancel, isPending, submitLabel }: { onCancel: () => vo
       <button
         type="button"
         onClick={onCancel}
-        className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50"
+        disabled={isPending}
+        className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
       >
         Batal
       </button>
       <button
         type="submit"
         disabled={isPending}
-        className="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
+        className="flex-1 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-1"
       >
-        {isPending ? 'Menyimpan...' : submitLabel}
+        {isPending ? (
+          <>
+            <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            Menyimpan...
+          </>
+        ) : submitLabel}
       </button>
     </div>
   )

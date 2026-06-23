@@ -29,12 +29,27 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [rejectModal, setRejectModal] = useState<{ taskId: string; title: string } | null>(null)
   const [rejectReason, setRejectReason] = useState('')
+  const [confirmApproveId, setConfirmApproveId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [filterStatus, setFilterStatus] = useState<string>('ALL')
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
 
   const canCreate = maxTasksPerMonth === -1 || tasksThisMonth < maxTasksPerMonth
+  const taskQuotaLabel = maxTasksPerMonth === -1
+    ? null
+    : `${tasksThisMonth} / ${maxTasksPerMonth} tugas bulan ini`
+
+  function showSuccess(msg: string) {
+    setSuccess(msg)
+    setTimeout(() => setSuccess(null), 4000)
+  }
+
+  function showError(msg: string) {
+    setError(msg)
+    setTimeout(() => setError(null), 6000)
+  }
 
   function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -44,8 +59,8 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
       const res = await createTask(fd)
       if (res.success) {
         setShowCreateForm(false)
-        setSuccess('Tugas berhasil dibuat!')
-        setTimeout(() => setSuccess(null), 3000)
+        ;(e.target as HTMLFormElement).reset()
+        showSuccess('✅ Tugas berhasil dibuat!')
         router.refresh()
       } else {
         setError(res.error ?? 'Terjadi kesalahan.')
@@ -54,30 +69,33 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
   }
 
   function handleApprove(taskId: string) {
+    setActiveTaskId(taskId)
+    setConfirmApproveId(null)
     startTransition(async () => {
       const res = await approveTask(taskId)
+      setActiveTaskId(null)
       if (res.success) {
-        setSuccess(`Tugas disetujui! Saldo baru: Rp ${res.data.newBalance.toLocaleString('id-ID')}`)
-        setTimeout(() => setSuccess(null), 4000)
+        showSuccess(`✅ Tugas disetujui! Reward Rp ${res.data.newBalance.toLocaleString('id-ID')} ditambahkan ke saldo anak.`)
         router.refresh()
       } else {
-        setError(res.error ?? 'Terjadi kesalahan.')
+        showError(res.error ?? 'Terjadi kesalahan.')
       }
     })
   }
 
   function handleReject() {
     if (!rejectModal) return
+    setActiveTaskId(rejectModal.taskId)
     startTransition(async () => {
       const res = await rejectTask(rejectModal.taskId, rejectReason)
+      setActiveTaskId(null)
       if (res.success) {
         setRejectModal(null)
         setRejectReason('')
-        setSuccess('Tugas ditolak.')
-        setTimeout(() => setSuccess(null), 3000)
+        showSuccess('Tugas ditolak dan anak telah diberitahu.')
         router.refresh()
       } else {
-        setError(res.error ?? 'Terjadi kesalahan.')
+        showError(res.error ?? 'Terjadi kesalahan.')
       }
     })
   }
@@ -98,14 +116,15 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
   return (
     <>
       {success && (
-        <div className="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl">
-          {success}
+        <div className="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl flex items-center justify-between">
+          <span>{success}</span>
+          <button onClick={() => setSuccess(null)} className="ml-3 text-emerald-500 hover:text-emerald-700 font-bold">×</button>
         </div>
       )}
       {error && (
-        <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl">
-          {error}
-          <button onClick={() => setError(null)} className="ml-2 underline">tutup</button>
+        <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="ml-3 text-red-400 hover:text-red-600 font-bold">×</button>
         </div>
       )}
 
@@ -117,7 +136,7 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
               {claimedTasks.length} tugas menunggu persetujuan Anda
             </p>
             <p className="text-xs text-amber-600 mt-0.5">
-              Filter "Diklaim" untuk melihat dan menyetujui
+              Klik "Lihat" untuk menyaring dan menyetujui
             </p>
           </div>
           <button
@@ -132,19 +151,38 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
       {/* Create task */}
       <div className="mb-6">
         {!showCreateForm ? (
-          <button
-            onClick={() => setShowCreateForm(true)}
-            disabled={!canCreate}
-            className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            + Buat Tugas Baru
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowCreateForm(true)}
+              disabled={!canCreate}
+              className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              + Buat Tugas Baru
+            </button>
+            {taskQuotaLabel && (
+              <span className={`text-xs font-medium ${tasksThisMonth >= maxTasksPerMonth ? 'text-red-500' : 'text-gray-400'}`}>
+                {taskQuotaLabel}
+              </span>
+            )}
+          </div>
         ) : (
           <form
             onSubmit={handleCreate}
             className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4"
           >
-            <h3 className="font-semibold text-gray-900">Buat Tugas Baru</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Buat Tugas Baru</h3>
+              {taskQuotaLabel && (
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                  tasksThisMonth >= maxTasksPerMonth
+                    ? 'bg-red-50 text-red-500'
+                    : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {taskQuotaLabel}
+                </span>
+              )}
+            </div>
+
             {children.length === 0 ? (
               <p className="text-sm text-amber-600">Tambah anak terlebih dahulu sebelum membuat tugas.</p>
             ) : (
@@ -169,9 +207,12 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
                   <input
                     name="title"
                     required
+                    minLength={3}
+                    maxLength={100}
                     placeholder="Contoh: Bersihkan kamar"
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
+                  <p className="text-xs text-gray-400 mt-1">Minimal 3 karakter</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -248,60 +289,108 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredTasks.map((task) => (
-            <div
-              key={task.id}
-              className="bg-white rounded-xl border border-gray-200 p-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-sm font-semibold text-gray-900 truncate">{task.title}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${statusColor[task.status]}`}>
-                      {statusLabel[task.status]}
-                    </span>
-                  </div>
-                  {task.description && (
-                    <p className="text-xs text-gray-400 mb-1 truncate">{task.description}</p>
-                  )}
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    <span>{task.child.avatar} {task.child.name}</span>
-                    <span className="font-semibold text-emerald-600">
-                      Rp {task.rewardAmount.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                </div>
-                {task.status === 'CLAIMED' && (
-                  <div className="flex gap-2 shrink-0">
-                    {task.proofPhotoUrl && (
-                      <a
-                        href={task.proofPhotoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs px-2 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
-                      >
-                        📷 Bukti
-                      </a>
+          {filteredTasks.map((task) => {
+            const isThisTaskPending = isPending && activeTaskId === task.id
+            const isBeingConfirmed = confirmApproveId === task.id
+
+            return (
+              <div
+                key={task.id}
+                className={`bg-white rounded-xl border p-4 transition-all ${
+                  isThisTaskPending ? 'border-emerald-300 opacity-75' : 'border-gray-200'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold text-gray-900 truncate">{task.title}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${statusColor[task.status]}`}>
+                        {statusLabel[task.status]}
+                      </span>
+                    </div>
+                    {task.description && (
+                      <p className="text-xs text-gray-400 mb-1 truncate">{task.description}</p>
                     )}
-                    <button
-                      onClick={() => handleApprove(task.id)}
-                      disabled={isPending}
-                      className="text-xs px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
-                    >
-                      ✓ Setuju
-                    </button>
-                    <button
-                      onClick={() => setRejectModal({ taskId: task.id, title: task.title })}
-                      disabled={isPending}
-                      className="text-xs px-3 py-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 disabled:opacity-50"
-                    >
-                      ✕ Tolak
-                    </button>
+                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                      <span>{task.child.avatar} {task.child.name}</span>
+                      <span className="font-semibold text-emerald-600">
+                        Rp {task.rewardAmount.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {task.status === 'CLAIMED' && (
+                    <div className="flex flex-col gap-2 shrink-0 items-end">
+                      {/* Proof photo link */}
+                      {task.proofPhotoUrl && (
+                        <a
+                          href={task.proofPhotoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs px-2 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
+                        >
+                          📷 Lihat Bukti
+                        </a>
+                      )}
+
+                      {/* Confirm step or action buttons */}
+                      {isBeingConfirmed ? (
+                        <div className="flex flex-col gap-1.5 items-end">
+                          <p className="text-xs text-gray-500 text-right">Setujui tugas ini?</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setConfirmApproveId(null)}
+                              disabled={isThisTaskPending}
+                              className="text-xs px-2 py-1.5 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50"
+                            >
+                              Batal
+                            </button>
+                            <button
+                              onClick={() => handleApprove(task.id)}
+                              disabled={isThisTaskPending}
+                              className="text-xs px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1"
+                            >
+                              {isThisTaskPending ? (
+                                <>
+                                  <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                  Memproses...
+                                </>
+                              ) : 'Ya, Setujui'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setConfirmApproveId(task.id)}
+                            disabled={isPending}
+                            className="text-xs px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            ✓ Setuju
+                          </button>
+                          <button
+                            onClick={() => setRejectModal({ taskId: task.id, title: task.title })}
+                            disabled={isPending}
+                            className="text-xs px-3 py-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-100 disabled:opacity-50"
+                          >
+                            ✕ Tolak
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Per-task loading indicator */}
+                {isThisTaskPending && (
+                  <div className="mt-3 flex items-center gap-2 text-xs text-emerald-600">
+                    <span className="inline-block w-3 h-3 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                    Memproses...
                   </div>
                 )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -328,16 +417,22 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
             <div className="flex gap-3">
               <button
                 onClick={() => { setRejectModal(null); setRejectReason('') }}
-                className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50"
+                disabled={isPending && activeTaskId === rejectModal.taskId}
+                className="flex-1 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
               >
                 Batal
               </button>
               <button
                 onClick={handleReject}
-                disabled={isPending}
-                className="flex-1 py-2 bg-red-500 text-white rounded-xl text-sm font-medium hover:bg-red-600 disabled:opacity-50"
+                disabled={isPending && activeTaskId === rejectModal.taskId}
+                className="flex-1 py-2 bg-red-500 text-white rounded-xl text-sm font-medium hover:bg-red-600 disabled:opacity-50 flex items-center justify-center gap-1"
               >
-                {isPending ? 'Menolak...' : 'Tolak Tugas'}
+                {isPending && activeTaskId === rejectModal.taskId ? (
+                  <>
+                    <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Menolak...
+                  </>
+                ) : 'Tolak Tugas'}
               </button>
             </div>
           </div>

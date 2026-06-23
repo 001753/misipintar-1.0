@@ -4,14 +4,14 @@ import { useRouter, usePathname } from "next/navigation";
 import { useCallback } from "react";
 
 const TX_LABELS: Record<string, { label: string; emoji: string; color: string }> = {
-  TASK_REWARD:    { label: "Reward Tugas",       emoji: "🏆", color: "text-emerald-600 bg-emerald-50" },
-  SAVINGS_DEPOSIT:{ label: "Transfer ke Tabungan",emoji: "💰", color: "text-blue-600 bg-blue-50" },
-  SAVINGS_WITHDRAW:{ label: "Tarik Tabungan",    emoji: "🏧", color: "text-orange-600 bg-orange-50" },
-  CHARITY:        { label: "Transfer ke Sedekah", emoji: "🤲", color: "text-purple-600 bg-purple-50" },
-  INTEREST:       { label: "Bunga Tabungan",      emoji: "📈", color: "text-cyan-600 bg-cyan-50" },
-  TAX:            { label: "Pajak Virtual",       emoji: "📋", color: "text-red-600 bg-red-50" },
-  FINE:           { label: "Denda",               emoji: "⚠️", color: "text-red-600 bg-red-50" },
-  ADJUSTMENT:     { label: "Penyesuaian",         emoji: "🔄", color: "text-gray-600 bg-gray-100" },
+  TASK_REWARD:    { label: "Reward Tugas",        emoji: "🏆", color: "text-emerald-600 bg-emerald-50" },
+  SAVINGS_DEPOSIT:{ label: "Transfer ke Tabungan", emoji: "💰", color: "text-blue-600 bg-blue-50" },
+  SAVINGS_WITHDRAW:{ label: "Tarik Tabungan",     emoji: "🏧", color: "text-orange-600 bg-orange-50" },
+  CHARITY:        { label: "Transfer ke Sedekah",  emoji: "🤲", color: "text-purple-600 bg-purple-50" },
+  INTEREST:       { label: "Bunga Tabungan",       emoji: "📈", color: "text-cyan-600 bg-cyan-50" },
+  TAX:            { label: "Pajak Virtual",        emoji: "📋", color: "text-red-600 bg-red-50" },
+  FINE:           { label: "Denda",                emoji: "⚠️", color: "text-red-600 bg-red-50" },
+  ADJUSTMENT:     { label: "Penyesuaian",          emoji: "🔄", color: "text-gray-600 bg-gray-100" },
 };
 
 const TX_TYPES = Object.keys(TX_LABELS);
@@ -70,6 +70,8 @@ export default function HistoryClient({
     router.push(buildUrl({ page: String(p) }));
   };
 
+  const hasActiveFilter = filters.from || filters.to || filters.type;
+
   return (
     <div className={viewerRole === "CHILD" ? "space-y-4 pt-2" : "max-w-3xl mx-auto p-6 space-y-6"}>
       {/* Header */}
@@ -77,7 +79,7 @@ export default function HistoryClient({
         {viewerRole === "PARENT" && (
           <button
             onClick={() => router.back()}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors text-sm"
           >
             ← Kembali
           </button>
@@ -95,7 +97,18 @@ export default function HistoryClient({
 
       {/* Filter Bar */}
       <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Filter</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Filter</p>
+          {hasActiveFilter && (
+            <button
+              onClick={() => router.push(basePath)}
+              className="text-xs text-red-500 hover:text-red-700 font-medium"
+            >
+              Reset semua
+            </button>
+          )}
+        </div>
+
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => handleFilter("type", undefined)}
@@ -122,7 +135,7 @@ export default function HistoryClient({
           ))}
         </div>
 
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
           <div className="flex items-center gap-1.5">
             <label className="text-xs text-gray-500">Dari</label>
             <input
@@ -141,14 +154,6 @@ export default function HistoryClient({
               className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-400"
             />
           </div>
-          {(filters.from || filters.to || filters.type) && (
-            <button
-              onClick={() => router.push(basePath)}
-              className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1.5"
-            >
-              Reset filter
-            </button>
-          )}
         </div>
       </div>
 
@@ -157,7 +162,17 @@ export default function HistoryClient({
         {entries.length === 0 ? (
           <div className="bg-white rounded-2xl p-10 text-center shadow-sm">
             <p className="text-2xl mb-2">📭</p>
-            <p className="text-gray-400 text-sm">Belum ada transaksi</p>
+            <p className="text-gray-400 text-sm">
+              {hasActiveFilter ? "Tidak ada transaksi yang sesuai filter." : "Belum ada transaksi."}
+            </p>
+            {hasActiveFilter && (
+              <button
+                onClick={() => router.push(basePath)}
+                className="mt-3 text-xs text-emerald-600 hover:text-emerald-700 font-medium underline"
+              >
+                Hapus filter
+              </button>
+            )}
           </div>
         ) : (
           entries.map((entry) => {
@@ -187,11 +202,10 @@ export default function HistoryClient({
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className={`text-sm font-bold ${isPositive ? "text-emerald-600" : "text-red-500"}`}>
-                      {isPositive ? "+" : ""}
-                      Rp {Math.abs(entry.amount).toLocaleString("id-ID")}
+                      {isPositive ? "+" : ""}Rp {Math.abs(entry.amount).toLocaleString("id-ID")}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {entry.balanceBefore.toLocaleString("id-ID")} → {entry.balanceAfter.toLocaleString("id-ID")}
+                      Rp {entry.balanceBefore.toLocaleString("id-ID")} → Rp {entry.balanceAfter.toLocaleString("id-ID")}
                     </p>
                   </div>
                 </div>
