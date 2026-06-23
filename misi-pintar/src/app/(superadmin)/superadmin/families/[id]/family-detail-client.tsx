@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   forceUpgradeSubscription,
   forceExpireSubscription,
@@ -55,6 +56,7 @@ const INV_STATUS_COLORS: Record<string, string> = {
 };
 
 export default function FamilyDetailClient({ family }: { family: Family }) {
+  const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
   const [suspendReason, setSuspendReason] = useState("");
   const [showSuspend, setShowSuspend] = useState(false);
@@ -70,6 +72,7 @@ export default function FamilyDetailClient({ family }: { family: Family }) {
     startTransition(async () => {
       const res = await forceUpgradeSubscription(family.id, planType);
       showToast(res.success ? `Force upgrade ke ${planType} berhasil` : "Gagal: " + res.error);
+      if (res.success) router.refresh();
     });
   }
 
@@ -78,6 +81,7 @@ export default function FamilyDetailClient({ family }: { family: Family }) {
     startTransition(async () => {
       const res = await forceExpireSubscription(family.id);
       showToast(res.success ? "Subscription berhasil di-expire" : "Gagal: " + res.error);
+      if (res.success) router.refresh();
     });
   }
 
@@ -87,7 +91,7 @@ export default function FamilyDetailClient({ family }: { family: Family }) {
     startTransition(async () => {
       const res = await suspendFamilySpace(family.id, suspendReason);
       showToast(res.success ? "Keluarga berhasil disuspend" : "Gagal: " + res.error);
-      setShowSuspend(false);
+      if (res.success) { setShowSuspend(false); router.refresh(); }
     });
   }
 
