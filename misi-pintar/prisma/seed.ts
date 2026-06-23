@@ -169,6 +169,108 @@ async function seedSuperAdmin() {
   }
 }
 
+async function seedSampleData() {
+  console.log("Seeding sample families...");
+
+  const starterPlan = await prisma.plan.findUnique({ where: { type: "STARTER" } });
+  const proPlan = await prisma.plan.findUnique({ where: { type: "PRO" } });
+  if (!starterPlan || !proPlan) throw new Error("Plans belum ada — jalankan seedPlans() dulu");
+
+  const families = [
+    {
+      parentEmail: "budi.santoso@demo.com",
+      parentPassword: "Demo@Budi123",
+      parentName: "Budi Santoso",
+      spaceName: "Keluarga Santoso",
+      spaceCode: "SANT01",
+      plan: starterPlan,
+      children: [
+        { username: "andi_s", password: "Andi123!", name: "Andi Santoso", avatar: "👦", balance: 15000, savingsBalance: 5000 },
+        { username: "rina_s", password: "Rina123!", name: "Rina Santoso", avatar: "👧", balance: 8000, savingsBalance: 2000 },
+      ],
+    },
+    {
+      parentEmail: "dewi.rahayu@demo.com",
+      parentPassword: "Demo@Dewi123",
+      parentName: "Dewi Rahayu",
+      spaceName: "Keluarga Rahayu",
+      spaceCode: "RAHU01",
+      plan: proPlan,
+      children: [
+        { username: "bagas_r", password: "Bagas123!", name: "Bagas Rahayu", avatar: "🧒", balance: 32000, savingsBalance: 10000 },
+        { username: "sari_r",  password: "Sari123!",  name: "Sari Rahayu",  avatar: "👧", balance: 21000, savingsBalance: 7000 },
+        { username: "dika_r",  password: "Dika123!",  name: "Dika Rahayu",  avatar: "🦁", balance: 5000,  savingsBalance: 1000 },
+      ],
+    },
+  ];
+
+  for (const fam of families) {
+    const existingParent = await prisma.user.findUnique({ where: { email: fam.parentEmail } });
+    if (existingParent) {
+      console.log(`  ↩ ${fam.parentEmail} sudah ada — skip`);
+      continue;
+    }
+
+    const parentHash = await bcrypt.hash(fam.parentPassword, 12);
+
+    await prisma.$transaction(async (tx) => {
+      const parent = await tx.user.create({
+        data: {
+          email: fam.parentEmail,
+          name: fam.parentName,
+          passwordHash: parentHash,
+          role: "PARENT",
+        },
+      });
+
+      const space = await tx.familySpace.create({
+        data: {
+          name: fam.spaceName,
+          spaceCode: fam.spaceCode,
+          ownerId: parent.id,
+          users: { connect: { id: parent.id } },
+        },
+      });
+
+      await tx.user.update({
+        where: { id: parent.id },
+        data: { familySpaceId: space.id },
+      });
+
+      const periodEnd = new Date();
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+
+      await tx.subscription.create({
+        data: {
+          familySpaceId: space.id,
+          planId: fam.plan.id,
+          status: fam.plan.type === "PRO" ? "PRO" : "FREE",
+          currentPeriodEnd: periodEnd,
+        },
+      });
+
+      for (const child of fam.children) {
+        const childHash = await bcrypt.hash(child.password, 12);
+        await tx.child.create({
+          data: {
+            username: child.username,
+            name: child.name,
+            passwordHash: childHash,
+            avatar: child.avatar,
+            familySpaceId: space.id,
+            balance: child.balance,
+            savingsBalance: child.savingsBalance,
+          },
+        });
+      }
+    });
+
+    console.log(`  ✓ ${fam.spaceName} (${fam.parentEmail}) + ${fam.children.length} anak`);
+  }
+
+  console.log("Sample families seeded.");
+}
+
 async function main() {
   console.log("🌱 Misi Pintar — Prisma Seed\n");
 
@@ -176,6 +278,7 @@ async function main() {
     await seedPlans();
     await seedAppConfig();
     await seedSuperAdmin();
+    await seedSampleData();
 
     console.log("\n✅ Seed selesai.");
   } catch (err) {
