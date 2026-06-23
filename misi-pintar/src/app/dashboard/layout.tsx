@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { logoutAction } from '@/actions/auth'
 import { getUnreadCount } from '@/lib/notifications/sse'
+import NotificationBell from '@/components/notification-bell'
 
 export default async function DashboardLayout({
   children,
@@ -39,33 +40,14 @@ export default async function DashboardLayout({
             <Link href="/dashboard/billing" className="text-gray-600 hover:text-emerald-600 font-medium">
               Billing
             </Link>
-            {/* [5.5] Notifikasi dengan badge counter */}
-            <Link
-              href="/dashboard/notifications"
-              className="relative text-gray-600 hover:text-emerald-600 font-medium"
-            >
-              Notifikasi
-              {unreadCount > 0 && (
-                <span className="absolute -top-2 -right-3 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </Link>
+            {/* Notification bell with dropdown — replaces static link */}
+            <NotificationBell initialUnread={unreadCount} />
           </nav>
           <div className="flex items-center gap-3">
-            {/* Badge mobile */}
-            <Link
-              href="/dashboard/notifications"
-              className="relative md:hidden text-gray-600 hover:text-emerald-600"
-              aria-label="Notifikasi"
-            >
-              <span className="text-xl">🔔</span>
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </Link>
+            {/* Mobile bell */}
+            <div className="md:hidden">
+              <NotificationBell initialUnread={unreadCount} />
+            </div>
             <span className="text-sm text-gray-600 hidden md:block">
               {session.user.name}
             </span>
