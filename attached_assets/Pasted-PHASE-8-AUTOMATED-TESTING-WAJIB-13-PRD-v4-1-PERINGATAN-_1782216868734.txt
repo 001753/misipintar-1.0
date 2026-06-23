@@ -1,0 +1,124 @@
+PHASE 8 — AUTOMATED TESTING WAJIB (§13 PRD v4.1)
+
+PERINGATAN: JANGAN tandai Phase ini selesai hanya dengan klaim verbal.
+Bukti yang diterima: output `npm run test` dengan status PASS.
+
+TUGAS [8.1] — TEST DATABASE SETUP
+Buat `src/__tests__/setup.ts`:
+```typescript
+import { prisma } from '@/lib/prisma'
+import { beforeAll, afterAll, beforeEach } from 'vitest'
+
+beforeAll(async () => {
+  // Pastikan menggunakan DATABASE_URL_TEST, bukan DATABASE_URL produksi
+  if (!process.env.DATABASE_URL?.includes('test')) {
+    throw new Error('DANGER: Test harus menggunakan DATABASE_URL_TEST!')
+  }
+})
+
+beforeEach(async () => {
+  // Bersihkan data test sebelum setiap test
+  await prisma.$transaction([
+    prisma.transactionLedger.deleteMany(),
+    prisma.task.deleteMany(),
+    prisma.child.deleteMany(),
+    prisma.loginAttempt.deleteMany(),
+    // ... tabel lain sesuai kebutuhan
+  ])
+})
+
+afterAll(async () => {
+  await prisma.$disconnect()
+})
+```
+
+TUGAS [8.2] — TEST: APPROVE TASK
+Buat `src/__tests__/actions/task.test.ts`:
+
+Test case yang WAJIB ada dan WAJIB PASS:
+1. "approveTask: balance anak bertambah persis rewardAmount"
+   - Setup: buat child dengan balance 100, buat task rewardAmount 50, claim task
+   - Action: approveTask(taskId)
+   - Assert: child.balance === 150
+   - Assert: 1 baris TransactionLedger dengan type TASK_REWARD, amount 50, balanceBefore 100, balanceAfter 150
+
+2. "approveTask: rollback jika ledger insert gagal"
+   - Mock: paksa TransactionLedger.create throw error
+   - Action: approveTask(taskId)
+   - Assert: child.balance TIDAK berubah
+   - Assert: task.status tetap CLAIMED
+
+3. "approveTask: tidak bisa approve task milik keluarga lain"
+   - Setup: buat 2 FamilySpace, 2 task masing-masing
+   - Action: coba approveTask dari familySpace 1 untuk task familySpace 2
+   - Assert: throw error UNAUTHORIZED
+
+TUGAS [8.3] — TEST: TRANSFER TO SAVINGS
+Buat test di file yang sama atau `savings.test.ts`:
+
+1. "transferToSavings: transfer valid — atomik"
+   - Setup: child.balance = 100, savingsBalance = 0
+   - Action: transferToSavings(childId, 60)
+   - Assert: child.balance === 40, savingsBalance === 60
+   - Assert: 2 baris TransactionLedger terbuat
+
+2. "transferToSavings: transfer melebihi saldo — DITOLAK tanpa perubahan"
+   - Setup: child.balance = 50
+   - Action: transferToSavings(childId, 100)
+   - Assert: throw error INSUFFICIENT_BALANCE
+   - Assert: child.balance tetap 50 (fetch ulang dari DB untuk konfirmasi)
+   - Assert: savingsBalance tetap 0
+   - Assert: TIDAK ada baris baru di TransactionLedger
+
+3. "transferToSavings: amount negatif ditolak"
+   - Action: transferToSavings(childId, -10)
+   - Assert: throw error validasi
+
+TUGAS [8.4] — TEST: WEBHOOK MIDTRANS
+Buat `src/__tests__/api/webhook.test.ts`:
+
+1. "webhook: signature invalid → 403"
+   - POST ke /api/webhooks/midtrans dengan signature yang salah
+   - Assert: response.status === 403
+
+2. "webhook: dua request paralel order_id sama → hanya 1 Subscription terupdate"
+   - Setup: buat Invoice dengan midtransOrderId "TEST-ORDER-001"
+   - Action: kirim 2 webhook valid secara paralel (Promise.all)
+   - Assert: Subscription.status ter-update (bukan error)
+   - Assert: PaymentLog count === 1 (bukan 2)
+   - Assert: satu request return "ok", satu return "already_processed"
+
+TUGAS [8.5] — TEST: RATE LIMITING LOGIN
+Buat `src/__tests__/auth/rateLimit.test.ts`:
+
+1. "rate limiting: percobaan ke-6 dalam 15 menit SELALU ditolak"
+   - Setup: tulis 5 LoginAttempt gagal dalam 15 menit terakhir untuk identifier "test@email.com"
+   - Action: panggil checkLoginRateLimit("test@email.com", "127.0.0.1")
+   - Assert: throw error "RATE_LIMITED"
+
+2. "rate limiting: 5 percobaan gagal LAMA (> 15 menit) tidak memblokir"
+   - Setup: tulis 5 LoginAttempt gagal dengan createdAt 20 menit lalu
+   - Action: checkLoginRateLimit("test@email.com", "127.0.0.1")
+   - Assert: TIDAK throw (window sudah expired)
+
+3. "rate limiting: percobaan berhasil tidak dihitung"
+   - Setup: 4 gagal + 1 berhasil dalam 15 menit
+   - Assert: percobaan ke-6 TIDAK diblokir (hanya gagal yang dihitung)
+
+TUGAS [8.6] — CI INTEGRATION
+Tambahkan ke `package.json`:
+```json
+"scripts": {
+  "test": "DATABASE_URL=$DATABASE_URL_TEST vitest run",
+  "test:coverage": "DATABASE_URL=$DATABASE_URL_TEST vitest run --coverage"
+}
+```
+
+CHECKLIST PHASE 8 (BUKTI WAJIB):
+☐ `npm run test` output: semua test PASS (0 failures)
+☐ Minimum 12 test cases di atas semua PASS
+☐ Test menggunakan DATABASE_URL_TEST (bukan database dev/produksi)
+☐ Test rollback approveTask terbukti: saldo tidak berubah jika satu langkah gagal
+☐ Test race condition webhook: 2 paralel = 1 update
+
+Paste output `npm run test` di sini sebagai bukti sebelum lanjut ke Phase 9.

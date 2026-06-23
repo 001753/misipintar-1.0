@@ -5,9 +5,14 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: "jsdom",
-    setupFiles: ["./src/test/setup.ts"],
     globals: true,
+    environmentMatchGlobs: [
+      // Existing phase2 test uses jsdom (DOM testing)
+      ["src/test/**", "jsdom"],
+      // New Phase 8 DB/server tests use node
+      ["src/__tests__/**", "node"],
+    ],
+    setupFiles: ["./src/test/setup.ts"],
   },
   resolve: {
     alias: {
