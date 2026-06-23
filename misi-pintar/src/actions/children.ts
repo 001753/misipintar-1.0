@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import { validateChildPassword } from '@/lib/auth/passwordPolicy'
 import type { ActionResult } from '@/types'
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -59,8 +60,11 @@ export async function createChild(
 
   const { name, username, password, avatar } = parsed.data
 
-  if (password.toLowerCase() === username.toLowerCase()) {
-    return { success: false, error: 'Password tidak boleh sama dengan username.' }
+  // [7.3] Validasi password anak via passwordPolicy
+  try {
+    validateChildPassword(password, username)
+  } catch (err: any) {
+    return { success: false, error: err?.message ?? 'Password tidak valid.' }
   }
 
   const limits = await getPlanLimits(familySpaceId)
@@ -128,9 +132,11 @@ export async function changeChildPassword(
   }
 
   const newPassword = formData.get('newPassword')?.toString() ?? ''
-  if (newPassword.length < 6) return { success: false, error: 'Password minimal 6 karakter.' }
-  if (newPassword.toLowerCase() === child.username.toLowerCase()) {
-    return { success: false, error: 'Password tidak boleh sama dengan username.' }
+  // [7.3] Validasi password anak via passwordPolicy
+  try {
+    validateChildPassword(newPassword, child.username)
+  } catch (err: any) {
+    return { success: false, error: err?.message ?? 'Password tidak valid.' }
   }
 
   const passwordHash = await bcrypt.hash(newPassword, 12)

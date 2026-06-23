@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { signIn, signOut } from '@/lib/auth/config'
+import { validateParentPassword } from '@/lib/auth/passwordPolicy'
 import type { ActionResult } from '@/types'
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -24,6 +25,7 @@ async function generateUniqueSpaceCode(): Promise<string> {
 const registerSchema = z.object({
   ownerName: z.string().min(2, 'Nama minimal 2 karakter'),
   email: z.string().email('Email tidak valid'),
+  // [7.3] Basic length check dulu — detail divalidasi via validateParentPassword
   password: z.string().min(8, 'Password minimal 8 karakter'),
   familyName: z.string().min(2, 'Nama keluarga minimal 2 karakter'),
 })
@@ -44,6 +46,14 @@ export async function registerFamilySpace(
   }
 
   const { ownerName, email, password, familyName } = parsed.data
+
+  // [7.3] Validasi password parent via passwordPolicy
+  try {
+    validateParentPassword(password)
+  } catch (err: any) {
+    const msg = err?.errors?.[0]?.message ?? err?.message ?? 'Password tidak memenuhi syarat.'
+    return { success: false, error: msg }
+  }
 
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) {

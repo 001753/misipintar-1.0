@@ -2,57 +2,12 @@ import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
-import { redis } from '@/lib/redis'
 import { z } from 'zod'
-
-const RATE_LIMIT_MAX = 5
-const RATE_LIMIT_WINDOW = 15 * 60
-
-async function checkRateLimit(identifier: string): Promise<boolean> {
-  // ── Redis path ────────────────────────────────────────
-  if (redis) {
-    try {
-      const key = `login_attempts:${identifier}`
-      const attempts = await redis.incr(key)
-      if (attempts === 1) await redis.expire(key, RATE_LIMIT_WINDOW)
-      return attempts > RATE_LIMIT_MAX
-    } catch {
-      // fallback ke DB
-    }
-  }
-
-  // ── DB fallback: hitung gagal dalam 15 menit terakhir ─
-  try {
-    const since = new Date(Date.now() - RATE_LIMIT_WINDOW * 1000)
-    const count = await prisma.loginAttempt.count({
-      where: { identifier, success: false, createdAt: { gte: since } },
-    })
-    return count >= RATE_LIMIT_MAX
-  } catch {
-    return false
-  }
-}
-
-async function clearRateLimit(identifier: string): Promise<void> {
-  if (!redis) return
-  try {
-    await redis.del(`login_attempts:${identifier}`)
-  } catch {
-  }
-}
-
-async function recordLoginAttempt(
-  identifier: string,
-  ipAddress: string,
-  success: boolean
-) {
-  try {
-    await prisma.loginAttempt.create({
-      data: { identifier, ipAddress, success },
-    })
-  } catch {
-  }
-}
+import {
+  checkLoginRateLimit,
+  clearLoginRateLimit,
+  recordLoginAttempt,
+} from '@/lib/auth/loginGuard'
 
 const parentLoginSchema = z.object({
   email: z.string().email(),
@@ -80,13 +35,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const { email, password } = parsed.data
         const ip =
-          request?.headers?.get?.('x-forwarded-for') ?? '0.0.0.0'
+          request?.headers?.get?.('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0'
 
-        const blocked = await checkRateLimit(email)
-        if (blocked) {
-          await recordLoginAttempt(email, ip, false)
-          throw new Error('TOO_MANY_ATTEMPTS')
-        }
+        // [7.2] Cek rate limit — throw RATE_LIMITED jika terkunci
+        await checkLoginRateLimit(email, ip)
 
         const user = await prisma.user.findUnique({
           where: { email },
@@ -105,7 +57,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         await recordLoginAttempt(email, ip, true)
-        await clearRateLimit(email)
+        await clearLoginRateLimit(email)
 
         return {
           id: user.id,
@@ -131,15 +83,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null
 
         const { spaceCode, username, password } = parsed.data
+        // [7.2] Identifier gabungan untuk rate limit anak
         const identifier = `${spaceCode}:${username}`
         const ip =
-          request?.headers?.get?.('x-forwarded-for') ?? '0.0.0.0'
+          request?.headers?.get?.('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0'
 
-        const blocked = await checkRateLimit(identifier)
-        if (blocked) {
-          await recordLoginAttempt(identifier, ip, false)
-          throw new Error('TOO_MANY_ATTEMPTS')
-        }
+        // [7.2] Cek rate limit
+        await checkLoginRateLimit(identifier, ip)
 
         const familySpace = await prisma.familySpace.findUnique({
           where: { spaceCode },
@@ -158,7 +108,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
         })
 
-        if (!child) {
+        if (!child || child.deletedAt) {
           await recordLoginAttempt(identifier, ip, false)
           return null
         }
@@ -170,7 +120,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         await recordLoginAttempt(identifier, ip, true)
-        await clearRateLimit(identifier)
+        await clearLoginRateLimit(identifier)
 
         return {
           id: child.id,
@@ -209,6 +159,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: { strategy: 'jwt' },
   secret: process.env.NEXTAUTH_SECRET ?? process.env.SESSION_SECRET,
-  // [7] trustHost — diperlukan untuk secure cookies di balik reverse proxy (Replit / Vercel)
+  // [7.4] trustHost — secure cookies di balik reverse proxy (Replit / Vercel)
   trustHost: true,
 })

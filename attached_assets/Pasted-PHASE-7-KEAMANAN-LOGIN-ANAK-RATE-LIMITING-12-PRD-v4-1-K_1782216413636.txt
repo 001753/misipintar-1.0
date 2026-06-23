@@ -1,0 +1,122 @@
+PHASE 7 — KEAMANAN LOGIN ANAK & RATE LIMITING (§12 PRD v4.1)
+
+Konteks: Menutup celah keamanan yang diidentifikasi audit v4.1. Akun anak menyimpan
+saldo virtual — wajib dilindungi dari brute force dan password lemah.
+
+TUGAS [7.1] — LOGIN GUARD (RATE LIMITING)
+Buat `src/lib/auth/loginGuard.ts` PERSIS sesuai PRD §12.2:
+
+```typescript
+const MAX_ATTEMPTS = 5
+const WINDOW_MINUTES = 15
+
+export async function checkLoginRateLimit(
+  identifier: string,
+  ipAddress: string
+): Promise<void> {
+  const since = new Date(Date.now() - WINDOW_MINUTES * 60 * 1000)
+  
+  const failedCount = await prisma.loginAttempt.count({
+    where: {
+      identifier,
+      success: false,
+      createdAt: { gte: since },
+    },
+  })
+  
+  if (failedCount >= MAX_ATTEMPTS) {
+    // JANGAN bedakan pesan dengan "password salah" — cegah enumeration attack
+    throw new Error('RATE_LIMITED')
+  }
+}
+
+export async function recordLoginAttempt(
+  identifier: string,
+  ipAddress: string,
+  success: boolean
+): Promise<void> {
+  await prisma.loginAttempt.create({
+    data: { identifier, ipAddress, success },
+  })
+}
+```
+
+TUGAS [7.2] — INTEGRASI KE AUTH HANDLER
+Update NextAuth credentials providers:
+
+Untuk Parent login (email):
+1. Panggil checkLoginRateLimit(email, ipAddress) — jika throw RATE_LIMITED, return null dengan pesan "Terlalu banyak percobaan, coba lagi dalam 15 menit"
+2. Verifikasi password dengan bcrypt.compare
+3. Panggil recordLoginAttempt(email, ip, berhasil/tidak)
+4. Jika berhasil → return user session
+5. Jika gagal → return null
+
+Untuk Child login (spaceCode + username):
+1. Identifier = `${spaceCode}:${username}` (gabungkan untuk rate limit)
+2. Panggil checkLoginRateLimit(identifier, ipAddress)
+3. Cari FamilySpace by spaceCode, lalu Child by username dalam space tersebut
+4. Verifikasi password dengan bcrypt.compare
+5. Panggil recordLoginAttempt(identifier, ip, berhasil/tidak)
+
+TUGAS [7.3] — PASSWORD VALIDATION (ZOD SCHEMA)
+Buat `src/lib/auth/passwordPolicy.ts`:
+```typescript
+import { z } from 'zod'
+
+export const childPasswordSchema = z
+  .string()
+  .min(6, 'Password minimal 6 karakter')
+  .refine((val) => val.trim().length > 0, 'Password tidak boleh kosong')
+
+export function validateChildPassword(password: string, username: string): void {
+  childPasswordSchema.parse(password)
+  if (password.toLowerCase() === username.toLowerCase()) {
+    throw new Error('Password tidak boleh sama dengan username')
+  }
+}
+
+export const parentPasswordSchema = z
+  .string()
+  .min(8, 'Password minimal 8 karakter')
+  .regex(/[A-Z]/, 'Harus ada huruf kapital')
+  .regex(/[0-9]/, 'Harus ada angka')
+```
+
+Terapkan validasi ini di:
+- createChild (password awal anak)
+- changeChildPassword
+- Register parent baru
+
+TUGAS [7.4] — SECURE CONTEXT (§12.4 PRD v4.1)
+Buat/update `src/lib/utils/env.ts`:
+```typescript
+export function isSecureContext(headersList?: Headers): boolean {
+  // Pertama: cek APP_URL dari env (paling aman)
+  if (process.env.APP_URL?.startsWith('https://')) return true
+  
+  // Kedua: percaya proxy header HANYA jika TRUST_PROXY=true
+  if (process.env.TRUST_PROXY === 'true' && headersList) {
+    return headersList.get('x-forwarded-proto') === 'https'
+  }
+  
+  // Default: tidak percaya — aman untuk development
+  return false
+}
+```
+Terapkan ini di konfigurasi cookie session NextAuth.
+
+TUGAS [7.5] — UI FEEDBACK RATE LIMIT
+Update halaman login parent dan child:
+- Jika error RATE_LIMITED: tampilkan pesan "Akun terkunci sementara. Coba lagi dalam 15 menit."
+- JANGAN tampilkan pesan yang membedakan "email salah" vs "password salah" vs "rate limited" — semua pakai satu pesan generic untuk gagal login (kecuali rate limited yang perlu info waktu tunggu)
+- Tambahkan countdown timer jika rate limited
+
+CHECKLIST SEBELUM LANJUT KE PHASE 8:
+☐ 5 percobaan login gagal berturut-turut → percobaan ke-6 ditolak (WAJIB automated test)
+☐ Setelah 15 menit, login kembali bisa dicoba
+☐ Password anak < 6 karakter ditolak saat create/update
+☐ Password anak = username ditolak
+☐ isSecureContext() tidak percaya x-forwarded-proto kecuali TRUST_PROXY=true
+☐ LoginAttempt tersimpan di DB (bisa dilihat di SuperAdmin security log)
+
+Laporkan hasil setiap sub-task [7.1] s/d [7.5] sebelum lanjut.

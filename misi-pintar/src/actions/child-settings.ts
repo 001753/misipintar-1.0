@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import { validateChildPassword } from '@/lib/auth/passwordPolicy'
 import type { ActionResult } from '@/types'
 
 async function getChildSession() {
@@ -59,9 +60,11 @@ export async function childChangeOwnPassword(
     return { success: false, error: 'Password lama tidak benar.' }
   }
 
-  // [7] Validasi: password baru tidak boleh sama dengan username
-  if (newPassword.toLowerCase() === child.username.toLowerCase()) {
-    return { success: false, error: 'Password tidak boleh sama dengan username.' }
+  // [7.3] Validasi via passwordPolicy
+  try {
+    validateChildPassword(newPassword, child.username)
+  } catch (err: any) {
+    return { success: false, error: err?.message ?? 'Password tidak valid.' }
   }
 
   // [7] Validasi: password baru tidak boleh sama dengan password lama
