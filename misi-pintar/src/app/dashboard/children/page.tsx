@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { AVATARS } from '@/actions/children'
+import { AVATARS } from '@/lib/utils'
 import ChildrenClient from './children-client'
 
 export default async function ChildrenPage() {
