@@ -1,0 +1,56 @@
+PHASE 9 — AUDIT LOG & HARDENING (§14 PRD v4.1)
+
+Konteks: Review dan verifikasi bahwa §14.1 dan §14.2 sudah diimplementasi dengan benar
+di seluruh codebase — bukan hanya di satu tempat.
+
+TUGAS [9.1] — AUDIT CODEBASE UNTUK CONSOLE.LOG
+Jalankan perintah berikut dan eliminasi semua console.log di Server Actions sensitif:
+```bash
+grep -rn "console.log" src/actions/ src/app/api/webhooks/
+```
+Setiap console.log yang mencatat aksi superadmin atau perubahan data finansial WAJIB
+diganti dengan AdminAuditLog insert. console.error untuk error handling masih boleh.
+
+TUGAS [9.2] — VERIFIKASI AdminAuditLog LENGKAP
+Buat checklist: cari semua fungsi admin yang BELUM menulis ke AdminAuditLog:
+```bash
+grep -rn "await prisma\." src/actions/admin.ts | grep -v "adminAuditLog"
+```
+Setiap update/delete oleh superadmin yang tidak disertai adminAuditLog.create = BUG.
+
+TUGAS [9.3] — VERIFIKASI UNIQUE CONSTRAINT WEBHOOK
+Jalankan di database:
+```sql
+SELECT indexname, indexdef 
+FROM pg_indexes 
+WHERE tablename = 'Subscription' AND indexname LIKE '%invoice%';
+```
+Harus ada: `UNIQUE INDEX` pada field `invoiceId` WHERE `invoiceId IS NOT NULL`.
+Jika tidak ada → jalankan migration untuk menambahkannya.
+
+TUGAS [9.4] — CLEANUP LoginAttempt LAMA (CRON)
+Buat BullMQ cron job yang berjalan setiap hari:
+- Hapus LoginAttempt yang createdAt > 30 hari lalu
+- Ini mencegah tabel LoginAttempt membengkak tanpa batas
+- Gunakan distributed Redis lock: "cron:mutex:cleanup-login-attempts"
+
+TUGAS [9.5] — SECURITY HEADERS
+Tambahkan ke `next.config.js`:
+```javascript
+const securityHeaders = [
+  { key: 'X-DNS-Prefetch-Control', value: 'on' },
+  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+]
+```
+
+CHECKLIST PHASE 9:
+☐ Zero console.log untuk aksi sensitif di src/actions/ (hanya console.error untuk error)
+☐ Setiap fungsi admin punya AdminAuditLog insert
+☐ UNIQUE constraint pada Subscription.invoiceId dikonfirmasi ada di DB
+☐ Cron cleanup LoginAttempt berjalan
+☐ Security headers terpasang (cek dengan curl -I localhost:3000)
+
+Laporkan temuan audit dan perubahan yang dilakukan sebelum lanjut.
