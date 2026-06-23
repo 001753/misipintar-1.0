@@ -1,11 +1,21 @@
-import { Queue } from "bullmq";
+import { Queue } from 'bullmq'
+import { getBullConnection } from '@/lib/redis-bull'
 
-const connection = {
-  host: process.env.REDIS_HOST ?? "localhost",
-  port: Number(process.env.REDIS_PORT ?? 6379),
-};
+/**
+ * Create a BullMQ Queue only if Redis is configured.
+ * Returns null when REDIS_URL is not set — callers must handle null gracefully.
+ */
+function makeQueue(name: string): Queue | null {
+  const connection = getBullConnection()
+  if (!connection) return null
+  try {
+    return new Queue(name, { connection })
+  } catch {
+    return null
+  }
+}
 
-export const notificationQueue = new Queue("notifications", { connection });
-export const reportQueue = new Queue("reports", { connection });
-export const subscriptionQueue = new Queue("subscriptions", { connection });
-export const interestQueue = new Queue("interest", { connection });
+export const notificationQueue = makeQueue('notifications')
+export const reportQueue       = makeQueue('reports')
+export const subscriptionQueue = makeQueue('subscriptions')
+export const interestQueue     = makeQueue('interest')

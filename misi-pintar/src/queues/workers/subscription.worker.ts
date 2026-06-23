@@ -9,15 +9,11 @@
 import { Worker, Job } from "bullmq";
 import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
+import { getBullConnection } from "@/lib/redis-bull";
 
 const LOCK_KEY = "cron:mutex:expire-subs";
 const LOCK_TTL_SECONDS = 300; // 5 menit
 const BATCH_SIZE = 200;
-
-const connection = {
-  host: process.env.REDIS_HOST ?? "localhost",
-  port: Number(process.env.REDIS_PORT ?? 6379),
-};
 
 async function acquireLock(): Promise<boolean> {
   if (!redis) return false;
@@ -170,7 +166,8 @@ async function expireCancelledSubscriptions(now: Date): Promise<number> {
 }
 
 export function startSubscriptionWorker() {
-  if (!redis) {
+  const connection = getBullConnection();
+  if (!redis || !connection) {
     console.warn(
       "[SubExpiry] Redis not available — subscription expiry cron disabled"
     );

@@ -1,15 +1,11 @@
 import { Worker, Job } from "bullmq";
 import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
+import { getBullConnection } from "@/lib/redis-bull";
 
 const LOCK_KEY = "cron:mutex:interest";
 const LOCK_TTL_SECONDS = 300; // 5 menit
 const BATCH_SIZE = 500;
-
-const connection = {
-  host: process.env.REDIS_HOST ?? "localhost",
-  port: Number(process.env.REDIS_PORT ?? 6379),
-};
 
 async function acquireLock(): Promise<boolean> {
   if (!redis) return false;
@@ -269,7 +265,8 @@ async function runTaxEngine(): Promise<{
 // Worker registrations
 // ─────────────────────────────────────────────────────────
 export function startInterestWorker() {
-  if (!redis) {
+  const connection = getBullConnection();
+  if (!redis || !connection) {
     console.warn("[InterestWorker] Redis not available — interest cron disabled");
     return null;
   }
