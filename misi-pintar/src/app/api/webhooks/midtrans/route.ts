@@ -150,9 +150,7 @@ export async function POST(req: NextRequest) {
       }),
     ]);
 
-    console.log(
-      `[Webhook] Payment SUCCESS: order=${order_id} plan=${plan.name} period=${isYearly ? "yearly" : "monthly"}`
-    );
+    // Data finansial sudah tersimpan di PaymentLog — tidak perlu console.log
 
     // [5.3] FCM + SSE setelah transaksi — non-fatal
     try {
@@ -182,14 +180,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`[Webhook] Payment FAILED/EXPIRED: order=${order_id} status=${transaction_status}`);
+    // Status FAILED/EXPIRED tersimpan di PaymentLog
   } else if (isRefund) {
     await prisma.invoice.update({
       where: { id: invoice.id },
       data: { status: "REFUNDED" },
     });
 
-    console.log(`[Webhook] Payment REFUNDED: order=${order_id}`);
+    // Status REFUNDED tersimpan di PaymentLog
   }
 
   return NextResponse.json({ message: "OK" });
