@@ -31,63 +31,70 @@ export default async function ParentDashboardPage() {
   ])
 
   const totalBalance = children.reduce((sum, c) => sum + c.balance, 0)
+  const firstName = session.user.name?.split(' ')[0]
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          Selamat datang, {session.user.name?.split(' ')[0]}! 👋
-        </h1>
-        <p className="text-gray-500 mt-1">{familySpace?.name}</p>
+    <div className="space-y-6">
+      {/* ── Header ── */}
+      <div className="animate-fade-up">
+        <p className="text-gray-400 text-sm font-medium">Selamat datang kembali 👋</p>
+        <h1 className="text-2xl font-black text-gray-900 mt-0.5">{firstName}</h1>
+        <p className="text-emerald-600 text-sm font-semibold">{familySpace?.name}</p>
       </div>
 
-      {/* Kode Keluarga */}
-      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-emerald-700 font-semibold uppercase tracking-wider">Kode Keluarga</p>
-          <p className="text-2xl font-black tracking-[0.25em] text-emerald-700 font-mono mt-1">
-            {familySpace?.spaceCode}
-          </p>
+      {/* ── Family Code Card ── */}
+      <div className="animate-fade-up delay-100 relative overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-5 shadow-xl shadow-emerald-100">
+        <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full" />
+        <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full" />
+        <div className="relative z-10 flex items-center justify-between">
+          <div>
+            <p className="text-emerald-200 text-[10px] font-bold uppercase tracking-widest mb-1">🏠 Kode Keluarga</p>
+            <p className="text-4xl font-black tracking-[0.3em] text-white font-mono">
+              {familySpace?.spaceCode}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-emerald-200 text-[10px] leading-snug max-w-[130px]">
+              Bagikan ke anak untuk masuk ke aplikasi
+            </p>
+          </div>
         </div>
-        <p className="text-xs text-emerald-600 max-w-[200px] text-right">
-          Bagikan kode ini ke anak untuk login ke aplikasi
-        </p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard label="Total Anak" value={String(children.length)} icon="👧" />
-        <StatCard label="Tugas Menunggu" value={String(pendingTasks.length)} icon="📋" />
-        <StatCard label="Plan" value={subscription?.plan.name ?? 'Starter'} icon="⭐" highlight />
-        <StatCard
-          label="Total Saldo"
-          value={`Rp ${totalBalance.toLocaleString('id-ID')}`}
-          icon="💰"
-        />
+      {/* ── Stats Grid ── */}
+      <div className="animate-fade-up delay-150 grid grid-cols-2 gap-3">
+        <StatCard label="Total Anak" value={String(children.length)} icon="👧" color="blue" />
+        <StatCard label="Menunggu Review" value={String(pendingTasks.length)} icon="⏳" color="amber" alert={pendingTasks.length > 0} />
+        <StatCard label="Paket" value={subscription?.plan.name ?? 'Starter'} icon="⭐" color="purple" />
+        <StatCard label="Total Saldo" value={`Rp ${(totalBalance / 1000).toFixed(0)}K`} icon="💰" color="emerald" />
       </div>
 
-      {/* Tugas menunggu */}
+      {/* ── Pending Tasks ── */}
       {pendingTasks.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Tugas Menunggu Persetujuan ({pendingTasks.length})
-          </h2>
-          <div className="space-y-3">
-            {pendingTasks.map((task) => (
+        <div className="animate-fade-up delay-200">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold text-gray-900">
+              ⏳ Menunggu Review
+            </h2>
+            <span className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-bold">
+              {pendingTasks.length} tugas
+            </span>
+          </div>
+          <div className="space-y-2">
+            {pendingTasks.map((task, i) => (
               <Link
                 key={task.id}
                 href="/dashboard/tasks/pending"
-                className="bg-white rounded-xl border border-amber-200 p-4 flex items-center justify-between hover:bg-amber-50 transition-colors"
+                className={`card-hover animate-fade-up bg-white rounded-2xl border border-amber-100 p-4 flex items-center justify-between shadow-sm delay-${(i + 1) * 100}`}
               >
-                <div>
-                  <p className="font-medium text-gray-900">{task.title}</p>
-                  <p className="text-sm text-gray-500">
-                    oleh {task.child.name} · Rp {task.rewardAmount.toLocaleString('id-ID')}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm truncate">{task.title}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {task.child.name} · <span className="text-emerald-600 font-bold">Rp {task.rewardAmount.toLocaleString('id-ID')}</span>
                   </p>
                 </div>
-                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">
-                  Setujui →
+                <span className="btn-press ml-3 shrink-0 text-xs bg-gradient-to-r from-amber-500 to-amber-400 text-white px-3 py-1.5 rounded-xl font-bold shadow-sm">
+                  Review →
                 </span>
               </Link>
             ))}
@@ -95,64 +102,96 @@ export default async function ParentDashboardPage() {
         </div>
       )}
 
-      {/* Daftar anak */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Daftar Anak</h2>
-          <Link href="/dashboard/children" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+      {/* ── Children ── */}
+      <div className="animate-fade-up delay-300">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-bold text-gray-900">Daftar Anak</h2>
+          <Link href="/dashboard/children" className="text-xs text-emerald-600 hover:text-emerald-700 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl transition-colors">
             Kelola →
           </Link>
         </div>
+
         {children.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-8 text-center">
+          <div className="bg-white rounded-3xl border-2 border-dashed border-gray-200 p-8 text-center">
             <p className="text-4xl mb-3">👧</p>
-            <p className="text-gray-600 font-medium">Belum ada anak terdaftar</p>
-            <p className="text-gray-400 text-sm mt-1">Tambah akun anak untuk mulai</p>
+            <p className="text-gray-700 font-bold">Belum ada anak terdaftar</p>
+            <p className="text-gray-400 text-sm mt-1">Tambahkan akun anak untuk mulai</p>
             <Link
               href="/dashboard/children"
-              className="inline-block mt-4 px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-emerald-700 transition-colors"
+              className="btn-press inline-block mt-4 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-sm font-bold rounded-2xl shadow-md shadow-emerald-100 transition-all"
             >
-              Tambah Anak
+              + Tambah Anak
             </Link>
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {children.map((child) => (
-              <div key={child.id} className="bg-white rounded-xl border border-gray-200 p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-lg">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {children.map((child, i) => (
+              <Link
+                key={child.id}
+                href={`/dashboard/history/${child.id}`}
+                className={`card-hover animate-fade-up bg-white rounded-2xl border border-gray-100 p-4 shadow-sm delay-${(i + 1) * 100}`}
+              >
+                <div className="flex flex-col items-center text-center gap-2">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center text-2xl shadow-sm">
                     {child.avatar ?? '🧒'}
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900 text-sm">{child.name}</p>
-                    <p className="text-xs text-gray-400">@{child.username}</p>
+                    <p className="font-bold text-gray-900 text-sm leading-tight">{child.name}</p>
+                    <p className="text-[10px] text-gray-400">@{child.username}</p>
+                  </div>
+                  <div className="w-full bg-emerald-50 rounded-xl p-2">
+                    <p className="text-[10px] text-gray-500 font-medium">Saldo</p>
+                    <p className="font-black text-emerald-600 text-sm">
+                      Rp {child.balance.toLocaleString('id-ID')}
+                    </p>
                   </div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-2 text-center">
-                  <p className="text-xs text-gray-500">Saldo</p>
-                  <p className="font-bold text-emerald-600">
-                    Rp {child.balance.toLocaleString('id-ID')}
-                  </p>
-                </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
+      </div>
+
+      {/* ── Quick Actions ── */}
+      <div className="animate-fade-up delay-400">
+        <h2 className="text-base font-bold text-gray-900 mb-3">Aksi Cepat</h2>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { href: '/dashboard/tasks',    icon: '➕', label: 'Buat Tugas',   color: 'from-emerald-500 to-emerald-600' },
+            { href: '/dashboard/ledger',   icon: '📊', label: 'Lihat Saldo',  color: 'from-blue-500 to-blue-600' },
+            { href: '/dashboard/billing',  icon: '💳', label: 'Billing',      color: 'from-purple-500 to-purple-600' },
+          ].map(({ href, icon, label, color }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`btn-press flex flex-col items-center gap-2 p-4 rounded-2xl bg-gradient-to-br ${color} text-white shadow-md transition-all`}
+            >
+              <span className="text-2xl">{icon}</span>
+              <span className="text-[10px] font-bold text-center leading-tight">{label}</span>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
 function StatCard({
-  label, value, icon, highlight = false,
+  label, value, icon, color, alert = false,
 }: {
-  label: string; value: string; icon: string; highlight?: boolean
+  label: string; value: string; icon: string; color: string; alert?: boolean
 }) {
+  const colors: Record<string, string> = {
+    emerald: 'bg-emerald-50 text-emerald-700',
+    blue:    'bg-blue-50 text-blue-700',
+    amber:   'bg-amber-50 text-amber-700',
+    purple:  'bg-purple-50 text-purple-700',
+  }
   return (
-    <div className={`rounded-2xl p-4 ${highlight ? 'bg-emerald-600 text-white' : 'bg-white border border-gray-200'}`}>
+    <div className={`card-hover rounded-2xl p-4 shadow-sm border border-transparent ${colors[color] ?? 'bg-gray-50 text-gray-700'} ${alert ? 'ring-2 ring-amber-300' : ''}`}>
       <div className="text-2xl mb-2">{icon}</div>
-      <p className={`text-lg font-bold ${highlight ? 'text-white' : 'text-gray-900'}`}>{value}</p>
-      <p className={`text-xs mt-0.5 ${highlight ? 'text-emerald-100' : 'text-gray-500'}`}>{label}</p>
+      <p className="text-lg font-black leading-tight">{value}</p>
+      <p className="text-[11px] font-medium mt-0.5 opacity-70">{label}</p>
     </div>
   )
 }

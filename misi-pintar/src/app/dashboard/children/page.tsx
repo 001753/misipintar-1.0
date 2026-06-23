@@ -25,13 +25,16 @@ export default async function ChildrenPage() {
   const maxChildren = limits.maxChildren ?? 2
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-6 animate-fade-up">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Manajemen Anak</h1>
+          <h1 className="text-2xl font-black text-gray-900">👧 Manajemen Anak</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {children.length}/{maxChildren} anak terdaftar
+            <span className="font-bold text-emerald-600">{children.length}</span>/{maxChildren} anak terdaftar
           </p>
+        </div>
+        <div className="hidden sm:flex items-center gap-2 bg-emerald-50 px-3 py-2 rounded-2xl">
+          <span className="text-emerald-600 text-sm font-bold">{maxChildren - children.length} slot tersisa</span>
         </div>
       </div>
       <ChildrenClient

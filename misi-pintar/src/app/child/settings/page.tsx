@@ -17,8 +17,11 @@ export default async function ChildSettingsPage() {
   if (!child) redirect('/login')
 
   return (
-    <div className="pt-4">
-      <h1 className="text-white font-bold text-xl mb-4">⚙️ Pengaturan</h1>
+    <div className="animate-fade-up space-y-4 pt-4 pb-4">
+      <div>
+        <h1 className="text-white font-black text-xl">⚙️ Profil & Pengaturan</h1>
+        <p className="text-emerald-200 text-sm mt-0.5">Ubah profil dan avatar kamu</p>
+      </div>
       <ChildSettingsClient
         name={child.name}
         username={child.username}
