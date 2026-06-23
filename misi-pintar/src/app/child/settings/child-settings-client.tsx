@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { childChangeOwnPassword } from '@/actions/child-settings'
+import AvatarUploadButton from '@/components/avatar-upload-button'
 
 interface Props {
   name: string
@@ -37,8 +38,8 @@ export default function ChildSettingsClient({ name, username, avatar }: Props) {
     <div className="space-y-4">
       {/* Profil Card */}
       <div className="bg-white rounded-2xl p-5 shadow">
-        <div className="flex items-center gap-3 mb-1">
-          <span className="text-4xl">{avatar}</span>
+        <div className="flex items-center gap-4">
+          <AvatarUploadButton currentAvatar={avatar} size="lg" dark />
           <div>
             <p className="font-bold text-gray-900">{name}</p>
             <p className="text-sm text-gray-500">@{username}</p>

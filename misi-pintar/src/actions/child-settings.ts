@@ -78,3 +78,31 @@ export async function childChangeOwnPassword(
 
   return { success: true, data: null }
 }
+
+// ─── [8] updateChildAvatar ────────────────────────────────
+// Anak upload/ganti avatar sendiri (base64 JPEG, sudah dikompres di client)
+
+export async function updateChildAvatar(
+  base64: string
+): Promise<ActionResult<null>> {
+  const { childId } = await getChildSession()
+
+  if (
+    !base64.startsWith('data:image/jpeg;base64,') &&
+    !base64.startsWith('data:image/png;base64,') &&
+    !base64.startsWith('data:image/webp;base64,')
+  ) {
+    return { success: false, error: 'Format gambar tidak valid.' }
+  }
+
+  if (base64.length > 300 * 1024) {
+    return { success: false, error: 'Ukuran foto terlalu besar. Coba foto lain.' }
+  }
+
+  await prisma.child.update({
+    where: { id: childId },
+    data: { avatar: base64 },
+  })
+
+  return { success: true, data: null }
+}

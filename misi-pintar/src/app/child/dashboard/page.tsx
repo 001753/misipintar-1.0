@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import AvatarUploadButton from '@/components/avatar-upload-button'
 
 export default async function ChildDashboardPage() {
   const session = await auth()
@@ -30,7 +31,9 @@ export default async function ChildDashboardPage() {
     <div className="space-y-4 pt-2">
       {/* Avatar & Greeting */}
       <div className="text-white text-center py-2">
-        <div className="text-5xl mb-2">{child.avatar ?? '🧒'}</div>
+        <div className="flex justify-center mb-3">
+          <AvatarUploadButton currentAvatar={child.avatar} size="xl" />
+        </div>
         <h1 className="text-xl font-bold">Halo, {child.name}! 👋</h1>
         <p className="text-emerald-100 text-sm">{child.familySpace.name}</p>
       </div>
