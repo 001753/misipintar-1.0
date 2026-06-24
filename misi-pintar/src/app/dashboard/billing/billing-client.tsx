@@ -63,6 +63,7 @@ interface Props {
   user: { name: string; email: string };
   snapUrl: string;
   clientKey: string;
+  isProduction: boolean;
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -100,6 +101,7 @@ export default function BillingClient({
   user,
   snapUrl,
   clientKey,
+  isProduction,
 }: Props) {
   const router = useRouter();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("MONTHLY");
@@ -449,7 +451,7 @@ export default function BillingClient({
         )}
 
         {/* Sandbox Notice */}
-        {process.env.NODE_ENV !== "production" && (
+        {!isProduction && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
             ⚠️ <strong>Mode Sandbox</strong> — Gunakan kartu test Midtrans. Pembayaran tidak nyata.
           </div>

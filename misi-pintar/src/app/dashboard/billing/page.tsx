@@ -10,7 +10,7 @@ export default async function BillingPage() {
   const familySpaceId = session.user.familySpaceId;
   if (!familySpaceId) redirect("/login");
 
-  const isProduction = process.env.NODE_ENV === "production";
+  const isProduction = process.env.MIDTRANS_IS_PRODUCTION === "true";
   const snapUrl = isProduction
     ? "https://app.midtrans.com/snap/snap.js"
     : "https://app.sandbox.midtrans.com/snap/snap.js";
@@ -83,6 +83,7 @@ export default async function BillingPage() {
       user={user}
       snapUrl={snapUrl}
       clientKey={clientKey}
+      isProduction={isProduction}
     />
   );
 }
