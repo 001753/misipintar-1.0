@@ -100,6 +100,25 @@ export default function Footer() {
             <span className="text-slate-600 text-xs">🇮🇩 Made in Indonesia</span>
           </div>
         </div>
+
+        {/* Powered By */}
+        <div className="mt-6 pt-6 border-t border-slate-800/60 flex justify-center">
+          <div className="flex items-center gap-2.5 group">
+            <div className="flex items-center gap-1.5">
+              <div className="w-px h-3 bg-slate-700" />
+              <span className="text-slate-600 text-[10px] font-medium uppercase tracking-[0.15em]">Powered by</span>
+              <div className="w-px h-3 bg-slate-700" />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded-md bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm shadow-amber-500/30">
+                <span className="text-[9px] font-black text-white leading-none">JE</span>
+              </div>
+              <span className="text-[11px] font-black tracking-widest text-slate-300 group-hover:text-amber-400 transition-colors duration-300 uppercase">
+                JOBEN ENTERPRISE
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </footer>
   )

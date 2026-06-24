@@ -61,6 +61,21 @@ export default async function ChildLayout({ children }: { children: React.ReactN
       {/* ── Content ── */}
       <div className="relative z-10 max-w-sm mx-auto px-4 pb-28">
         {children}
+
+        {/* ── Powered By Footer ── */}
+        <div className="mt-8 pt-5 border-t border-white/10 dark:border-gray-800 flex justify-center">
+          <div className="flex items-center gap-2 group">
+            <span className="text-[10px] font-medium text-white/30 dark:text-gray-600 uppercase tracking-[0.15em]">Powered by</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 rounded-md bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm shadow-amber-400/30">
+                <span className="text-[7px] font-black text-white leading-none">JE</span>
+              </div>
+              <span className="text-[10px] font-black tracking-widest text-white/30 dark:text-gray-600 group-hover:text-amber-300 dark:group-hover:text-amber-400 transition-colors duration-300 uppercase">
+                JOBEN ENTERPRISE
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Mobile Bottom Nav (glassy) ── */}

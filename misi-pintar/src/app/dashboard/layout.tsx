@@ -75,6 +75,21 @@ export default async function DashboardLayout({
       {/* ── Main Content ── */}
       <main className="max-w-6xl mx-auto px-4 py-6 pb-24 md:pb-8">
         {children}
+
+        {/* ── Powered By Footer ── */}
+        <div className="mt-10 pt-5 border-t border-gray-100 dark:border-gray-800 flex justify-center transition-colors duration-200">
+          <div className="flex items-center gap-2 group">
+            <span className="text-[10px] font-medium text-gray-300 dark:text-gray-600 uppercase tracking-[0.15em]">Powered by</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-4 h-4 rounded-md bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm shadow-amber-400/25">
+                <span className="text-[7px] font-black text-white leading-none">JE</span>
+              </div>
+              <span className="text-[10px] font-black tracking-widest text-gray-300 dark:text-gray-600 group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors duration-300 uppercase">
+                JOBEN ENTERPRISE
+              </span>
+            </div>
+          </div>
+        </div>
       </main>
 
       {/* ── Mobile Bottom Nav ── */}
