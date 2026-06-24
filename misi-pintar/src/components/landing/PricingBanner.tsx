@@ -18,7 +18,7 @@ export default function PricingBanner() {
   const { ref, inView } = useScrollReveal()
 
   return (
-    <section className="py-20 md:py-28 bg-gradient-to-b from-slate-50 to-white">
+    <section className="py-20 md:py-28 bg-gradient-to-b from-slate-50 to-white dark:from-gray-900 dark:to-gray-950 transition-colors duration-200">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           ref={ref}
@@ -77,9 +77,7 @@ export default function PricingBanner() {
               <Clock className="w-5 h-5 text-amber-300" />
               <div className="text-amber-200 text-sm font-medium">
                 Slot tersisa:{' '}
-                <span className="font-bold text-white text-lg">
-                  952.847
-                </span>
+                <span className="font-bold text-white text-lg">952.847</span>
                 {' '}dari 1.000.000
               </div>
             </div>

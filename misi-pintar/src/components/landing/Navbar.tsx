@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { Menu, X, Target } from 'lucide-react'
+import ThemeToggle from '@/components/ThemeToggle'
 
 const navLinks = [
   { label: 'Fitur', href: '#fitur' },
@@ -30,7 +31,7 @@ export default function Navbar() {
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? 'bg-white/90 backdrop-blur-xl shadow-lg shadow-emerald-500/5 border-b border-emerald-100'
+            ? 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl shadow-lg shadow-emerald-500/5 dark:shadow-black/30 border-b border-emerald-100 dark:border-gray-800'
             : 'bg-transparent'
         }`}
       >
@@ -40,7 +41,7 @@ export default function Navbar() {
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform duration-200">
                 <Target className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-slate-900 font-display">
+              <span className="text-xl font-bold text-slate-900 dark:text-white font-display">
                 Misi<span className="text-emerald-500">Pintar</span>
               </span>
             </Link>
@@ -50,17 +51,18 @@ export default function Navbar() {
                 <a
                   key={link.label}
                   href={link.href}
-                  className="text-sm font-medium text-slate-600 hover:text-emerald-600 transition-colors duration-200"
+                  className="text-sm font-medium text-slate-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors duration-200"
                 >
                   {link.label}
                 </a>
               ))}
             </div>
 
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-2">
+              <ThemeToggle />
               <Link
                 href="/login"
-                className="text-sm font-semibold text-slate-700 hover:text-emerald-600 transition-colors px-4 py-2 rounded-xl hover:bg-emerald-50"
+                className="text-sm font-semibold text-slate-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors px-4 py-2 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
               >
                 Masuk
               </Link>
@@ -72,13 +74,16 @@ export default function Navbar() {
               </Link>
             </div>
 
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden p-2 rounded-xl text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
-              aria-label="Toggle menu"
-            >
-              {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+            <div className="md:hidden flex items-center gap-1">
+              <ThemeToggle />
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="p-2 rounded-xl text-slate-600 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                aria-label="Toggle menu"
+              >
+                {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
           </div>
         </div>
       </motion.nav>
@@ -90,7 +95,7 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.25 }}
-            className="fixed top-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl shadow-xl border-b border-emerald-100 md:hidden"
+            className="fixed top-16 left-0 right-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl shadow-xl dark:shadow-black/40 border-b border-emerald-100 dark:border-gray-800 md:hidden"
           >
             <div className="px-4 py-6 flex flex-col gap-4">
               {navLinks.map((link) => (
@@ -98,16 +103,16 @@ export default function Navbar() {
                   key={link.label}
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
-                  className="text-base font-medium text-slate-700 hover:text-emerald-600 py-2 transition-colors"
+                  className="text-base font-medium text-slate-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-400 py-2 transition-colors"
                 >
                   {link.label}
                 </a>
               ))}
-              <div className="flex flex-col gap-3 pt-4 border-t border-slate-100">
+              <div className="flex flex-col gap-3 pt-4 border-t border-slate-100 dark:border-gray-800">
                 <Link
                   href="/login"
                   onClick={() => setMenuOpen(false)}
-                  className="text-center text-sm font-semibold text-slate-700 border border-slate-200 px-4 py-3 rounded-xl hover:bg-slate-50"
+                  className="text-center text-sm font-semibold text-slate-700 dark:text-gray-200 border border-slate-200 dark:border-gray-700 px-4 py-3 rounded-xl hover:bg-slate-50 dark:hover:bg-gray-800 transition-colors"
                 >
                   Masuk
                 </Link>

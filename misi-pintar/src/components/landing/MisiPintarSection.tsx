@@ -29,7 +29,7 @@ export default function MisiPintarSection() {
   const filtered = activeTab === 'Semua' ? missions : missions.filter((m) => m.cat === activeTab)
 
   return (
-    <section id="fitur" className="py-20 md:py-28 bg-gradient-to-b from-white to-slate-50">
+    <section id="fitur" className="py-20 md:py-28 bg-gradient-to-b from-white to-slate-50 dark:from-gray-950 dark:to-gray-900 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           ref={ref}
@@ -38,16 +38,16 @@ export default function MisiPintarSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <div className="inline-flex items-center gap-2 bg-emerald-100 border border-emerald-200 rounded-full px-4 py-2 mb-6">
-            <span className="text-emerald-700 text-sm font-semibold">🎮 Misi Pintar</span>
+          <div className="inline-flex items-center gap-2 bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-full px-4 py-2 mb-6">
+            <span className="text-emerald-700 dark:text-emerald-400 text-sm font-semibold">🎮 Misi Pintar</span>
           </div>
-          <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl text-slate-900 mb-4">
+          <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white mb-4">
             Saat Belajar Terasa Seru{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-700">
               Seperti Naik Level!
             </span>
           </h2>
-          <p className="text-slate-500 text-lg max-w-2xl mx-auto">
+          <p className="text-slate-500 dark:text-gray-400 text-lg max-w-2xl mx-auto">
             Ratusan template misi siap pakai — dari PR sekolah hingga karakter. Orang tua atur, anak klaim!
           </p>
         </motion.div>
@@ -65,7 +65,7 @@ export default function MisiPintarSection() {
               className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
                 activeTab === cat
                   ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
-                  : 'bg-white border border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-600'
+                  : 'bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-slate-600 dark:text-gray-300 hover:border-emerald-300 dark:hover:border-emerald-600 hover:text-emerald-600 dark:hover:text-emerald-400'
               }`}
             >
               {cat}
@@ -88,22 +88,22 @@ export default function MisiPintarSection() {
                 variants={fadeUpVariants}
                 whileHover={{ scale: 1.03, y: -6, transition: { duration: 0.2 } }}
                 whileTap={{ scale: 0.97 }}
-                className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 cursor-pointer group"
+                className="bg-white dark:bg-gray-800 border border-slate-100 dark:border-gray-700 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 dark:hover:shadow-emerald-900/20 cursor-pointer group transition-all duration-200"
               >
                 <div className="text-4xl mb-3">{mission.emoji}</div>
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-display font-bold text-slate-900 text-base group-hover:text-emerald-600 transition-colors">{mission.title}</h3>
+                  <h3 className="font-display font-bold text-slate-900 dark:text-white text-base group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">{mission.title}</h3>
                   {mission.template && (
-                    <span className="relative inline-flex shrink-0 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 overflow-hidden">
+                    <span className="relative inline-flex shrink-0 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 overflow-hidden">
                       <span className="relative z-10">Template</span>
-                      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 dark:via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     </span>
                   )}
                 </div>
-                <p className="text-slate-500 text-xs leading-relaxed mb-4">{mission.syarat}</p>
+                <p className="text-slate-500 dark:text-gray-400 text-xs leading-relaxed mb-4">{mission.syarat}</p>
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-600 text-base">{formatRupiah(mission.reward)}</span>
-                  <span className="text-xs text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg">{mission.cat}</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400 text-base">{formatRupiah(mission.reward)}</span>
+                  <span className="text-xs text-slate-400 dark:text-gray-500 bg-slate-50 dark:bg-gray-700 border border-slate-100 dark:border-gray-600 px-2 py-1 rounded-lg">{mission.cat}</span>
                 </div>
               </motion.div>
             ))}
@@ -114,10 +114,10 @@ export default function MisiPintarSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.5 }}
-          className="mt-10 flex items-center justify-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-6 py-4"
+          className="mt-10 flex items-center justify-center gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl px-6 py-4"
         >
           <ShieldCheck className="w-5 h-5 text-amber-500 flex-shrink-0" />
-          <p className="text-amber-700 text-sm font-medium">
+          <p className="text-amber-700 dark:text-amber-400 text-sm font-medium">
             <strong>Fitur Bukti Kerja Anti-Cheat:</strong> Anak wajib upload foto/teks bukti sebelum reward cair. Orang tua review & approve.
           </p>
         </motion.div>

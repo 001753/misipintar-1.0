@@ -40,7 +40,7 @@ export default function HowItWorks() {
   const { ref, inView } = useScrollReveal()
 
   return (
-    <section id="cara-kerja" className="py-20 md:py-28 bg-white">
+    <section id="cara-kerja" className="py-20 md:py-28 bg-white dark:bg-gray-900 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           ref={ref}
@@ -49,23 +49,23 @@ export default function HowItWorks() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center gap-2 bg-purple-100 border border-purple-200 rounded-full px-4 py-2 mb-6">
-            <span className="text-purple-700 text-sm font-semibold">⚙️ Cara Kerja</span>
+          <div className="inline-flex items-center gap-2 bg-purple-100 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 rounded-full px-4 py-2 mb-6">
+            <span className="text-purple-700 dark:text-purple-400 text-sm font-semibold">⚙️ Cara Kerja</span>
           </div>
-          <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl text-slate-900 mb-4">
+          <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white mb-4">
             3 Langkah Menuju{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-700">
               Anak yang Melek Keuangan
             </span>
           </h2>
-          <p className="text-slate-500 text-lg max-w-2xl mx-auto">
+          <p className="text-slate-500 dark:text-gray-400 text-lg max-w-2xl mx-auto">
             Tidak perlu keahlian teknis. Tidak perlu waktu berjam-jam. Cukup 3 langkah mudah.
           </p>
         </motion.div>
 
         <div className="relative">
           <div className="hidden lg:block absolute top-24 left-[16.5%] right-[16.5%] h-0.5">
-            <div className="w-full h-full border-t-2 border-dashed border-slate-200" />
+            <div className="w-full h-full border-t-2 border-dashed border-slate-200 dark:border-gray-700" />
             <motion.div
               className="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-400 to-emerald-600"
               style={{ height: '2px' }}
@@ -88,14 +88,14 @@ export default function HowItWorks() {
                   <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center shadow-xl ${step.shadow} group-hover:scale-110 group-hover:-rotate-3 transition-all duration-300`}>
                     <step.icon className="w-9 h-9 text-white" />
                   </div>
-                  <div className="absolute -top-3 -right-3 font-display font-black text-5xl text-slate-100 -z-10 select-none leading-none">
+                  <div className="absolute -top-3 -right-3 font-display font-black text-5xl text-slate-100 dark:text-gray-800 -z-10 select-none leading-none">
                     {step.number}
                   </div>
                 </div>
                 <div className="text-3xl mb-3">{step.emoji}</div>
-                <h3 className="font-display font-bold text-slate-900 text-xl mb-3">{step.title}</h3>
-                <p className="text-slate-500 leading-relaxed mb-4">{step.desc}</p>
-                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                <h3 className="font-display font-bold text-slate-900 dark:text-white text-xl mb-3">{step.title}</h3>
+                <p className="text-slate-500 dark:text-gray-400 leading-relaxed mb-4">{step.desc}</p>
+                <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-3 py-1 rounded-full">
                   {step.time}
                 </span>
               </motion.div>
@@ -109,7 +109,7 @@ export default function HowItWorks() {
           transition={{ delay: 0.8 }}
           className="mt-16 text-center"
         >
-          <p className="text-slate-500 text-base mb-6">Bergabung bersama ribuan keluarga yang sudah memulai perjalanan finansial mereka</p>
+          <p className="text-slate-500 dark:text-gray-400 text-base mb-6">Bergabung bersama ribuan keluarga yang sudah memulai perjalanan finansial mereka</p>
           <div className="flex items-center justify-center gap-2">
             {['👨‍👩‍👧', '👪', '👨‍👩‍👦‍👦', '👨‍👩‍👧‍👦', '👩‍👧', '👨‍👦'].map((emoji, i) => (
               <motion.span
@@ -122,7 +122,7 @@ export default function HowItWorks() {
                 {emoji}
               </motion.span>
             ))}
-            <span className="text-slate-500 text-sm ml-2 font-medium">+47.000 keluarga lainnya</span>
+            <span className="text-slate-500 dark:text-gray-400 text-sm ml-2 font-medium">+47.000 keluarga lainnya</span>
           </div>
         </motion.div>
       </div>

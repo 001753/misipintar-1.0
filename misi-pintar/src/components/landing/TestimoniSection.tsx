@@ -58,7 +58,7 @@ export default function TestimoniSection() {
   const { ref, inView } = useScrollReveal()
 
   return (
-    <section id="testimoni" className="py-20 md:py-28 bg-slate-50 overflow-hidden">
+    <section id="testimoni" className="py-20 md:py-28 bg-slate-50 dark:bg-gray-900 overflow-hidden transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           ref={ref}
@@ -67,11 +67,11 @@ export default function TestimoniSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center gap-2 bg-amber-100 border border-amber-200 rounded-full px-4 py-2 mb-6">
+          <div className="inline-flex items-center gap-2 bg-amber-100 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 rounded-full px-4 py-2 mb-6">
             <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-            <span className="text-amber-700 text-sm font-semibold">Testimoni Nyata</span>
+            <span className="text-amber-700 dark:text-amber-400 text-sm font-semibold">Testimoni Nyata</span>
           </div>
-          <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl text-slate-900 mb-4">
+          <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white mb-4">
             Dipercaya{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-500">
               Ribuan Keluarga Indonesia
@@ -79,9 +79,9 @@ export default function TestimoniSection() {
           </h2>
           <div className="flex items-center justify-center gap-1 mb-2">
             {[1,2,3,4,5].map(i => <Star key={i} className="w-6 h-6 text-amber-400 fill-amber-400" />)}
-            <span className="ml-2 text-slate-700 font-bold text-lg">4.9/5</span>
+            <span className="ml-2 text-slate-700 dark:text-gray-200 font-bold text-lg">4.9/5</span>
           </div>
-          <p className="text-slate-500">dari 3.200+ ulasan terverifikasi</p>
+          <p className="text-slate-500 dark:text-gray-400">dari 3.200+ ulasan terverifikasi</p>
         </motion.div>
 
         <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
@@ -91,7 +91,7 @@ export default function TestimoniSection() {
               initial={{ opacity: 0, y: 40 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: i * 0.1, duration: 0.5 }}
-              className="break-inside-avoid bg-white border border-slate-100 rounded-3xl p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group"
+              className="break-inside-avoid bg-white dark:bg-gray-800 border border-slate-100 dark:border-gray-700 rounded-3xl p-6 shadow-sm hover:shadow-lg dark:hover:shadow-black/30 hover:-translate-y-1 transition-all duration-200 group"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex gap-1">
@@ -99,19 +99,19 @@ export default function TestimoniSection() {
                     <Star key={j} className="w-4 h-4 text-amber-400 fill-amber-400" />
                   ))}
                 </div>
-                <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                <div className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-100 dark:border-emerald-800 px-2 py-0.5 rounded-full">
                   <BadgeCheck className="w-3 h-3" />
                   Verified
                 </div>
               </div>
-              <p className="text-slate-700 leading-relaxed mb-6 italic">"{t.quote}"</p>
+              <p className="text-slate-700 dark:text-gray-300 leading-relaxed mb-6 italic">"{t.quote}"</p>
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${t.gradient} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
                   {t.name.split(' ').slice(-1)[0][0]}
                 </div>
                 <div>
-                  <div className="font-semibold text-slate-900 text-sm">{t.name}</div>
-                  <div className="text-slate-500 text-xs">{t.city} · {t.role}</div>
+                  <div className="font-semibold text-slate-900 dark:text-white text-sm">{t.name}</div>
+                  <div className="text-slate-500 dark:text-gray-400 text-xs">{t.city} · {t.role}</div>
                 </div>
               </div>
             </motion.div>

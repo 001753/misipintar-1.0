@@ -1,0 +1,87 @@
+This is a significant change across the whole app. Let me first explore the scope — understand the current color system and count pages before touching anything.
+
+
+4 actions
+69 TSX files is a big scope. Let me explore the main user-facing layouts and color patterns before touching anything.
+
+
+4 actions
+Good picture. The dashboard is already light, child is gamified-green, auth is light, superadmin/adm-panel are dark. The strategy:
+
+CSS variables + class-based dark mode in globals.css
+ThemeProvider + toggle component
+Update all 6 layout files with dark: variants
+Update the most visible pages
+Let me read the remaining key pages before writing anything.
+
+
+4 actions
+Good picture. Now let me read the remaining key files I need to update — dashboard pages, auth pages, child pages — all in parallel.
+
+
+4 actions
+I have enough to plan the full implementation. Let me read the remaining files I need, then write everything in one large coordinated batch.
+
+
+4 actions
+Now I have everything I need. Let me implement this in coordinated batches — infrastructure first, then layouts, then pages.
+
+
+3 actions
+Now let me update globals.css and root layout, while reading the full register page tail simultaneously.
+
+
+5 actions
+Now let me write all 6 remaining files in parallel — layouts first, then the pages.
+
+
+Reading files for updates
+I need to read the files before writing. Let me read all 6 files I need to update in one parallel batch.
+
+
+7 actions
+Now I have all 6 files. Writing them all in parallel now.
+
+
+7 actions
+Good progress — 6 layout/page files updated. Now let me update the dashboard main page and notification bell, while restarting the app to verify the changes compile.
+
+
+3 actions
+Now writing the dashboard main page and notification bell with dark mode — both in parallel.
+
+
+3 actions
+Now writing both files simultaneously.
+
+
+3 actions
+Good, all core files written. Let me restart the app to verify compilation while reading the remaining dashboard sub-pages.
+
+
+5 actions
+App is running clean — no compilation errors. Now let me tackle the remaining dashboard and child sub-pages. Let me glob to find all page/client files still needing dark mode.
+
+
+3 actions
+Let me read the 8 most-visited client components in two parallel batches.
+
+
+5 actions
+I have the content from bash output — I can use edit for targeted dark mode changes on these large files. Batching all 4 in parallel.
+
+
+5 actions
+Continuing with more targeted dark mode edits on all the files simultaneously while reading child sub-pages.
+
+
+5 actions
+Continuing with the remaining dark mode edits in parallel batches.
+
+
+5 actions
+Continuing with remaining edits on tasks, ledger, pending, and reading child sub-pages all in parallel.
+
+
+9 actions
+Now applying dark mode to child sub-pages in parallel while reading the shared history client.

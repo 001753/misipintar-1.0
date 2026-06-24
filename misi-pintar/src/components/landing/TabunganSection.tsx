@@ -9,49 +9,61 @@ const features = [
     icon: Target,
     title: 'Kantong Impian',
     desc: 'Anak membuat kantong bertujuan: "Sepatu Nike", "Game Switch", "Buku". Lengkap dengan progress bar visual menuju target.',
-    color: 'bg-emerald-50 border-emerald-200',
-    iconColor: 'text-emerald-500',
-    iconBg: 'bg-emerald-100',
+    color: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800',
+    iconColor: 'text-emerald-600 dark:text-emerald-400',
+    iconBg: 'bg-emerald-100 dark:bg-emerald-900/60',
+    titleColor: 'text-slate-900 dark:text-white',
+    descColor: 'text-slate-600 dark:text-gray-300',
   },
   {
     icon: TrendingUp,
     title: 'Bunga Reward Orang Tua',
     desc: 'Orang tua bisa memberi "bunga" 5–20% sebagai motivasi menabung lebih lama. Anak belajar konsep compound interest sejak dini.',
-    color: 'bg-blue-50 border-blue-200',
-    iconColor: 'text-blue-500',
-    iconBg: 'bg-blue-100',
+    color: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800',
+    iconColor: 'text-blue-600 dark:text-blue-400',
+    iconBg: 'bg-blue-100 dark:bg-blue-900/60',
+    titleColor: 'text-slate-900 dark:text-white',
+    descColor: 'text-slate-600 dark:text-gray-300',
   },
   {
     icon: Lock,
     title: 'Kunci Tabungan',
     desc: 'Orang tua bisa kunci kantong sehingga tidak bisa dicairkan sebelum tanggal/target tercapai. Mengajarkan komitmen finansial.',
-    color: 'bg-purple-50 border-purple-200',
-    iconColor: 'text-purple-500',
-    iconBg: 'bg-purple-100',
+    color: 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800',
+    iconColor: 'text-purple-600 dark:text-purple-400',
+    iconBg: 'bg-purple-100 dark:bg-purple-900/60',
+    titleColor: 'text-slate-900 dark:text-white',
+    descColor: 'text-slate-600 dark:text-gray-300',
   },
   {
     icon: PartyPopper,
     title: 'Momen Perayaan',
     desc: 'Saat target tercapai, app menampilkan animasi konfeti & notifikasi ke semua anggota keluarga. Momen bangga bersama!',
-    color: 'bg-amber-50 border-amber-200',
-    iconColor: 'text-amber-500',
-    iconBg: 'bg-amber-100',
+    color: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800',
+    iconColor: 'text-amber-600 dark:text-amber-400',
+    iconBg: 'bg-amber-100 dark:bg-amber-900/60',
+    titleColor: 'text-slate-900 dark:text-white',
+    descColor: 'text-slate-600 dark:text-gray-300',
   },
   {
     icon: Coins,
     title: 'Auto-Setor dari Misi',
     desc: 'Set persentase otomatis dari setiap reward misi langsung masuk kantong tabungan. Disiplin finansial berjalan otomatis.',
-    color: 'bg-orange-50 border-orange-200',
-    iconColor: 'text-orange-500',
-    iconBg: 'bg-orange-100',
+    color: 'bg-orange-50 dark:bg-orange-950/40 border-orange-200 dark:border-orange-800',
+    iconColor: 'text-orange-600 dark:text-orange-400',
+    iconBg: 'bg-orange-100 dark:bg-orange-900/60',
+    titleColor: 'text-slate-900 dark:text-white',
+    descColor: 'text-slate-600 dark:text-gray-300',
   },
   {
     icon: BarChart3,
     title: 'Laporan Progres',
     desc: 'Grafik pertumbuhan saldo tabungan per minggu. Anak lihat sendiri uang mereka "tumbuh" dari kerja keras.',
-    color: 'bg-teal-50 border-teal-200',
-    iconColor: 'text-teal-500',
-    iconBg: 'bg-teal-100',
+    color: 'bg-teal-50 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800',
+    iconColor: 'text-teal-600 dark:text-teal-400',
+    iconBg: 'bg-teal-100 dark:bg-teal-900/60',
+    titleColor: 'text-slate-900 dark:text-white',
+    descColor: 'text-slate-600 dark:text-gray-300',
   },
 ]
 
@@ -60,7 +72,7 @@ export default function TabunganSection() {
   const { ref: cardRef, inView: cardInView } = useScrollReveal(0.2)
 
   return (
-    <section id="tabungan" className="py-20 md:py-28 bg-slate-950 relative overflow-hidden">
+    <section id="tabungan" className="py-20 md:py-28 bg-slate-950 dark:bg-gray-950 relative overflow-hidden transition-colors duration-200">
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 30% 40%, #10b981, transparent 60%), radial-gradient(circle at 70% 60%, #f59e0b, transparent 60%)' }} />
       </div>
@@ -106,8 +118,8 @@ export default function TabunganSection() {
                 <div className={`w-10 h-10 ${feat.iconBg} rounded-xl flex items-center justify-center mb-3`}>
                   <feat.icon className={`w-5 h-5 ${feat.iconColor}`} />
                 </div>
-                <h3 className="font-semibold text-slate-900 text-sm mb-1">{feat.title}</h3>
-                <p className="text-slate-600 text-xs leading-relaxed">{feat.desc}</p>
+                <h3 className={`font-semibold ${feat.titleColor} text-sm mb-1`}>{feat.title}</h3>
+                <p className={`${feat.descColor} text-xs leading-relaxed`}>{feat.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -121,21 +133,21 @@ export default function TabunganSection() {
           >
             <div className="relative w-full max-w-sm">
               <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/20 to-amber-500/20 rounded-[3rem] blur-2xl" />
-              <div className="relative bg-white rounded-3xl shadow-2xl p-6 border border-slate-100">
+              <div className="relative bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-6 border border-slate-100 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <div className="text-xs text-slate-500 font-medium mb-0.5">🎯 Kantong Impian</div>
-                    <div className="font-display font-bold text-slate-900 text-xl">Sepatu Nike Air Max</div>
+                    <div className="text-xs text-slate-500 dark:text-gray-400 font-medium mb-0.5">🎯 Kantong Impian</div>
+                    <div className="font-display font-bold text-slate-900 dark:text-white text-xl">Sepatu Nike Air Max</div>
                   </div>
                   <div className="text-3xl" style={{ animation: 'piggyBounce 2s ease-in-out infinite' }}>🐷</div>
                 </div>
 
                 <div className="mb-4">
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-slate-600 font-medium">Progress</span>
-                    <span className="text-emerald-600 font-bold">68%</span>
+                    <span className="text-slate-600 dark:text-gray-300 font-medium">Progress</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">68%</span>
                   </div>
-                  <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden">
+                  <div className="w-full bg-slate-100 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
                     <motion.div
                       className="h-4 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full"
                       initial={{ width: 0 }}
@@ -143,7 +155,7 @@ export default function TabunganSection() {
                       transition={{ duration: 1.5, delay: 0.3, ease: 'easeOut' }}
                     />
                   </div>
-                  <div className="flex justify-between text-xs text-slate-400 mt-1">
+                  <div className="flex justify-between text-xs text-slate-400 dark:text-gray-500 mt-1">
                     <span>Rp 306.000 terkumpul</span>
                     <span>Target: Rp 450.000</span>
                   </div>
@@ -156,7 +168,7 @@ export default function TabunganSection() {
                     { icon: '⏰', text: 'Perkiraan tercapai: 3 minggu lagi' },
                     { icon: '⚡', text: 'Auto-setor 30% dari setiap misi' },
                   ].map((item) => (
-                    <div key={item.text} className="flex items-center gap-2 text-sm text-slate-600 bg-slate-50 rounded-xl px-3 py-2">
+                    <div key={item.text} className="flex items-center gap-2 text-sm text-slate-600 dark:text-gray-300 bg-slate-50 dark:bg-gray-700/50 rounded-xl px-3 py-2">
                       <span>{item.icon}</span>
                       <span>{item.text}</span>
                     </div>

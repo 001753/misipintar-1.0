@@ -2,11 +2,11 @@
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import MeshBackground from '@/components/ui/MeshBackground'
-import { Rocket, Play, CheckCircle, Star, Zap, TrendingUp } from 'lucide-react'
+import { Rocket, Play, CheckCircle, Star, TrendingUp } from 'lucide-react'
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800 pt-20">
+    <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800 dark:from-gray-950 dark:via-gray-900 dark:to-gray-900 pt-20">
       <MeshBackground />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 w-full">
@@ -163,7 +163,7 @@ export default function HeroSection() {
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-white dark:from-gray-950 to-transparent" />
     </section>
   )
 }

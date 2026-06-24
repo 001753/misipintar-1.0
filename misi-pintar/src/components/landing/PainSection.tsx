@@ -37,7 +37,7 @@ export default function PainSection() {
   const { ref, inView } = useScrollReveal()
 
   return (
-    <section className="py-20 md:py-28 bg-slate-950 relative overflow-hidden">
+    <section className="py-20 md:py-28 bg-slate-950 dark:bg-gray-950 relative overflow-hidden transition-colors duration-200">
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-0 left-0 w-full h-full" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, #ef4444 0%, transparent 50%), radial-gradient(circle at 80% 50%, #f59e0b 0%, transparent 50%)' }} />
       </div>
@@ -76,7 +76,7 @@ export default function PainSection() {
               <div className="text-5xl mb-4">{pain.emoji}</div>
               <h3 className="font-display font-bold text-xl text-white mb-3">{pain.title}</h3>
               <p className="text-slate-400 leading-relaxed">{pain.desc}</p>
-              <div className={`absolute top-6 right-6 opacity-10`}>
+              <div className="absolute top-6 right-6 opacity-10">
                 <pain.icon className={`w-16 h-16 ${pain.iconColor}`} />
               </div>
             </motion.div>

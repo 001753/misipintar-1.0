@@ -44,7 +44,7 @@ export default function FaqSection() {
   const { ref, inView } = useScrollReveal()
 
   return (
-    <section id="faq" className="py-20 md:py-28 bg-white">
+    <section id="faq" className="py-20 md:py-28 bg-white dark:bg-gray-950 transition-colors duration-200">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           ref={ref}
@@ -53,16 +53,16 @@ export default function FaqSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <div className="inline-flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-full px-4 py-2 mb-6">
-            <span className="text-slate-600 text-sm font-semibold">❓ Pertanyaan Umum</span>
+          <div className="inline-flex items-center gap-2 bg-slate-100 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-full px-4 py-2 mb-6">
+            <span className="text-slate-600 dark:text-gray-300 text-sm font-semibold">❓ Pertanyaan Umum</span>
           </div>
-          <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl text-slate-900 mb-4">
+          <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white mb-4">
             Punya Pertanyaan?{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-700">
               Kami Jawab!
             </span>
           </h2>
-          <p className="text-slate-500 text-lg">Pertanyaan yang sering ditanyakan oleh orang tua</p>
+          <p className="text-slate-500 dark:text-gray-400 text-lg">Pertanyaan yang sering ditanyakan oleh orang tua</p>
         </motion.div>
 
         <div className="space-y-3">
@@ -73,19 +73,23 @@ export default function FaqSection() {
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: i * 0.06, duration: 0.4 }}
               className={`border rounded-2xl overflow-hidden transition-colors duration-200 ${
-                openIndex === i ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-100 bg-white hover:border-emerald-100'
+                openIndex === i
+                  ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20'
+                  : 'border-slate-100 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-emerald-100 dark:hover:border-emerald-900'
               }`}
             >
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
                 className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left"
               >
-                <span className="font-semibold text-slate-900 text-base leading-snug">{faq.q}</span>
+                <span className="font-semibold text-slate-900 dark:text-white text-base leading-snug">{faq.q}</span>
                 <motion.div
                   animate={{ rotate: openIndex === i ? 180 : 0 }}
                   transition={{ duration: 0.2 }}
-                  className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                    openIndex === i ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'
+                  className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                    openIndex === i
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-400'
                   }`}
                 >
                   <ChevronDown className="w-4 h-4" />
@@ -101,7 +105,7 @@ export default function FaqSection() {
                     transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                     className="overflow-hidden"
                   >
-                    <div className="px-6 pb-5 text-slate-600 leading-relaxed border-t border-emerald-100">
+                    <div className="px-6 pb-5 text-slate-600 dark:text-gray-300 leading-relaxed border-t border-emerald-100 dark:border-emerald-900">
                       <div className="pt-4">{faq.a}</div>
                     </div>
                   </motion.div>
