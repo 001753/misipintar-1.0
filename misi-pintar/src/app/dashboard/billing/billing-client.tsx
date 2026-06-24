@@ -11,6 +11,7 @@ import {
   BillingCycle,
 } from "@/actions/subscription";
 import QrisModal from "./qris-modal";
+import Link from "next/link";
 
 declare global {
   interface Window {
@@ -485,10 +486,10 @@ export default function BillingClient({
                 return (
                   <div
                     key={inv.id}
-                    className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors gap-3"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">
                         {inv.midtransOrderId ?? `INV-${inv.id.slice(0, 8)}`}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
@@ -500,13 +501,23 @@ export default function BillingClient({
                         {inv.paymentMethod && ` · ${inv.paymentMethod}`}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {fmt(inv.amount)}
-                      </p>
-                      <p className={`text-xs font-medium mt-0.5 ${statusMeta.color}`}>
-                        {statusMeta.label}
-                      </p>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {fmt(inv.amount)}
+                        </p>
+                        <p className={`text-xs font-medium mt-0.5 ${statusMeta.color}`}>
+                          {statusMeta.label}
+                        </p>
+                      </div>
+                      {inv.status === "PAID" && (
+                        <Link
+                          href={`/dashboard/billing/invoice/${inv.id}`}
+                          className="flex items-center gap-1 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
+                        >
+                          ↓ Kuitansi
+                        </Link>
+                      )}
                     </div>
                   </div>
                 );
