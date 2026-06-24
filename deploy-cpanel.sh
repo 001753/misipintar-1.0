@@ -128,21 +128,12 @@ else
 fi
 
 # ── Step 5: Build Next.js ─────────────────────────────────────────────────────
-log "[5/6] Build Next.js (standalone)..."
+log "[5/6] Build Next.js (standalone, webpack)..."
 #
-# PENTING — cPanel shared hosting membatasi jumlah thread OS (nproc):
-#   RAYON_NUM_THREADS=1  → Turbopack Rust engine hanya pakai 1 thread rayon
-#   UV_THREADPOOL_SIZE=4 → Node.js libuv thread pool dibatasi (default 128)
-#   NODE_OPTIONS mem     → Batasi heap Node.js agar tidak OOM di shared hosting
+# Menggunakan webpack (bukan Turbopack) — flag --webpack memastikan build
+# berjalan stabil di shared hosting tanpa butuh thread pool Rust/rayon.
 #
-# Tanpa ini, Turbopack panic dengan:
-#   "ThreadPoolBuildError: Resource temporarily unavailable (EAGAIN)"
-#
-export RAYON_NUM_THREADS=1
-export UV_THREADPOOL_SIZE=4
-export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=512"
-
-./node_modules/.bin/next build
+./node_modules/.bin/next build --webpack
 ok "Build berhasil"
 
 # ── Step 6: Copy static assets ────────────────────────────────────────────────
