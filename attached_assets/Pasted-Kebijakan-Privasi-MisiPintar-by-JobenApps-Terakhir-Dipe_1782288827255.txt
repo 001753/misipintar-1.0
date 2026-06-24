@@ -1,0 +1,53 @@
+Kebijakan Privasi – MisiPintar (by JobenApps)
+Terakhir Diperbarui: 24 Juni 2026
+
+Selamat datang di MisiPintar (jobenapps.cloud). Kami sangat menghargai kepercayaan yang Anda berikan selaku orang tua untuk mengasuh dan mendidik kedisiplinan serta literasi keuangan anak bersama kami. Kebijakan Privasi ini dirancang untuk menjelaskan bagaimana kami mengumpulkan, menggunakan, menyimpan, dan melindungi informasi pribadi keluarga Anda demi memberikan pengalaman belajar dan gamifikasi terbaik yang aman.
+
+1. Informasi yang Kami Kumpulkan
+Untuk menyelenggarakan layanan ekosistem multi-tenant keluarga, kami mengumpulkan dua kategori data:
+
+A. Informasi Akun Orang Tua (Pengendali Utama)
+Data Registrasi: Nama lengkap, nomor WhatsApp aktif (untuk integrasi notifikasi Fonnte), alamat email, dan kata sandi yang dienkripsi secara aman.
+
+Data Transaksi: Informasi pembayaran langganan paket Pro melalui gerbang pembayaran resmi (Midtrans / InterActive QRIS). Kami tidak pernah menyimpan data kartu kredit atau kredensial bank Anda di server kami.
+
+B. Informasi Akun Anak (Di bawah Kendali Orang Tua)
+Profil Virtual Anak: Nama panggilan, username unik untuk login tanpa email, dan pilihan avatar emoji.
+
+Aktivitas Misi: Data mengenai daftar tugas (Misi Pintar), bukti penyelesaian tugas, catatan tabungan virtual, serta bunga simulasi yang didapatkan anak di dalam aplikasi.
+
+2. Penggunaan Informasi Anda
+MisiPintar menggunakan data yang dikumpulkan semata-mata untuk kepentingan operasional dan edukasi keluarga Anda, antara lain:
+
+Menyediakan, memelihara, dan mengamankan dasbor FamilySpace Anda.
+
+Mengirimkan notifikasi perkembangan tugas dan pencairan saldo anak langsung ke WhatsApp Orang Tua melalui sistem Fonnte.
+
+Memproses validasi pembayaran upgrade paket premium secara otomatis menggunakan Midtrans / QRIS.
+
+Mengoptimalkan respons asisten pintar berbasis kecerdasan buatan (Gemini API) guna memberikan rekomendasi misi pintar yang relevan bagi anak (tanpa mengekspos identitas asli anak).
+
+3. Keamanan Data Tingkat Tinggi
+Kami berkomitmen menjaga privasi keluarga Anda dengan standar keamanan siber terbaik:
+
+Enkripsi Total: Seluruh kata sandi dienkripsi menggunakan algoritma hashing satu arah, dan data sensitif dilindungi menggunakan kunci enkripsi bawaan industri (ENCRYPTION_KEY).
+
+Isolasi Multi-Tenant: Data antar-keluarga diisolasi secara ketat di dalam database PostgreSQL kami. Keluarga lain tidak akan pernah bisa melihat kode akses ruang (Space Code), profil anak, atau aktivitas misi keluarga Anda.
+
+Perlindungan Anak: Akun anak tidak memiliki akses ke dunia luar, tidak memiliki fitur chat publik, dan tidak dapat dihubungi oleh pengguna asing dari luar lingkaran keluarga Anda.
+
+4. Berbagi Informasi dengan Pihak Ketiga
+Kami tidak akan pernah menjual, menyewakan, atau menukar data pribadi keluarga Anda kepada pihak ketiga untuk kepentingan iklan atau pemasaran. Kami hanya membagikan data terenkripsi secara terbatas kepada mitra layanan (third-party services) yang terintegrasi langsung untuk menjalankan fungsionalitas aplikasi:
+
+Fonnte: Untuk mengirimkan gerbang notifikasi pesan teks WhatsApp.
+
+Midtrans / InterActive: Untuk memproses keamanan transaksi pembayaran QRIS dan Virtual Account.
+
+Google Gemini API: Untuk memproses analisis teks rekomendasi tugas cerdas tanpa menyertakan informasi identitas asli (anonimisasi data).
+
+5. Hak Anda atas Data Pribadi
+Sebagai orang tua yang memegang kendali penuh atas FamilySpace, Anda memiliki hak mutlak untuk:
+
+Mengubah, memperbarui, atau memperbaiki informasi profil keluarga dan akun anak kapan saja melalui dasbor pengaturan.
+
+Menghapus akun keluarga Anda secara permanen. Penghapusan akun akan membersihkan seluruh data anak, riwayat misi, dan catatan keuangan virtual dari database produksi kami seketika.

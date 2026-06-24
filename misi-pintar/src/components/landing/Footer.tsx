@@ -15,8 +15,8 @@ const links = {
     { label: 'Kontak', href: '#' },
   ],
   Legal: [
-    { label: 'Privasi', href: '#' },
-    { label: 'Syarat & Ketentuan', href: '#' },
+    { label: 'Kebijakan Privasi', href: '/kebijakan-privasi' },
+    { label: 'Syarat & Ketentuan', href: '/syarat-ketentuan' },
     { label: 'Cookie', href: '#' },
   ],
 }
