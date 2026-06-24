@@ -174,8 +174,8 @@ export default function LedgerClient({ children }: Props) {
     <div className="grid lg:grid-cols-2 gap-8">
       {/* Transfer Form */}
       <div className="space-y-6">
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">Transfer Saldo</h2>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200">
+          <h2 className="font-semibold text-gray-900 dark:text-gray-50 mb-4">Transfer Saldo</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Pilih Anak */}
@@ -354,14 +354,14 @@ export default function LedgerClient({ children }: Props) {
 
       {/* Children Overview */}
       <div className="space-y-4">
-        <h2 className="font-semibold text-gray-900">Ringkasan Saldo Anak</h2>
+        <h2 className="font-semibold text-gray-900 dark:text-gray-50">Ringkasan Saldo Anak</h2>
         {children.map((c) => (
           <div
             key={c.id}
-            className={`bg-white rounded-2xl border-2 p-5 cursor-pointer transition-colors ${
+            className={`bg-white dark:bg-gray-900 rounded-2xl border-2 p-5 cursor-pointer transition-colors duration-200 ${
               selectedChild === c.id
-                ? "border-emerald-400"
-                : "border-gray-200 hover:border-gray-300"
+                ? "border-emerald-400 dark:border-emerald-600"
+                : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
             }`}
             onClick={() => { setSelectedChild(c.id); setAmount(""); setError(null); setSuccess(null); }}
           >

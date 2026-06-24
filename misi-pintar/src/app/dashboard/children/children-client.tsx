@@ -133,8 +133,8 @@ export default function ChildrenClient({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-black text-gray-900">👨‍👩‍👧 Keluarga</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
+          <h1 className="text-2xl font-black text-gray-900 dark:text-gray-50">👨‍👩‍👧 Keluarga</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">
             <span className="font-bold text-emerald-600">{activeChildren.length}</span>
             <span className="text-gray-400">/{maxChildren} anak aktif</span>
             {archivedChildren.length > 0 && (
@@ -160,18 +160,18 @@ export default function ChildrenClient({
       )}
 
       {/* Tab Bar */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl w-fit mb-6">
+      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl w-fit mb-6 transition-colors duration-200">
         <button
           onClick={() => setTab('active')}
           className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
             tab === 'active'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 shadow-sm'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
           }`}
         >
           Aktif
           <span className={`ml-2 px-1.5 py-0.5 rounded-md text-xs font-bold ${
-            tab === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'
+            tab === 'active' ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400' : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
           }`}>
             {activeChildren.length}
           </span>
@@ -180,14 +180,14 @@ export default function ChildrenClient({
           onClick={() => setTab('archived')}
           className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
             tab === 'archived'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
+              ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 shadow-sm'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
           }`}
         >
           Arsip
           {archivedChildren.length > 0 && (
             <span className={`ml-2 px-1.5 py-0.5 rounded-md text-xs font-bold ${
-              tab === 'archived' ? 'bg-red-100 text-red-600' : 'bg-gray-200 text-gray-500'
+              tab === 'archived' ? 'bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400' : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
             }`}>
               {archivedChildren.length}
             </span>
@@ -248,7 +248,7 @@ export default function ChildrenClient({
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
           onClick={(e) => { if (e.target === e.currentTarget) closeModal() }}
         >
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl dark:shadow-black/50 w-full max-w-md max-h-[90vh] overflow-y-auto transition-colors duration-200">
 
             {/* Create */}
             {modal.type === 'create' && (
@@ -404,7 +404,7 @@ export default function ChildrenClient({
 
 // ── Sub-components ──────────────────────────────────────────
 
-function ChildCard({
+function ChildCard({ // dark-mode-enabled
   child,
   tasks,
   recentTasks,
@@ -420,12 +420,12 @@ function ChildCard({
   onDeactivate: () => void
 }) {
   return (
-    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+    <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md dark:shadow-black/20 transition-all overflow-hidden">
       {/* Card header */}
       <div className="p-5 pb-4">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center text-3xl overflow-hidden flex-shrink-0 border border-emerald-100">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/60 dark:to-emerald-900/40 flex items-center justify-center text-3xl overflow-hidden flex-shrink-0 border border-emerald-100 dark:border-emerald-900">
               {child.avatar?.startsWith('data:image/') ? (
                 <img src={child.avatar} alt={child.name} className="w-full h-full object-cover" />
               ) : (
@@ -433,8 +433,8 @@ function ChildCard({
               )}
             </div>
             <div>
-              <p className="font-bold text-gray-900 leading-tight">{child.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">@{child.username}</p>
+              <p className="font-bold text-gray-900 dark:text-gray-100 leading-tight">{child.name}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">@{child.username}</p>
             </div>
           </div>
           <div className="flex-shrink-0">
@@ -454,7 +454,7 @@ function ChildCard({
 
         {/* Task stats */}
         {tasks && (
-          <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-2xl">
+          <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-2xl">
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <span>📋</span>
               <span><strong className="text-gray-800">{tasks.total}</strong> total</span>
@@ -495,10 +495,10 @@ function ChildCard({
       </div>
 
       {/* Actions */}
-      <div className="border-t border-gray-50 px-5 py-3 flex items-center gap-2">
+      <div className="border-t border-gray-50 dark:border-gray-800 px-5 py-3 flex items-center gap-2">
         <Link
           href={`/dashboard/history/${child.id}`}
-          className="flex-1 text-xs py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-center font-medium transition-colors"
+          className="flex-1 text-xs py-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-xl text-center font-medium transition-colors"
         >
           📋 Riwayat
         </Link>
@@ -604,10 +604,10 @@ function StatBox({ label, value, color }: { label: string; value: number; color:
 
 function EmptyState({ emoji, title, desc }: { emoji: string; title: string; desc: string }) {
   return (
-    <div className="bg-white rounded-3xl border border-dashed border-gray-200 p-16 text-center">
+    <div className="bg-white dark:bg-gray-900 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700 p-16 text-center transition-colors duration-200">
       <p className="text-5xl mb-4">{emoji}</p>
-      <p className="text-gray-700 font-semibold">{title}</p>
-      <p className="text-gray-400 text-sm mt-1">{desc}</p>
+      <p className="text-gray-700 dark:text-gray-300 font-semibold">{title}</p>
+      <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">{desc}</p>
     </div>
   )
 }
@@ -615,11 +615,11 @@ function EmptyState({ emoji, title, desc }: { emoji: string; title: string; desc
 function ModalHeader({ title, onClose }: { title: string; onClose: () => void }) {
   return (
     <div className="flex items-center justify-between">
-      <h2 className="text-lg font-black text-gray-900">{title}</h2>
+      <h2 className="text-lg font-black text-gray-900 dark:text-gray-50">{title}</h2>
       <button
         type="button"
         onClick={onClose}
-        className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-lg font-bold"
+        className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors text-lg font-bold"
       >
         ×
       </button>

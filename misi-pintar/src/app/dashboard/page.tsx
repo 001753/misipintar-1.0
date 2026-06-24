@@ -13,7 +13,6 @@ export default async function ParentDashboardPage() {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-  // Week starts Monday
   const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1
   const weekStart = new Date(now)
   weekStart.setDate(now.getDate() - dayOfWeek)
@@ -63,7 +62,6 @@ export default async function ParentDashboardPage() {
   const monthlyTaskCount = monthlyRewards._count
   const monthName = now.toLocaleDateString('id-ID', { month: 'long' })
 
-  // ── Weekly chart data ──────────────────────────────────
   const DAY_LABELS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
   const childNames = activeChildren.map((c) => c.name)
 
@@ -83,7 +81,6 @@ export default async function ParentDashboardPage() {
   }
   const visibleChartData = chartData.slice(0, dayOfWeek + 1)
 
-  // ── Leaderboard data ───────────────────────────────────
   const leaderboard = activeChildren
     .map((child) => {
       const stats = monthlyLeaderboard.find((r) => r.childId === child.id)
@@ -97,21 +94,20 @@ export default async function ParentDashboardPage() {
 
   const maxTasks = leaderboard[0]?.taskCount ?? 0
   const hasLeaderboardData = maxTasks > 0
-
   const MEDALS = ['🥇', '🥈', '🥉']
 
   return (
     <div className="space-y-6">
       {/* ── Header ── */}
       <div className="animate-fade-up">
-        <p className="text-gray-400 text-sm font-medium">Selamat datang kembali 👋</p>
-        <h1 className="text-2xl font-black text-gray-900 mt-0.5">{firstName}</h1>
-        <p className="text-emerald-600 text-sm font-semibold">{familySpace?.name}</p>
+        <p className="text-gray-400 dark:text-gray-500 text-sm font-medium">Selamat datang kembali 👋</p>
+        <h1 className="text-2xl font-black text-gray-900 dark:text-gray-50 mt-0.5">{firstName}</h1>
+        <p className="text-emerald-600 dark:text-emerald-400 text-sm font-semibold">{familySpace?.name}</p>
       </div>
 
       {/* ── Family Summary Widget ── */}
       <div className="animate-fade-up delay-75">
-        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 rounded-3xl p-5 shadow-xl shadow-emerald-100">
+        <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 rounded-3xl p-5 shadow-xl shadow-emerald-100 dark:shadow-emerald-900/30">
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full" />
           <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-white/5 rounded-full" />
           <div className="absolute top-4 right-20 w-10 h-10 bg-white/10 rounded-full" />
@@ -137,38 +133,34 @@ export default async function ParentDashboardPage() {
         <div className="animate-fade-up delay-100">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-base font-bold text-gray-900">🏅 Papan Peringkat</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Misi selesai bulan {monthName}</p>
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-50">🏅 Papan Peringkat</h2>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Misi selesai bulan {monthName}</p>
             </div>
             {hasLeaderboardData && (
-              <span className="text-xs bg-amber-50 text-amber-600 font-semibold px-2.5 py-1 rounded-full border border-amber-100">
+              <span className="text-xs bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 font-semibold px-2.5 py-1 rounded-full border border-amber-100 dark:border-amber-900">
                 {monthlyTaskCount} total tugas
               </span>
             )}
           </div>
 
           {!hasLeaderboardData ? (
-            /* Empty state */
-            <div className="bg-white rounded-3xl border border-dashed border-gray-200 p-8 text-center">
+            <div className="bg-white dark:bg-gray-900 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700 p-8 text-center transition-colors duration-200">
               <p className="text-4xl mb-2">🚀</p>
-              <p className="text-gray-700 font-bold text-sm">Belum ada misi selesai bulan ini</p>
-              <p className="text-gray-400 text-xs mt-1">Peringkat akan muncul saat anak menyelesaikan misi pertama</p>
-              <Link href="/dashboard/tasks" className="inline-block mt-3 text-xs text-emerald-600 font-semibold hover:underline">
+              <p className="text-gray-700 dark:text-gray-300 font-bold text-sm">Belum ada misi selesai bulan ini</p>
+              <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Peringkat akan muncul saat anak menyelesaikan misi pertama</p>
+              <Link href="/dashboard/tasks" className="inline-block mt-3 text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline">
                 Buat misi baru →
               </Link>
             </div>
           ) : (
             <div className="space-y-3">
-              {/* 🥇 First place — hero card */}
               {leaderboard[0] && (
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 p-px shadow-lg shadow-amber-100">
-                  <div className="relative bg-gradient-to-br from-amber-50 to-yellow-50 rounded-[calc(1.5rem-1px)] p-4">
-                    {/* Crown glow */}
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-200/40 rounded-full -translate-y-8 translate-x-8" />
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 p-px shadow-lg shadow-amber-100 dark:shadow-amber-900/30">
+                  <div className="relative bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/80 dark:to-yellow-950/80 rounded-[calc(1.5rem-1px)] p-4">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-amber-200/40 dark:bg-amber-500/10 rounded-full -translate-y-8 translate-x-8" />
                     <div className="relative flex items-center gap-4">
-                      {/* Rank + Avatar */}
                       <div className="relative flex-shrink-0">
-                        <div className="w-16 h-16 rounded-2xl bg-amber-100 border-2 border-amber-300 flex items-center justify-center text-3xl overflow-hidden shadow-md">
+                        <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-900/50 border-2 border-amber-300 dark:border-amber-700 flex items-center justify-center text-3xl overflow-hidden shadow-md">
                           {leaderboard[0].avatar?.startsWith('data:image/') ? (
                             <img src={leaderboard[0].avatar} alt={leaderboard[0].name} className="w-full h-full object-cover" />
                           ) : (
@@ -177,25 +169,18 @@ export default async function ParentDashboardPage() {
                         </div>
                         <span className="absolute -top-2 -right-2 text-xl leading-none">👑</span>
                       </div>
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-base font-black text-amber-900">{leaderboard[0].name}</span>
-                        </div>
-                        <p className="text-xs text-amber-700">@{leaderboard[0].username}</p>
-                        {/* Progress bar */}
-                        <div className="mt-2 h-1.5 bg-amber-200 rounded-full overflow-hidden">
+                        <span className="text-base font-black text-amber-900 dark:text-amber-200">{leaderboard[0].name}</span>
+                        <p className="text-xs text-amber-700 dark:text-amber-400">@{leaderboard[0].username}</p>
+                        <div className="mt-2 h-1.5 bg-amber-200 dark:bg-amber-800 rounded-full overflow-hidden">
                           <div className="h-full bg-amber-500 rounded-full" style={{ width: '100%' }} />
                         </div>
                       </div>
-                      {/* Stats */}
                       <div className="flex-shrink-0 text-right">
-                        <p className="text-2xl font-black text-amber-800 leading-none">{leaderboard[0].taskCount}</p>
-                        <p className="text-[10px] text-amber-600 font-semibold">misi selesai</p>
-                        <p className="text-xs font-bold text-amber-700 mt-1">
-                          +{leaderboard[0].rewardEarned >= 1000
-                            ? `${(leaderboard[0].rewardEarned / 1000).toFixed(0)}k`
-                            : leaderboard[0].rewardEarned}
+                        <p className="text-2xl font-black text-amber-800 dark:text-amber-300 leading-none">{leaderboard[0].taskCount}</p>
+                        <p className="text-[10px] text-amber-600 dark:text-amber-500 font-semibold">misi selesai</p>
+                        <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mt-1">
+                          +{leaderboard[0].rewardEarned >= 1000 ? `${(leaderboard[0].rewardEarned / 1000).toFixed(0)}k` : leaderboard[0].rewardEarned}
                         </p>
                       </div>
                     </div>
@@ -203,20 +188,19 @@ export default async function ParentDashboardPage() {
                 </div>
               )}
 
-              {/* 🥈🥉 2nd & 3rd side by side */}
               {leaderboard.length > 1 && (
                 <div className="grid grid-cols-2 gap-3">
                   {leaderboard.slice(1, 3).map((child, i) => {
                     const rank = i + 2
                     const pct = maxTasks > 0 ? Math.round((child.taskCount / maxTasks) * 100) : 0
                     const styles = rank === 2
-                      ? { bg: 'bg-slate-50', border: 'border-slate-200', bar: 'bg-slate-400', text: 'text-slate-700', sub: 'text-slate-500' }
-                      : { bg: 'bg-orange-50', border: 'border-orange-200', bar: 'bg-orange-400', text: 'text-orange-700', sub: 'text-orange-500' }
+                      ? { bg: 'bg-slate-50 dark:bg-slate-900/60', border: 'border-slate-200 dark:border-slate-700', bar: 'bg-slate-400', text: 'text-slate-700 dark:text-slate-300', sub: 'text-slate-500 dark:text-slate-400' }
+                      : { bg: 'bg-orange-50 dark:bg-orange-950/50', border: 'border-orange-200 dark:border-orange-800', bar: 'bg-orange-400', text: 'text-orange-700 dark:text-orange-300', sub: 'text-orange-500 dark:text-orange-400' }
                     return (
-                      <div key={child.id} className={`${styles.bg} border ${styles.border} rounded-2xl p-3.5`}>
+                      <div key={child.id} className={`${styles.bg} border ${styles.border} rounded-2xl p-3.5 transition-colors duration-200`}>
                         <div className="flex items-center gap-2.5 mb-3">
                           <div className="relative flex-shrink-0">
-                            <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center text-2xl overflow-hidden border border-gray-100">
+                            <div className="w-11 h-11 rounded-xl bg-white dark:bg-gray-800 flex items-center justify-center text-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
                               {child.avatar?.startsWith('data:image/') ? (
                                 <img src={child.avatar} alt={child.name} className="w-full h-full object-cover" />
                               ) : (
@@ -227,7 +211,7 @@ export default async function ParentDashboardPage() {
                           </div>
                           <div className="min-w-0">
                             <p className={`font-bold text-sm ${styles.text} truncate`}>{child.name}</p>
-                            <p className="text-[10px] text-gray-400">@{child.username}</p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500">@{child.username}</p>
                           </div>
                         </div>
                         <div className="flex items-end justify-between mb-1.5">
@@ -236,26 +220,25 @@ export default async function ParentDashboardPage() {
                             +{child.rewardEarned >= 1000 ? `${(child.rewardEarned / 1000).toFixed(0)}k` : child.rewardEarned}
                           </p>
                         </div>
-                        <div className="h-1.5 bg-white rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-white dark:bg-gray-700 rounded-full overflow-hidden">
                           <div className={`h-full ${styles.bar} rounded-full transition-all`} style={{ width: `${pct}%` }} />
                         </div>
-                        <p className="text-[10px] text-gray-400 mt-1">misi selesai</p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">misi selesai</p>
                       </div>
                     )
                   })}
                 </div>
               )}
 
-              {/* 4th+ compact rows */}
               {leaderboard.length > 3 && (
-                <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50 overflow-hidden">
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800 overflow-hidden transition-colors duration-200">
                   {leaderboard.slice(3).map((child, i) => {
                     const rank = i + 4
                     const pct = maxTasks > 0 ? Math.round((child.taskCount / maxTasks) * 100) : 0
                     return (
                       <div key={child.id} className="flex items-center gap-3 px-4 py-3">
-                        <span className="w-6 text-center text-sm font-black text-gray-300">{rank}</span>
-                        <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-xl overflow-hidden flex-shrink-0 border border-gray-100">
+                        <span className="w-6 text-center text-sm font-black text-gray-300 dark:text-gray-600">{rank}</span>
+                        <div className="w-9 h-9 rounded-xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-xl overflow-hidden flex-shrink-0 border border-gray-100 dark:border-gray-700">
                           {child.avatar?.startsWith('data:image/') ? (
                             <img src={child.avatar} alt={child.name} className="w-full h-full object-cover" />
                           ) : (
@@ -263,16 +246,16 @@ export default async function ParentDashboardPage() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-800 text-sm truncate">{child.name}</p>
+                          <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">{child.name}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="flex-1 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                               <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${pct}%` }} />
                             </div>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p className="font-black text-gray-700 text-sm">{child.taskCount}</p>
-                          <p className="text-[10px] text-gray-400">misi</p>
+                          <p className="font-black text-gray-700 dark:text-gray-300 text-sm">{child.taskCount}</p>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500">misi</p>
                         </div>
                       </div>
                     )
@@ -286,11 +269,11 @@ export default async function ParentDashboardPage() {
 
       {/* ── Weekly Activity Chart ── */}
       {activeChildren.length > 0 && (
-        <div className="animate-fade-up delay-150 bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
+        <div className="animate-fade-up delay-150 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm dark:shadow-black/20 p-5 transition-colors duration-200">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-base font-bold text-gray-900">📈 Aktivitas Minggu Ini</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Tugas selesai per hari · Senin s/d hari ini</p>
+              <h2 className="text-base font-bold text-gray-900 dark:text-gray-50">📈 Aktivitas Minggu Ini</h2>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Tugas selesai per hari · Senin s/d hari ini</p>
             </div>
             {childNames.length > 0 && (
               <div className="flex gap-1.5 flex-wrap justify-end">
@@ -316,18 +299,18 @@ export default async function ParentDashboardPage() {
       {pendingTasks.length > 0 && (
         <div className="animate-fade-up delay-200">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-bold text-gray-900">⏳ Menunggu Review</h2>
-            <span className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-bold">
+            <h2 className="text-base font-bold text-gray-900 dark:text-gray-50">⏳ Menunggu Review</h2>
+            <span className="text-xs bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full font-bold">
               {pendingTasks.length} tugas
             </span>
           </div>
           <div className="space-y-2">
             {pendingTasks.map((task, i) => (
-              <Link key={task.id} href="/dashboard/tasks/pending" className={`card-hover animate-fade-up bg-white rounded-2xl border border-amber-100 p-4 flex items-center justify-between shadow-sm delay-${(i + 1) * 100}`}>
+              <Link key={task.id} href="/dashboard/tasks/pending" className={`card-hover animate-fade-up bg-white dark:bg-gray-900 rounded-2xl border border-amber-100 dark:border-amber-900/50 p-4 flex items-center justify-between shadow-sm dark:shadow-black/20 delay-${(i + 1) * 100} transition-colors duration-200`}>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-sm truncate">{task.title}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {task.child.name} · <span className="text-emerald-600 font-bold">Rp {task.rewardAmount.toLocaleString('id-ID')}</span>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">{task.title}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {task.child.name} · <span className="text-emerald-600 dark:text-emerald-400 font-bold">Rp {task.rewardAmount.toLocaleString('id-ID')}</span>
                   </p>
                 </div>
                 <span className="btn-press ml-3 shrink-0 text-xs bg-gradient-to-r from-amber-500 to-amber-400 text-white px-3 py-1.5 rounded-xl font-bold shadow-sm">
@@ -342,26 +325,26 @@ export default async function ParentDashboardPage() {
       {/* ── Children Grid ── */}
       <div className="animate-fade-up delay-300">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold text-gray-900">Daftar Anak</h2>
-          <Link href="/dashboard/children" className="text-xs text-emerald-600 hover:text-emerald-700 font-bold bg-emerald-50 px-3 py-1.5 rounded-xl transition-colors">
+          <h2 className="text-base font-bold text-gray-900 dark:text-gray-50">Daftar Anak</h2>
+          <Link href="/dashboard/children" className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-bold bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1.5 rounded-xl transition-colors">
             Kelola →
           </Link>
         </div>
         {activeChildren.length === 0 ? (
-          <div className="bg-white rounded-3xl border-2 border-dashed border-gray-200 p-8 text-center">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-8 text-center transition-colors duration-200">
             <p className="text-4xl mb-3">👧</p>
-            <p className="text-gray-700 font-bold">Belum ada anak terdaftar</p>
-            <p className="text-gray-400 text-sm mt-1">Tambahkan akun anak untuk mulai</p>
-            <Link href="/dashboard/children" className="btn-press inline-block mt-4 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-sm font-bold rounded-2xl shadow-md shadow-emerald-100 transition-all">
+            <p className="text-gray-700 dark:text-gray-300 font-bold">Belum ada anak terdaftar</p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Tambahkan akun anak untuk mulai</p>
+            <Link href="/dashboard/children" className="btn-press inline-block mt-4 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-sm font-bold rounded-2xl shadow-md shadow-emerald-100 dark:shadow-emerald-900/20 transition-all">
               + Tambah Anak
             </Link>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {activeChildren.map((child, i) => (
-              <Link key={child.id} href={`/dashboard/history/${child.id}`} className={`card-hover animate-fade-up bg-white rounded-2xl border border-gray-100 p-4 shadow-sm delay-${(i + 1) * 100}`}>
+              <Link key={child.id} href={`/dashboard/history/${child.id}`} className={`card-hover animate-fade-up bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 shadow-sm dark:shadow-black/20 delay-${(i + 1) * 100} transition-colors duration-200`}>
                 <div className="flex flex-col items-center text-center gap-2">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center text-2xl shadow-sm overflow-hidden">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-950/60 dark:to-teal-950/60 flex items-center justify-center text-2xl shadow-sm overflow-hidden">
                     {child.avatar?.startsWith('data:image/') ? (
                       <img src={child.avatar} alt={child.name} className="w-full h-full object-cover" />
                     ) : (
@@ -369,12 +352,12 @@ export default async function ParentDashboardPage() {
                     )}
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900 text-sm leading-tight">{child.name}</p>
-                    <p className="text-[10px] text-gray-400">@{child.username}</p>
+                    <p className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-tight">{child.name}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">@{child.username}</p>
                   </div>
-                  <div className="w-full bg-emerald-50 rounded-xl p-2">
-                    <p className="text-[10px] text-gray-500 font-medium">Saldo</p>
-                    <p className="font-black text-emerald-600 text-sm">Rp {child.balance.toLocaleString('id-ID')}</p>
+                  <div className="w-full bg-emerald-50 dark:bg-emerald-950/40 rounded-xl p-2">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Saldo</p>
+                    <p className="font-black text-emerald-600 dark:text-emerald-400 text-sm">Rp {child.balance.toLocaleString('id-ID')}</p>
                   </div>
                 </div>
               </Link>
@@ -385,7 +368,7 @@ export default async function ParentDashboardPage() {
 
       {/* ── Quick Actions ── */}
       <div className="animate-fade-up delay-400">
-        <h2 className="text-base font-bold text-gray-900 mb-3">Aksi Cepat</h2>
+        <h2 className="text-base font-bold text-gray-900 dark:text-gray-50 mb-3">Aksi Cepat</h2>
         <div className="grid grid-cols-3 gap-3">
           {[
             { href: '/dashboard/tasks',   icon: '➕', label: 'Buat Tugas',  color: 'from-emerald-500 to-emerald-600' },
@@ -423,13 +406,13 @@ function StatCard({ label, value, icon, color }: {
   label: string; value: string; icon: string; color: string
 }) {
   const colors: Record<string, string> = {
-    emerald: 'bg-emerald-50 text-emerald-700',
-    blue:    'bg-blue-50 text-blue-700',
-    amber:   'bg-amber-50 text-amber-700',
-    purple:  'bg-purple-50 text-purple-700',
+    emerald: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400',
+    blue:    'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-400',
+    amber:   'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400',
+    purple:  'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400',
   }
   return (
-    <div className={`card-hover rounded-2xl p-4 shadow-sm border border-transparent ${colors[color] ?? 'bg-gray-50 text-gray-700'}`}>
+    <div className={`card-hover rounded-2xl p-4 shadow-sm border border-transparent transition-colors duration-200 ${colors[color] ?? 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}>
       <div className="text-2xl mb-2">{icon}</div>
       <p className="text-lg font-black leading-tight">{value}</p>
       <p className="text-[11px] font-medium mt-0.5 opacity-70">{label}</p>

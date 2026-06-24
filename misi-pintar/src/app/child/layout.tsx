@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { logoutAction } from '@/actions/auth'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export default async function ChildLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -16,20 +17,20 @@ export default async function ChildLayout({ children }: { children: React.ReactN
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-500 via-emerald-600 to-emerald-700 relative">
+    <div className="min-h-screen bg-gradient-to-b from-emerald-500 via-emerald-600 to-emerald-700 dark:from-emerald-950 dark:via-gray-950 dark:to-gray-950 relative transition-colors duration-200">
       {/* Decorative blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute top-32 -left-16 w-48 h-48 bg-teal-400/20 rounded-full blur-2xl" />
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 dark:bg-emerald-400/5 rounded-full blur-3xl" />
+        <div className="absolute top-32 -left-16 w-48 h-48 bg-teal-400/20 dark:bg-teal-500/10 rounded-full blur-2xl" />
       </div>
 
-      {/* ── Top header (mobile only shows logo) ── */}
+      {/* ── Top header ── */}
       <header className="relative z-10 flex items-center justify-between px-4 pt-4 pb-2">
         <Link href="/child/dashboard" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+          <div className="w-8 h-8 rounded-xl bg-white/20 dark:bg-white/10 backdrop-blur-sm flex items-center justify-center">
             <span className="text-base">🎯</span>
           </div>
-          <span className="font-black text-white text-sm">Misi Pintar</span>
+          <span className="font-black text-white dark:text-gray-100 text-sm">Misi Pintar</span>
         </Link>
 
         {/* Desktop inline nav */}
@@ -38,17 +39,23 @@ export default async function ChildLayout({ children }: { children: React.ReactN
             <Link
               key={href}
               href={href}
-              className="text-emerald-100 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-xl hover:bg-white/10 transition-all"
+              className="text-emerald-100 dark:text-gray-300 hover:text-white dark:hover:text-white text-xs font-semibold px-3 py-1.5 rounded-xl hover:bg-white/10 transition-all"
             >
               {label}
             </Link>
           ))}
           <form action={logoutAction}>
-            <button type="submit" className="text-emerald-100 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-xl hover:bg-white/10 transition-all">
+            <button type="submit" className="text-emerald-100 dark:text-gray-300 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-xl hover:bg-white/10 transition-all">
               Keluar
             </button>
           </form>
+          <ThemeToggle className="text-white/70 hover:text-white hover:bg-white/10" />
         </nav>
+
+        {/* Mobile theme toggle */}
+        <div className="md:hidden">
+          <ThemeToggle className="text-white/70 hover:text-white hover:bg-white/10" />
+        </div>
       </header>
 
       {/* ── Content ── */}
@@ -58,7 +65,7 @@ export default async function ChildLayout({ children }: { children: React.ReactN
 
       {/* ── Mobile Bottom Nav (glassy) ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 pb-safe">
-        <div className="mx-3 mb-3 bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50">
+        <div className="mx-3 mb-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 dark:border-gray-700/50">
           <div className="flex items-center justify-around px-2 py-3">
             {navLinks.map(({ href, icon, label }) => (
               <Link
@@ -67,13 +74,13 @@ export default async function ChildLayout({ children }: { children: React.ReactN
                 className="flex flex-col items-center gap-0.5 px-2 rounded-2xl transition-all active:scale-90"
               >
                 <span className="text-xl leading-none">{icon}</span>
-                <span className="text-[10px] text-gray-600 font-semibold leading-none mt-0.5">{label}</span>
+                <span className="text-[10px] text-gray-600 dark:text-gray-400 font-semibold leading-none mt-0.5">{label}</span>
               </Link>
             ))}
             <form action={logoutAction} className="flex flex-col items-center">
               <button type="submit" className="flex flex-col items-center gap-0.5 px-2 rounded-2xl transition-all active:scale-90">
                 <span className="text-xl leading-none">🚪</span>
-                <span className="text-[10px] text-gray-600 font-semibold leading-none mt-0.5">Keluar</span>
+                <span className="text-[10px] text-gray-600 dark:text-gray-400 font-semibold leading-none mt-0.5">Keluar</span>
               </button>
             </form>
           </div>

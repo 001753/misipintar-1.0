@@ -227,7 +227,7 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
 
       {/* Pending approval banner */}
       {claimedTasks.length > 0 && (
-        <div className="mb-5 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+        <div className="mb-5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 flex items-center justify-between gap-3">
           <div>
             <p className="font-semibold text-amber-800 text-sm">
               {claimedTasks.length} tugas menunggu persetujuan Anda
@@ -249,7 +249,7 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
           <button
             onClick={() => setShowCreateForm(true)}
             disabled={!canCreate}
-            className="px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors active:scale-95"
+            className="px-4 py-2.5 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors active:scale-95 dark:shadow-emerald-900/20"
           >
             + Buat Tugas Baru
           </button>
@@ -263,11 +263,11 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
 
       {/* ── CREATE FORM ─────────────────────────────────────────────────────── */}
       {showCreateForm && (
-        <form onSubmit={handleCreate} className="mb-6 bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <form onSubmit={handleCreate} className="mb-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors duration-200">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
             <div>
-              <h3 className="font-bold text-gray-900">Buat Tugas Baru</h3>
+              <h3 className="font-bold text-gray-900 dark:text-gray-50">Buat Tugas Baru</h3>
               {taskQuotaLabel && (
                 <p className={`text-xs mt-0.5 ${tasksThisMonth >= maxTasksPerMonth ? 'text-red-500' : 'text-gray-400'}`}>
                   {taskQuotaLabel}
@@ -531,9 +531,9 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
 
       {/* ── TASK LIST ────────────────────────────────────────────────────────── */}
       {filteredTasks.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-dashed border-gray-300 p-10 text-center">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center transition-colors duration-200">
           <p className="text-3xl mb-2">📋</p>
-          <p className="text-gray-500 text-sm">Belum ada tugas</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">Belum ada tugas</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -544,14 +544,14 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
             return (
               <div
                 key={task.id}
-                className={`bg-white rounded-xl border p-4 transition-all ${
-                  isThisTaskPending ? 'border-emerald-300 opacity-75' : 'border-gray-200'
+                className={`bg-white dark:bg-gray-900 rounded-xl border p-4 transition-all ${
+                  isThisTaskPending ? 'border-emerald-300 dark:border-emerald-700 opacity-75' : 'border-gray-200 dark:border-gray-700'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="text-sm font-semibold text-gray-900">{task.title}</span>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{task.title}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${statusColor[task.status]}`}>
                         {statusLabel[task.status]}
                       </span>
@@ -639,10 +639,10 @@ export default function TasksClient({ children, tasks, tasksThisMonth, maxTasksP
       {/* ── REJECT MODAL ─────────────────────────────────────────────────────── */}
       {rejectModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900">Tolak Tugas</h2>
-            <p className="text-sm text-gray-600">
-              Tugas: <strong>{rejectModal.title}</strong>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-black/50 w-full max-w-md p-6 space-y-4 transition-colors duration-200">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-50">Tolak Tugas</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Tugas: <strong className="dark:text-gray-200">{rejectModal.title}</strong>
             </p>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

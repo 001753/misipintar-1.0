@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { logoutAction } from '@/actions/auth'
 import { getUnreadCount } from '@/lib/notifications/sse'
 import NotificationBell from '@/components/notification-bell'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export default async function DashboardLayout({
   children,
@@ -16,25 +17,27 @@ export default async function DashboardLayout({
   const unreadCount = await getUnreadCount(session.user.id)
 
   const navLinks = [
-    { href: '/dashboard',              icon: '🏠', label: 'Beranda' },
-    { href: '/dashboard/children',     icon: '👧', label: 'Anak' },
-    { href: '/dashboard/tasks',        icon: '📋', label: 'Tugas' },
-    { href: '/dashboard/tasks/pending',icon: '⏳', label: 'Review' },
-    { href: '/dashboard/ledger',       icon: '💰', label: 'Saldo' },
-    { href: '/dashboard/settings',     icon: '⚙️', label: 'Profil' },
+    { href: '/dashboard',               icon: '🏠', label: 'Beranda' },
+    { href: '/dashboard/children',      icon: '👧', label: 'Anak' },
+    { href: '/dashboard/tasks',         icon: '📋', label: 'Tugas' },
+    { href: '/dashboard/tasks/pending', icon: '⏳', label: 'Review' },
+    { href: '/dashboard/ledger',        icon: '💰', label: 'Saldo' },
+    { href: '/dashboard/settings',      icon: '⚙️', label: 'Profil' },
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
       {/* ── Top Header ── */}
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-30 shadow-sm">
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 sticky top-0 z-30 shadow-sm dark:shadow-black/20 transition-colors duration-200">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           {/* Logo */}
           <Link href="/dashboard" className="flex items-center gap-2 group">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shadow-sm">
               <span className="text-base">🎯</span>
             </div>
-            <span className="font-black text-gray-900 text-base hidden sm:block">Misi Pintar</span>
+            <span className="font-black text-gray-900 dark:text-gray-50 text-base hidden sm:block">
+              Misi Pintar
+            </span>
           </Link>
 
           {/* Desktop nav */}
@@ -43,23 +46,24 @@ export default async function DashboardLayout({
               <Link
                 key={href}
                 href={href}
-                className="px-3 py-2 rounded-xl text-sm font-medium text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 transition-all"
+                className="px-3 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 transition-all"
               >
                 {icon} {label}
               </Link>
             ))}
           </nav>
 
-          {/* Right */}
-          <div className="flex items-center gap-2">
+          {/* Right side */}
+          <div className="flex items-center gap-1.5">
+            <ThemeToggle />
             <NotificationBell initialUnread={unreadCount} />
-            <span className="text-sm text-gray-600 hidden md:block font-medium">
+            <span className="text-sm text-gray-600 dark:text-gray-400 hidden md:block font-medium">
               {session.user.name?.split(' ')[0]}
             </span>
             <form action={logoutAction}>
               <button
                 type="submit"
-                className="text-xs text-gray-400 hover:text-red-500 font-medium transition-colors px-2 py-1 rounded-lg hover:bg-red-50"
+                className="text-xs text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 font-medium transition-colors px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40"
               >
                 Keluar
               </button>
@@ -74,7 +78,7 @@ export default async function DashboardLayout({
       </main>
 
       {/* ── Mobile Bottom Nav ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-100 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.08)] pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.4)] pb-safe transition-colors duration-200">
         <div className="flex items-center justify-around px-2 pt-2 pb-2">
           {navLinks.map(({ href, icon, label }) => (
             <Link
@@ -83,13 +87,20 @@ export default async function DashboardLayout({
               className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-2xl transition-all active:scale-90 min-w-0"
             >
               <span className="text-xl leading-none">{icon}</span>
-              <span className="text-[10px] text-gray-500 font-medium leading-none mt-0.5 truncate">{label}</span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium leading-none mt-0.5 truncate">
+                {label}
+              </span>
             </Link>
           ))}
           <form action={logoutAction} className="flex flex-col items-center">
-            <button type="submit" className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-2xl transition-all active:scale-90">
+            <button
+              type="submit"
+              className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-2xl transition-all active:scale-90"
+            >
               <span className="text-xl leading-none">🚪</span>
-              <span className="text-[10px] text-gray-500 font-medium leading-none mt-0.5">Keluar</span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium leading-none mt-0.5">
+                Keluar
+              </span>
             </button>
           </form>
         </div>

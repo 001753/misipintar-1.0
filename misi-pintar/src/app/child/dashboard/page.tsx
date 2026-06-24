@@ -46,25 +46,25 @@ export default async function ChildDashboardPage() {
           </div>
         </div>
         <h1 className="text-xl font-black">Halo, {child.name}! 🌟</h1>
-        <p className="text-emerald-100 text-sm mt-0.5">{child.familySpace.name}</p>
+        <p className="text-emerald-100 dark:text-gray-400 text-sm mt-0.5">{child.familySpace.name}</p>
       </div>
 
       {/* ── Saldo Card ── */}
-      <div className="animate-fade-up delay-100 bg-white rounded-3xl p-5 shadow-2xl shadow-black/10">
-        <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold text-center mb-1">Saldo Utama</p>
-        <p className="text-5xl font-black text-emerald-600 text-center leading-tight">
+      <div className="animate-fade-up delay-100 bg-white dark:bg-gray-900 rounded-3xl p-5 shadow-2xl shadow-black/10 dark:shadow-black/40 transition-colors duration-200">
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-bold text-center mb-1">Saldo Utama</p>
+        <p className="text-5xl font-black text-emerald-600 dark:text-emerald-400 text-center leading-tight">
           Rp {child.balance.toLocaleString('id-ID')}
         </p>
         <div className="grid grid-cols-2 gap-2.5 mt-4">
-          <div className="bg-gradient-to-br from-blue-50 to-sky-50 rounded-2xl p-3 border border-blue-100">
-            <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wide">💰 Tabungan</p>
-            <p className="text-base font-black text-blue-700 mt-1">
+          <div className="bg-gradient-to-br from-blue-50 to-sky-50 dark:from-blue-950/50 dark:to-sky-950/50 rounded-2xl p-3 border border-blue-100 dark:border-blue-900">
+            <p className="text-[10px] text-blue-500 dark:text-blue-400 font-bold uppercase tracking-wide">💰 Tabungan</p>
+            <p className="text-base font-black text-blue-700 dark:text-blue-300 mt-1">
               Rp {child.savingsBalance.toLocaleString('id-ID')}
             </p>
           </div>
-          <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-3 border border-purple-100">
-            <p className="text-[10px] text-purple-500 font-bold uppercase tracking-wide">🤲 Sedekah</p>
-            <p className="text-base font-black text-purple-700 mt-1">
+          <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950/50 dark:to-violet-950/50 rounded-2xl p-3 border border-purple-100 dark:border-purple-900">
+            <p className="text-[10px] text-purple-500 dark:text-purple-400 font-bold uppercase tracking-wide">🤲 Sedekah</p>
+            <p className="text-base font-black text-purple-700 dark:text-purple-300 mt-1">
               Rp {child.charityBalance.toLocaleString('id-ID')}
             </p>
           </div>
@@ -72,25 +72,25 @@ export default async function ChildDashboardPage() {
       </div>
 
       {/* ── XP / Progress bar ── */}
-      <div className="animate-fade-up delay-150 bg-white/20 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
+      <div className="animate-fade-up delay-150 bg-white/20 dark:bg-black/20 backdrop-blur-sm rounded-2xl p-4 border border-white/20 dark:border-white/10">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-white text-sm font-bold">⚡ Misi Selesai</span>
-          <span className="text-white text-sm font-black">{completedCount} misi</span>
+          <span className="text-white dark:text-gray-200 text-sm font-bold">⚡ Misi Selesai</span>
+          <span className="text-white dark:text-gray-200 text-sm font-black">{completedCount} misi</span>
         </div>
-        <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
+        <div className="h-2.5 bg-white/20 dark:bg-white/10 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-amber-300 to-amber-400 rounded-full transition-all duration-700"
             style={{ width: `${Math.min((completedCount / 10) * 100, 100)}%` }}
           />
         </div>
-        <p className="text-emerald-100 text-[10px] mt-1.5 text-right">{10 - Math.min(completedCount, 10)} lagi untuk naik level!</p>
+        <p className="text-emerald-100 dark:text-gray-400 text-[10px] mt-1.5 text-right">{10 - Math.min(completedCount, 10)} lagi untuk naik level!</p>
       </div>
 
       {/* ── Active Tasks ── */}
-      <div className="animate-fade-up delay-200 bg-white rounded-3xl p-4 shadow-xl shadow-black/5">
+      <div className="animate-fade-up delay-200 bg-white dark:bg-gray-900 rounded-3xl p-4 shadow-xl shadow-black/5 dark:shadow-black/30 transition-colors duration-200">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-black text-gray-900 text-base">🎯 Misi Aktif</h2>
-          <span className="text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-bold">
+          <h2 className="font-black text-gray-900 dark:text-gray-50 text-base">🎯 Misi Aktif</h2>
+          <span className="text-[11px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 px-2.5 py-1 rounded-full font-bold">
             {pendingTasks.length} misi
           </span>
         </div>
@@ -98,8 +98,8 @@ export default async function ChildDashboardPage() {
         {pendingTasks.length === 0 ? (
           <div className="text-center py-6">
             <p className="text-3xl mb-2">🎉</p>
-            <p className="text-gray-500 text-sm font-medium">Semua misi selesai!</p>
-            <p className="text-gray-400 text-xs mt-0.5">Tunggu misi baru dari orang tua</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Semua misi selesai!</p>
+            <p className="text-gray-400 dark:text-gray-500 text-xs mt-0.5">Tunggu misi baru dari orang tua</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -107,11 +107,11 @@ export default async function ChildDashboardPage() {
               <Link
                 key={task.id}
                 href={`/child/tasks/${task.id}/claim`}
-                className={`animate-fade-up delay-${(i + 1) * 100} card-hover flex items-center justify-between p-3.5 bg-gradient-to-r from-gray-50 to-emerald-50/50 hover:from-emerald-50 hover:to-emerald-100/50 rounded-2xl border border-gray-100 transition-all`}
+                className={`animate-fade-up delay-${(i + 1) * 100} card-hover flex items-center justify-between p-3.5 bg-gradient-to-r from-gray-50 to-emerald-50/50 dark:from-gray-800 dark:to-emerald-950/30 hover:from-emerald-50 hover:to-emerald-100/50 dark:hover:from-gray-700 dark:hover:to-emerald-950/50 rounded-2xl border border-gray-100 dark:border-gray-700 transition-all`}
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-gray-900 truncate">{task.title}</p>
-                  <p className="text-xs text-emerald-600 font-black mt-0.5">
+                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{task.title}</p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-black mt-0.5">
                     +Rp {task.rewardAmount.toLocaleString('id-ID')}
                   </p>
                 </div>
@@ -126,7 +126,7 @@ export default async function ChildDashboardPage() {
         {pendingTasks.length > 0 && (
           <Link
             href="/child/tasks"
-            className="block text-center text-xs text-emerald-600 hover:text-emerald-700 font-bold mt-3 py-2 bg-emerald-50 rounded-2xl transition-colors"
+            className="block text-center text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-bold mt-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl transition-colors"
           >
             Lihat semua {pendingTasks.length} misi →
           </Link>
@@ -137,22 +137,22 @@ export default async function ChildDashboardPage() {
       <div className="animate-fade-up delay-300 grid grid-cols-2 gap-3">
         <Link
           href="/child/transfer"
-          className="btn-press bg-white/90 backdrop-blur-sm rounded-2xl p-4 flex items-center gap-3 shadow-lg border border-white/50 transition-all"
+          className="btn-press bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-2xl p-4 flex items-center gap-3 shadow-lg border border-white/50 dark:border-gray-700/50 transition-all"
         >
           <span className="text-2xl">💸</span>
           <div>
-            <p className="font-bold text-gray-900 text-sm">Transfer</p>
-            <p className="text-[10px] text-gray-500">Kirim saldo</p>
+            <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">Transfer</p>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400">Kirim saldo</p>
           </div>
         </Link>
         <Link
           href="/child/history"
-          className="btn-press bg-white/90 backdrop-blur-sm rounded-2xl p-4 flex items-center gap-3 shadow-lg border border-white/50 transition-all"
+          className="btn-press bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded-2xl p-4 flex items-center gap-3 shadow-lg border border-white/50 dark:border-gray-700/50 transition-all"
         >
           <span className="text-2xl">📜</span>
           <div>
-            <p className="font-bold text-gray-900 text-sm">Riwayat</p>
-            <p className="text-[10px] text-gray-500">Transaksi</p>
+            <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">Riwayat</p>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400">Transaksi</p>
           </div>
         </Link>
       </div>

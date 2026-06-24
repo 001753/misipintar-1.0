@@ -54,12 +54,12 @@ export default function PendingTasksClient({ tasks }: { tasks: Task[] }) {
   return (
     <>
       {success && (
-        <div className="mb-4 px-4 py-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl">
+        <div className="mb-4 px-4 py-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm rounded-xl">
           {success}
         </div>
       )}
       {error && (
-        <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl">
+        <div className="mb-4 px-4 py-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 text-sm rounded-xl">
           {error}
           <button onClick={() => setError(null)} className="ml-2 underline">tutup</button>
         </div>
@@ -67,19 +67,19 @@ export default function PendingTasksClient({ tasks }: { tasks: Task[] }) {
 
       <div className="space-y-4">
         {tasks.map((task) => (
-          <div key={task.id} className="bg-white rounded-2xl border border-amber-200 p-5">
+          <div key={task.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-amber-200 dark:border-amber-800 p-5 transition-colors duration-200">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-lg">{task.child.avatar ?? '🧒'}</span>
                   <span className="text-sm text-gray-500">{task.child.name}</span>
                 </div>
-                <h3 className="font-semibold text-gray-900 text-base">{task.title}</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-base">{task.title}</h3>
                 {task.description && (
-                  <p className="text-sm text-gray-500 mt-1">{task.description}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{task.description}</p>
                 )}
                 <div className="flex items-center gap-4 mt-2">
-                  <span className="text-emerald-600 font-bold text-sm">
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
                     Rp {task.rewardAmount.toLocaleString('id-ID')}
                   </span>
                   {task.claimedAt && (
@@ -130,10 +130,10 @@ export default function PendingTasksClient({ tasks }: { tasks: Task[] }) {
 
       {rejectModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900">Tolak Tugas</h2>
-            <p className="text-sm text-gray-600">
-              Tugas: <strong>{rejectModal.title}</strong>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl dark:shadow-black/50 w-full max-w-md p-6 space-y-4 transition-colors duration-200">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-50">Tolak Tugas</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Tugas: <strong className="dark:text-gray-200">{rejectModal.title}</strong>
             </p>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">

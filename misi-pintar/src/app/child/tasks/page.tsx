@@ -40,10 +40,10 @@ export default async function ChildTasksPage() {
       </div>
 
       {tasks.length === 0 ? (
-        <div className="animate-scale-in bg-white rounded-3xl p-10 text-center shadow-xl">
+        <div className="animate-scale-in bg-white dark:bg-gray-900 rounded-3xl p-10 text-center shadow-xl dark:shadow-black/30 transition-colors duration-200">
           <p className="text-4xl mb-3">📋</p>
-          <p className="text-gray-700 font-bold">Belum ada misi untukmu</p>
-          <p className="text-gray-400 text-sm mt-1">Minta orang tua untuk menambahkan misi</p>
+          <p className="text-gray-700 dark:text-gray-300 font-bold">Belum ada misi untukmu</p>
+          <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Minta orang tua untuk menambahkan misi</p>
         </div>
       ) : (
         <>
@@ -57,16 +57,16 @@ export default async function ChildTasksPage() {
                 {pendingTasks.map((task, i) => (
                   <div
                     key={task.id}
-                    className={`animate-fade-up bg-white rounded-3xl p-5 shadow-lg shadow-black/5 delay-${(i + 1) * 100}`}
+                    className={`animate-fade-up bg-white dark:bg-gray-900 rounded-3xl p-5 shadow-lg shadow-black/5 dark:shadow-black/30 delay-${(i + 1) * 100} transition-colors duration-200`}
                   >
                     <div className="flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-100 flex items-center justify-center text-xl shrink-0">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-xl shrink-0">
                         🎯
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-black text-gray-900 text-sm leading-snug">{task.title}</p>
+                        <p className="font-black text-gray-900 dark:text-gray-100 text-sm leading-snug">{task.title}</p>
                         {task.description && (
-                          <p className="text-xs text-gray-500 mt-1 leading-relaxed">{task.description}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{task.description}</p>
                         )}
                         <div className="flex items-center justify-between mt-3">
                           <p className="text-emerald-600 font-black text-base">
@@ -97,11 +97,11 @@ export default async function ChildTasksPage() {
                 {otherTasks.map((task, i) => (
                   <div
                     key={task.id}
-                    className={`animate-fade-up bg-white/90 backdrop-blur-sm rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-sm delay-${(i + 1) * 50}`}
+                    className={`animate-fade-up bg-white/90 dark:bg-gray-900/80 backdrop-blur-sm rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-sm delay-${(i + 1) * 50} transition-colors duration-200`}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-800 truncate">{task.title}</p>
-                      <p className="text-xs text-emerald-600 font-black mt-0.5">
+                      <p className="text-sm font-bold text-gray-800 dark:text-gray-200 truncate">{task.title}</p>
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-black mt-0.5">
                         Rp {task.rewardAmount.toLocaleString('id-ID')}
                       </p>
                     </div>

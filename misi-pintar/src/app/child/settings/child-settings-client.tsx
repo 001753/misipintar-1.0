@@ -37,27 +37,27 @@ export default function ChildSettingsClient({ name, username, avatar }: Props) {
   return (
     <div className="space-y-4">
       {/* Profil Card */}
-      <div className="bg-white rounded-2xl p-5 shadow">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow dark:shadow-black/30 transition-colors duration-200">
         <div className="flex items-center gap-4">
           <AvatarUploadButton currentAvatar={avatar} size="lg" dark />
           <div>
-            <p className="font-bold text-gray-900">{name}</p>
-            <p className="text-sm text-gray-500">@{username}</p>
+            <p className="font-bold text-gray-900 dark:text-gray-100">{name}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">@{username}</p>
           </div>
         </div>
       </div>
 
       {/* Ganti Password Card */}
-      <div className="bg-white rounded-2xl p-5 shadow">
-        <h2 className="font-bold text-gray-900 mb-4">🔒 Ganti Password</h2>
+      <div className="bg-white dark:bg-gray-900 rounded-2xl p-5 shadow dark:shadow-black/30 transition-colors duration-200">
+        <h2 className="font-bold text-gray-900 dark:text-gray-100 mb-4">🔒 Ganti Password</h2>
 
         {success && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+          <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm">
             ✅ Password berhasil diubah!
           </div>
         )}
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+          <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
             {error}
           </div>
         )}
@@ -65,7 +65,7 @@ export default function ChildSettingsClient({ name, username, avatar }: Props) {
         <form onSubmit={handleSubmit} className="space-y-3">
           {/* Password Lama */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Password Lama
             </label>
             <div className="relative">
@@ -74,7 +74,7 @@ export default function ChildSettingsClient({ name, username, avatar }: Props) {
                 type={showCurrent ? 'text' : 'password'}
                 required
                 placeholder="••••••"
-                className="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                className="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
               />
               <button
                 type="button"
@@ -88,7 +88,7 @@ export default function ChildSettingsClient({ name, username, avatar }: Props) {
 
           {/* Password Baru */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Password Baru
             </label>
             <div className="relative">
@@ -98,7 +98,7 @@ export default function ChildSettingsClient({ name, username, avatar }: Props) {
                 required
                 minLength={6}
                 placeholder="Minimal 6 karakter"
-                className="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                className="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
               />
               <button
                 type="button"
@@ -115,7 +115,7 @@ export default function ChildSettingsClient({ name, username, avatar }: Props) {
 
           {/* Konfirmasi Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Konfirmasi Password Baru
             </label>
             <div className="relative">
@@ -125,7 +125,7 @@ export default function ChildSettingsClient({ name, username, avatar }: Props) {
                 required
                 minLength={6}
                 placeholder="Ulangi password baru"
-                className="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                className="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
               />
               <button
                 type="button"
