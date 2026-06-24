@@ -19,6 +19,7 @@ export default async function SuperAdminLayout({
     { href: "/superadmin/analytics", label: "Analitik", icon: "📈" },
     { href: "/superadmin/audit", label: "Audit Log", icon: "📋" },
     { href: "/superadmin/security/login-attempts", label: "Keamanan", icon: "🔒" },
+    { href: "/superadmin/settings", label: "Pengaturan", icon: "⚙️" },
   ];
 
   return (
