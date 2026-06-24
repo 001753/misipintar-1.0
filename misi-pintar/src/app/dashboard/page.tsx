@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import WeeklyActivityChart from './weekly-chart'
+import SpendingAnalyticsChart, { type WeekData } from './spending-chart'
 
 export default async function ParentDashboardPage() {
   const session = await auth()
@@ -12,56 +13,92 @@ export default async function ParentDashboardPage() {
 
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
 
   const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1
   const weekStart = new Date(now)
   weekStart.setDate(now.getDate() - dayOfWeek)
   weekStart.setHours(0, 0, 0, 0)
 
-  const [familySpace, activeChildren, pendingTasks, subscription, monthlyRewards, weeklyTasks, monthlyLeaderboard] =
-    await Promise.all([
-      prisma.familySpace.findUnique({
-        where: { id: familySpaceId },
-        select: { name: true, spaceCode: true },
-      }),
-      prisma.child.findMany({
-        where: { familySpaceId, deletedAt: null },
-        orderBy: { createdAt: 'asc' },
-      }),
-      prisma.task.findMany({
-        where: { familySpaceId, status: 'CLAIMED' },
-        include: { child: { select: { name: true } } },
-        orderBy: { claimedAt: 'desc' },
-        take: 5,
-      }),
-      prisma.subscription.findUnique({
-        where: { familySpaceId },
-        include: { plan: { select: { name: true } } },
-      }),
-      prisma.task.aggregate({
-        where: { familySpaceId, status: 'APPROVED', approvedAt: { gte: monthStart } },
-        _sum: { rewardAmount: true },
-        _count: true,
-      }),
-      prisma.task.findMany({
-        where: { familySpaceId, status: 'APPROVED', approvedAt: { gte: weekStart } },
-        select: { childId: true, approvedAt: true },
-        orderBy: { approvedAt: 'asc' },
-      }),
-      prisma.task.groupBy({
-        by: ['childId'],
-        where: { familySpaceId, status: 'APPROVED', approvedAt: { gte: monthStart } },
-        _count: { _all: true },
-        _sum: { rewardAmount: true },
-      }),
-    ])
+  // 8-week window for spending analytics
+  const eightWeeksAgo = new Date(now)
+  eightWeeksAgo.setDate(now.getDate() - 55) // 8 weeks back from start of current week
+  eightWeeksAgo.setHours(0, 0, 0, 0)
+
+  const [
+    familySpace,
+    activeChildren,
+    pendingTasks,
+    subscription,
+    monthlyRewards,
+    weeklyTasks,
+    monthlyLeaderboard,
+    lastMonthRewards,
+    spendingTasks,
+  ] = await Promise.all([
+    prisma.familySpace.findUnique({
+      where: { id: familySpaceId },
+      select: { name: true, spaceCode: true },
+    }),
+    prisma.child.findMany({
+      where: { familySpaceId, deletedAt: null },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.task.findMany({
+      where: { familySpaceId, status: 'CLAIMED' },
+      include: { child: { select: { name: true } } },
+      orderBy: { claimedAt: 'desc' },
+      take: 5,
+    }),
+    prisma.subscription.findUnique({
+      where: { familySpaceId },
+      include: { plan: { select: { name: true } } },
+    }),
+    prisma.task.aggregate({
+      where: { familySpaceId, status: 'APPROVED', approvedAt: { gte: monthStart } },
+      _sum: { rewardAmount: true },
+      _count: true,
+    }),
+    prisma.task.findMany({
+      where: { familySpaceId, status: 'APPROVED', approvedAt: { gte: weekStart } },
+      select: { childId: true, approvedAt: true },
+      orderBy: { approvedAt: 'asc' },
+    }),
+    prisma.task.groupBy({
+      by: ['childId'],
+      where: { familySpaceId, status: 'APPROVED', approvedAt: { gte: monthStart } },
+      _count: { _all: true },
+      _sum: { rewardAmount: true },
+    }),
+    // last month total for trend comparison
+    prisma.task.aggregate({
+      where: {
+        familySpaceId,
+        status: 'APPROVED',
+        approvedAt: { gte: lastMonthStart, lt: monthStart },
+      },
+      _sum: { rewardAmount: true },
+    }),
+    // 8 weeks of task data for spending chart
+    prisma.task.findMany({
+      where: {
+        familySpaceId,
+        status: 'APPROVED',
+        approvedAt: { gte: eightWeeksAgo },
+      },
+      select: { childId: true, approvedAt: true, rewardAmount: true },
+      orderBy: { approvedAt: 'asc' },
+    }),
+  ])
 
   const totalBalance = activeChildren.reduce((sum, c) => sum + c.balance, 0)
   const firstName = session.user.name?.split(' ')[0]
   const monthlyTotal = monthlyRewards._sum.rewardAmount ?? 0
   const monthlyTaskCount = monthlyRewards._count
+  const lastMonthTotal = lastMonthRewards._sum.rewardAmount ?? 0
   const monthName = now.toLocaleDateString('id-ID', { month: 'long' })
 
+  // ── Weekly activity chart data ──
   const DAY_LABELS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
   const childNames = activeChildren.map((c) => c.name)
 
@@ -81,6 +118,36 @@ export default async function ParentDashboardPage() {
   }
   const visibleChartData = chartData.slice(0, dayOfWeek + 1)
 
+  // ── Spending analytics: 8 weekly buckets ──
+  // Find the Monday of eightWeeksAgo week
+  const anchorMonday = new Date(eightWeeksAgo)
+  const anchorDay = anchorMonday.getDay() === 0 ? 6 : anchorMonday.getDay() - 1
+  anchorMonday.setDate(anchorMonday.getDate() - anchorDay)
+  anchorMonday.setHours(0, 0, 0, 0)
+
+  const weekBuckets: WeekData[] = Array.from({ length: 8 }, (_, i) => {
+    const d = new Date(anchorMonday)
+    d.setDate(anchorMonday.getDate() + i * 7)
+    const label = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+    const entry: WeekData = { week: label, total: 0 }
+    for (const name of childNames) entry[name] = 0
+    return entry
+  })
+
+  for (const task of spendingTasks) {
+    const approvedAt = new Date(task.approvedAt!)
+    const msFromAnchor = approvedAt.getTime() - anchorMonday.getTime()
+    const weekIdx = Math.floor(msFromAnchor / (7 * 24 * 60 * 60 * 1000))
+    if (weekIdx < 0 || weekIdx >= 8) continue
+    const childName = activeChildren.find((c) => c.id === task.childId)?.name
+    if (childName) {
+      weekBuckets[weekIdx][childName] =
+        ((weekBuckets[weekIdx][childName] as number) || 0) + task.rewardAmount
+      weekBuckets[weekIdx].total += task.rewardAmount
+    }
+  }
+
+  // ── Leaderboard ──
   const leaderboard = activeChildren
     .map((child) => {
       const stats = monthlyLeaderboard.find((r) => r.childId === child.id)
@@ -128,9 +195,33 @@ export default async function ParentDashboardPage() {
         </div>
       </div>
 
+      {/* ── Spending Analytics Chart ── */}
+      {activeChildren.length > 0 && (
+        <div className="animate-fade-up delay-100 bg-gray-900 dark:bg-gray-900 rounded-3xl border border-gray-800 shadow-lg p-5">
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <h2 className="text-base font-bold text-white">💸 Analitik Reward</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Distribusi reward per minggu</p>
+            </div>
+            <Link
+              href="/dashboard/ledger"
+              className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold bg-emerald-950/50 border border-emerald-800 px-3 py-1.5 rounded-xl transition-colors"
+            >
+              Ledger →
+            </Link>
+          </div>
+          <SpendingAnalyticsChart
+            data={weekBuckets}
+            childNames={childNames}
+            currentMonthTotal={monthlyTotal}
+            lastMonthTotal={lastMonthTotal}
+          />
+        </div>
+      )}
+
       {/* ── Leaderboard ── */}
       {activeChildren.length > 0 && (
-        <div className="animate-fade-up delay-100">
+        <div className="animate-fade-up delay-150">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="text-base font-bold text-gray-900 dark:text-gray-50">🏅 Papan Peringkat</h2>
@@ -269,7 +360,7 @@ export default async function ParentDashboardPage() {
 
       {/* ── Weekly Activity Chart ── */}
       {activeChildren.length > 0 && (
-        <div className="animate-fade-up delay-150 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm dark:shadow-black/20 p-5 transition-colors duration-200">
+        <div className="animate-fade-up delay-200 bg-white dark:bg-gray-900 rounded-3xl border border-gray-100 dark:border-gray-800 shadow-sm dark:shadow-black/20 p-5 transition-colors duration-200">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-bold text-gray-900 dark:text-gray-50">📈 Aktivitas Minggu Ini</h2>
@@ -290,14 +381,14 @@ export default async function ParentDashboardPage() {
       )}
 
       {/* ── Secondary Stats ── */}
-      <div className="animate-fade-up delay-200 grid grid-cols-2 gap-3">
+      <div className="animate-fade-up delay-250 grid grid-cols-2 gap-3">
         <StatCard label="Total Saldo Anak" value={`Rp ${(totalBalance / 1000).toFixed(0)}K`} icon="💰" color="emerald" />
         <StatCard label="Paket Aktif" value={subscription?.plan.name ?? 'Starter'} icon="⭐" color="purple" />
       </div>
 
       {/* ── Pending Tasks ── */}
       {pendingTasks.length > 0 && (
-        <div className="animate-fade-up delay-200">
+        <div className="animate-fade-up delay-300">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-bold text-gray-900 dark:text-gray-50">⏳ Menunggu Review</h2>
             <span className="text-xs bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded-full font-bold">
@@ -323,7 +414,7 @@ export default async function ParentDashboardPage() {
       )}
 
       {/* ── Children Grid ── */}
-      <div className="animate-fade-up delay-300">
+      <div className="animate-fade-up delay-350">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-bold text-gray-900 dark:text-gray-50">Daftar Anak</h2>
           <Link href="/dashboard/children" className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 font-bold bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1.5 rounded-xl transition-colors">
