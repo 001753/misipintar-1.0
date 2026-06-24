@@ -4,6 +4,7 @@
   "description": "Misi Pintar — platform literasi keuangan & gamifikasi untuk keluarga",
   "private": true,
   "scripts": {
+    "postinstall": "cd misi-pintar && npm install",
     "dev": "cd misi-pintar && npm run dev",
     "build": "cd misi-pintar && npm run build",
     "start": "cd misi-pintar && npm run start",
