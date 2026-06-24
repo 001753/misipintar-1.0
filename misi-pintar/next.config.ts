@@ -12,6 +12,8 @@ const securityHeaders = [
   },
 ];
 
+const isDev = process.env.NODE_ENV !== "production";
+
 const nextConfig: NextConfig = {
   output: "standalone",
   devIndicators: false,
@@ -32,9 +34,15 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ["nodemailer"],
-  turbopack: {
-    root: path.resolve(__dirname),
-  },
+  // turbopack.root is needed in dev (Replit has two lockfiles and Turbopack
+  // picks the wrong workspace root). In production (next build), we use
+  // webpack which resolves modules via NODE_PATH — compatible with cPanel's
+  // virtual env package layout.
+  ...(isDev && {
+    turbopack: {
+      root: path.resolve(__dirname),
+    },
+  }),
   experimental: {
     serverActions: {
       allowedOrigins: ["*"],
