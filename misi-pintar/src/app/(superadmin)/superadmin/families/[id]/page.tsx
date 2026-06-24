@@ -57,7 +57,7 @@ export default async function FamilyDetailPage({
           id: family.id,
           name: family.name,
           spaceCode: family.spaceCode,
-          ownerEmail: family.owner.email,
+          ownerEmail: family.owner.email ?? "",
           ownerName: family.owner.name ?? "",
           ownerCreatedAt: family.owner.createdAt.toISOString(),
           children: family.children.map((c) => ({

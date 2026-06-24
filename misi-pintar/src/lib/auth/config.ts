@@ -150,11 +150,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token
     },
     async session({ session, token }) {
-      session.user.id = token.id
-      session.user.role = token.role
-      session.user.familySpaceId = token.familySpaceId
-      session.user.childId = token.childId
-      session.user.phone = token.phone
+      const t = token as Record<string, unknown>
+      session.user.id = t.id as string
+      session.user.role = t.role as 'PARENT' | 'CHILD' | 'SUPER_ADMIN'
+      session.user.familySpaceId = (t.familySpaceId as string | null) ?? null
+      session.user.childId = (t.childId as string | null) ?? null
+      session.user.phone = (t.phone as string | null) ?? null
       return session
     },
   },

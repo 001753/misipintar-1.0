@@ -48,8 +48,8 @@ export default async function AuditPage({
           after: l.after,
           ipAddress: l.ipAddress ?? "-",
           createdAt: l.createdAt.toISOString(),
-          adminName: l.admin.name ?? l.admin.email,
-          adminEmail: l.admin.email,
+          adminName: l.admin.name ?? l.admin.email ?? "Unknown",
+          adminEmail: l.admin.email ?? "",
         }))}
         total={total}
         page={pageNum}

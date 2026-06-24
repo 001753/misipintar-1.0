@@ -48,7 +48,7 @@ export default auth((req) => {
     if (role !== 'SUPER_ADMIN') {
       return NextResponse.redirect(new URL('/unauthorized', req.url))
     }
-    if (!checkSuperadminIP(req as Parameters<typeof auth>[0] & { headers: Headers })) {
+    if (!checkSuperadminIP(req as unknown as Parameters<typeof auth>[0] & { headers: Headers })) {
       return NextResponse.json({ error: 'Forbidden — IP not allowed' }, { status: 403 })
     }
   }

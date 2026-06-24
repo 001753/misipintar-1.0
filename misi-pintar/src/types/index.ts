@@ -1,4 +1,4 @@
-import type { DefaultSession, DefaultJWT } from 'next-auth'
+import type { DefaultSession } from 'next-auth'
 
 // ─── NextAuth augmentations ───────────────────────────────
 declare module 'next-auth' {
@@ -13,15 +13,8 @@ declare module 'next-auth' {
   }
 }
 
-declare module 'next-auth/jwt' {
-  interface JWT extends DefaultJWT {
-    id: string
-    role: 'PARENT' | 'CHILD' | 'SUPER_ADMIN'
-    familySpaceId: string | null
-    childId: string | null
-    phone: string | null
-  }
-}
+// next-auth/jwt augmentation is handled via type assertions in auth/config.ts
+// because next-auth v5 beta does not expose a stable next-auth/jwt module path
 
 // ─── Shared action result type ────────────────────────────
 export type ActionResult<T = null> =

@@ -22,6 +22,7 @@ export default async function DashboardLayout({
     { href: '/dashboard/tasks',         icon: '📋', label: 'Tugas' },
     { href: '/dashboard/tasks/pending', icon: '⏳', label: 'Review' },
     { href: '/dashboard/ledger',        icon: '💰', label: 'Saldo' },
+    { href: '/dashboard/billing',       icon: '💳', label: 'Langganan' },
     { href: '/dashboard/settings',      icon: '⚙️', label: 'Profil' },
   ]
 

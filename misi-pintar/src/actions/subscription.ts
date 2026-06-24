@@ -86,7 +86,7 @@ export async function createCheckout(
       status: "PENDING",
       expiredAt: { gt: new Date() },
       amount,
-      snapToken: { not: null },
+      NOT: { snapToken: null },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -121,7 +121,7 @@ export async function createCheckout(
   try {
     const snapResp = await snap.createTransaction({
       transaction_details: { order_id: orderId, gross_amount: amount },
-      customer_details: { first_name: user.name, email: user.email },
+      customer_details: { first_name: user.name, email: user.email ?? undefined },
       item_details: [
         {
           id: `plan-${plan.type.toLowerCase()}-${billingCycle.toLowerCase()}`,

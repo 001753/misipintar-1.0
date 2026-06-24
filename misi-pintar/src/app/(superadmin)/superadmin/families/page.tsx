@@ -53,7 +53,7 @@ export default async function FamiliesPage({
           name: f.name,
           spaceCode: f.spaceCode,
           createdAt: f.createdAt.toISOString(),
-          ownerEmail: f.owner.email,
+          ownerEmail: f.owner.email ?? "",
           ownerName: f.owner.name ?? "",
           subStatus: f.subscription?.status ?? "FREE",
           planName: f.subscription?.plan.name ?? "Starter",

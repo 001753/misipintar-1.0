@@ -33,7 +33,7 @@ export default async function BillingPage() {
     }),
     prisma.user.findUniqueOrThrow({
       where: { id: session.user.id },
-      select: { name: true, email: true },
+      select: { name: true, email: true, phone: true },
     }),
   ]);
 
@@ -80,7 +80,7 @@ export default async function BillingPage() {
     <BillingClient
       subscription={serializedSubscription}
       plans={serializedPlans}
-      user={user}
+      user={{ name: user.name, email: user.email ?? user.phone ?? "" }}
       snapUrl={snapUrl}
       clientKey={clientKey}
       isProduction={isProduction}
