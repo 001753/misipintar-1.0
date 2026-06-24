@@ -7,7 +7,7 @@
 # Semua perintah dijalankan dari folder ROOT repository.
 #
 # PRASYARAT (lakukan SEKALI via SSH sebelum push pertama):
-#   cd ~/public_html/misipintar/misi-pintar
+#   cd ~/public_html/misipintar
 #   cp .env.example .env && nano .env   # isi semua nilai wajib
 #
 # SETUP cPanel:
@@ -29,4 +29,4 @@ deployment:
     #   4. prisma migrate deploy
     #   5. next build (tanpa prebuild hook — langsung ./node_modules/.bin/next build)
     #   6. Copy public/ dan .next/static/ ke standalone output
-    - bash misi-pintar/deploy-cpanel.sh
+    - bash deploy-cpanel.sh
