@@ -9,7 +9,7 @@ const links = {
     { label: 'Sistem Pajak', href: '#' },
   ],
   Perusahaan: [
-    { label: 'Tentang Kami', href: '#' },
+    { label: 'Tentang Kami', href: '/tentang-kami' },
     { label: 'Blog', href: '#' },
     { label: 'Karir', href: '#' },
     { label: 'Kontak', href: '#' },

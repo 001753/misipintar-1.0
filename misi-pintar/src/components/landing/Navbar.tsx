@@ -6,11 +6,12 @@ import { Menu, X, Target } from 'lucide-react'
 import ThemeToggle from '@/components/ThemeToggle'
 
 const navLinks = [
-  { label: 'Fitur', href: '#fitur' },
-  { label: 'Tabungan', href: '#tabungan' },
-  { label: 'Cara Kerja', href: '#cara-kerja' },
-  { label: 'Testimoni', href: '#testimoni' },
-  { label: 'FAQ', href: '#faq' },
+  { label: 'Fitur', href: '/#fitur' },
+  { label: 'Tabungan', href: '/#tabungan' },
+  { label: 'Cara Kerja', href: '/#cara-kerja' },
+  { label: 'Testimoni', href: '/#testimoni' },
+  { label: 'FAQ', href: '/#faq' },
+  { label: 'Tentang Kami', href: '/tentang-kami' },
 ]
 
 export default function Navbar() {
