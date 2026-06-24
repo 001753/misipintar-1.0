@@ -108,12 +108,31 @@ export async function updateChild(
 
   const name = formData.get('name')?.toString().trim()
   const avatar = formData.get('avatar')?.toString() || undefined
+  const usernameRaw = formData.get('username')?.toString().trim()
+  const username = usernameRaw ? usernameRaw.toLowerCase().replace(/[^a-z0-9_]/g, '') : undefined
 
   if (!name || name.length < 2) {
     return { success: false, error: 'Nama minimal 2 karakter.' }
   }
 
-  await prisma.child.update({ where: { id: childId }, data: { name, avatar } })
+  if (username !== undefined) {
+    if (username.length < 3) {
+      return { success: false, error: 'Username minimal 3 karakter.' }
+    }
+    if (username !== child.username) {
+      const conflict = await prisma.child.findUnique({
+        where: { familySpaceId_username: { familySpaceId, username } },
+      })
+      if (conflict && !conflict.deletedAt) {
+        return { success: false, error: 'Username sudah digunakan dalam keluarga ini.' }
+      }
+    }
+  }
+
+  await prisma.child.update({
+    where: { id: childId },
+    data: { name, avatar, ...(username ? { username } : {}) },
+  })
   return { success: true, data: null }
 }
 

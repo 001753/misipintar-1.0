@@ -10,38 +10,50 @@ export default async function ChildrenPage() {
 
   const familySpaceId = session.user.familySpaceId!
 
-  const [children, subscription] = await Promise.all([
+  const [activeChildren, archivedChildren, subscription, taskCounts] = await Promise.all([
     prisma.child.findMany({
       where: { familySpaceId, deletedAt: null },
       orderBy: { createdAt: 'asc' },
     }),
+    prisma.child.findMany({
+      where: { familySpaceId, deletedAt: { not: null } },
+      orderBy: { deletedAt: 'desc' },
+    }),
     prisma.subscription.findUnique({
       where: { familySpaceId },
       include: { plan: true },
+    }),
+    prisma.task.groupBy({
+      by: ['childId', 'status'],
+      where: { familySpaceId },
+      _count: true,
     }),
   ])
 
   const limits = (subscription?.plan.limits ?? { maxChildren: 2 }) as Record<string, number>
   const maxChildren = limits.maxChildren ?? 2
 
+  const taskCountMap: Record<string, { total: number; pending: number; approved: number }> = {}
+  for (const row of taskCounts) {
+    if (!taskCountMap[row.childId]) {
+      taskCountMap[row.childId] = { total: 0, pending: 0, approved: 0 }
+    }
+    taskCountMap[row.childId].total += row._count
+    if (row.status === 'PENDING' || row.status === 'CLAIMED') {
+      taskCountMap[row.childId].pending += row._count
+    }
+    if (row.status === 'APPROVED') {
+      taskCountMap[row.childId].approved += row._count
+    }
+  }
+
   return (
-    <div className="space-y-6 animate-fade-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-gray-900">👧 Manajemen Anak</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            <span className="font-bold text-emerald-600">{children.length}</span>/{maxChildren} anak terdaftar
-          </p>
-        </div>
-        <div className="hidden sm:flex items-center gap-2 bg-emerald-50 px-3 py-2 rounded-2xl">
-          <span className="text-emerald-600 text-sm font-bold">{maxChildren - children.length} slot tersisa</span>
-        </div>
-      </div>
-      <ChildrenClient
-        children={children}
-        maxChildren={maxChildren}
-        avatars={AVATARS}
-      />
-    </div>
+    <ChildrenClient
+      activeChildren={activeChildren}
+      archivedChildren={archivedChildren}
+      maxChildren={maxChildren}
+      avatars={AVATARS}
+      taskCountMap={taskCountMap}
+    />
   )
 }
