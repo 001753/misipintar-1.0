@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import WeeklyActivityChart from './weekly-chart'
 
 export default async function ParentDashboardPage() {
   const session = await auth()
@@ -12,42 +13,78 @@ export default async function ParentDashboardPage() {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-  const [familySpace, activeChildren, pendingTasks, subscription, monthlyRewards] = await Promise.all([
-    prisma.familySpace.findUnique({
-      where: { id: familySpaceId },
-      select: { name: true, spaceCode: true },
-    }),
-    prisma.child.findMany({
-      where: { familySpaceId, deletedAt: null },
-      orderBy: { createdAt: 'asc' },
-    }),
-    prisma.task.findMany({
-      where: { familySpaceId, status: 'CLAIMED' },
-      include: { child: { select: { name: true } } },
-      orderBy: { claimedAt: 'desc' },
-      take: 5,
-    }),
-    prisma.subscription.findUnique({
-      where: { familySpaceId },
-      include: { plan: { select: { name: true } } },
-    }),
-    prisma.task.aggregate({
-      where: {
-        familySpaceId,
-        status: 'APPROVED',
-        approvedAt: { gte: monthStart },
-      },
-      _sum: { rewardAmount: true },
-      _count: true,
-    }),
-  ])
+  // Week starts Monday
+  const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1
+  const weekStart = new Date(now)
+  weekStart.setDate(now.getDate() - dayOfWeek)
+  weekStart.setHours(0, 0, 0, 0)
+
+  const [familySpace, activeChildren, pendingTasks, subscription, monthlyRewards, weeklyTasks] =
+    await Promise.all([
+      prisma.familySpace.findUnique({
+        where: { id: familySpaceId },
+        select: { name: true, spaceCode: true },
+      }),
+      prisma.child.findMany({
+        where: { familySpaceId, deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      }),
+      prisma.task.findMany({
+        where: { familySpaceId, status: 'CLAIMED' },
+        include: { child: { select: { name: true } } },
+        orderBy: { claimedAt: 'desc' },
+        take: 5,
+      }),
+      prisma.subscription.findUnique({
+        where: { familySpaceId },
+        include: { plan: { select: { name: true } } },
+      }),
+      prisma.task.aggregate({
+        where: { familySpaceId, status: 'APPROVED', approvedAt: { gte: monthStart } },
+        _sum: { rewardAmount: true },
+        _count: true,
+      }),
+      prisma.task.findMany({
+        where: {
+          familySpaceId,
+          status: 'APPROVED',
+          approvedAt: { gte: weekStart },
+        },
+        select: { childId: true, approvedAt: true },
+        orderBy: { approvedAt: 'asc' },
+      }),
+    ])
 
   const totalBalance = activeChildren.reduce((sum, c) => sum + c.balance, 0)
   const firstName = session.user.name?.split(' ')[0]
   const monthlyTotal = monthlyRewards._sum.rewardAmount ?? 0
   const monthlyTaskCount = monthlyRewards._count
-
   const monthName = now.toLocaleDateString('id-ID', { month: 'long' })
+
+  // Build weekly chart data — Mon–Sun, one bar per child
+  const DAY_LABELS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
+  const childNames = activeChildren.map((c) => c.name)
+
+  type DayData = { day: string; [name: string]: string | number }
+
+  const chartData: DayData[] = DAY_LABELS.map((label) => {
+    const entry: DayData = { day: label }
+    for (const name of childNames) entry[name] = 0
+    return entry
+  })
+
+  for (const task of weeklyTasks) {
+    const d = new Date(task.approvedAt!)
+    const taskDay = d.getDay() === 0 ? 6 : d.getDay() - 1 // Mon=0
+    const childName = activeChildren.find((c) => c.id === task.childId)?.name
+    if (childName && chartData[taskDay]) {
+      chartData[taskDay][childName] = ((chartData[taskDay][childName] as number) || 0) + 1
+    }
+  }
+
+  // Only show days up to today
+  const todayIdx = dayOfWeek
+  const visibleChartData = chartData.slice(0, todayIdx + 1)
 
   return (
     <div className="space-y-6">
@@ -61,13 +98,11 @@ export default async function ParentDashboardPage() {
       {/* ── Family Summary Widget ── */}
       <div className="animate-fade-up delay-75">
         <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 rounded-3xl p-5 shadow-xl shadow-emerald-100">
-          {/* decorative circles */}
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full" />
           <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-white/5 rounded-full" />
           <div className="absolute top-4 right-20 w-10 h-10 bg-white/10 rounded-full" />
 
           <div className="relative z-10">
-            {/* Family code row */}
             <div className="flex items-center justify-between mb-5">
               <div>
                 <p className="text-emerald-200 text-[10px] font-bold uppercase tracking-widest mb-1">🏠 Kode Keluarga</p>
@@ -82,35 +117,43 @@ export default async function ParentDashboardPage() {
               </div>
             </div>
 
-            {/* Summary stats row */}
             <div className="grid grid-cols-3 gap-3">
-              <SummaryTile
-                icon="👧"
-                value={String(activeChildren.length)}
-                label="Anak Aktif"
-                href="/dashboard/children"
-              />
-              <SummaryTile
-                icon="⏳"
-                value={String(pendingTasks.length)}
-                label="Perlu Review"
-                href="/dashboard/tasks/pending"
-                alert={pendingTasks.length > 0}
-              />
-              <SummaryTile
-                icon="🏆"
-                value={monthlyTotal >= 1000 ? `${Math.round(monthlyTotal / 1000)}k` : String(monthlyTotal)}
-                label={`Reward ${monthName}`}
-                sub={`${monthlyTaskCount} tugas`}
-                href="/dashboard/ledger"
-              />
+              <SummaryTile icon="👧" value={String(activeChildren.length)} label="Anak Aktif" href="/dashboard/children" />
+              <SummaryTile icon="⏳" value={String(pendingTasks.length)} label="Perlu Review" href="/dashboard/tasks/pending" alert={pendingTasks.length > 0} />
+              <SummaryTile icon="🏆" value={monthlyTotal >= 1000 ? `${Math.round(monthlyTotal / 1000)}k` : String(monthlyTotal)} label={`Reward ${monthName}`} sub={`${monthlyTaskCount} tugas`} href="/dashboard/ledger" />
             </div>
           </div>
         </div>
       </div>
 
+      {/* ── Weekly Activity Chart ── */}
+      {activeChildren.length > 0 && (
+        <div className="animate-fade-up delay-150 bg-white rounded-3xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base font-bold text-gray-900">📈 Aktivitas Minggu Ini</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Tugas selesai per hari · Senin s/d hari ini</p>
+            </div>
+            {childNames.length > 0 && (
+              <div className="flex gap-1.5 flex-wrap justify-end">
+                {childNames.slice(0, 3).map((name, i) => (
+                  <span
+                    key={name}
+                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full text-white"
+                    style={{ background: COLORS[i % COLORS.length] }}
+                  >
+                    {name.split(' ')[0]}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <WeeklyActivityChart data={visibleChartData} childNames={childNames} />
+        </div>
+      )}
+
       {/* ── Secondary Stats ── */}
-      <div className="animate-fade-up delay-150 grid grid-cols-2 gap-3">
+      <div className="animate-fade-up delay-200 grid grid-cols-2 gap-3">
         <StatCard label="Total Saldo Anak" value={`Rp ${(totalBalance / 1000).toFixed(0)}K`} icon="💰" color="emerald" />
         <StatCard label="Paket Aktif" value={subscription?.plan.name ?? 'Starter'} icon="⭐" color="purple" />
       </div>
@@ -160,10 +203,7 @@ export default async function ParentDashboardPage() {
             <p className="text-4xl mb-3">👧</p>
             <p className="text-gray-700 font-bold">Belum ada anak terdaftar</p>
             <p className="text-gray-400 text-sm mt-1">Tambahkan akun anak untuk mulai</p>
-            <Link
-              href="/dashboard/children"
-              className="btn-press inline-block mt-4 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-sm font-bold rounded-2xl shadow-md shadow-emerald-100 transition-all"
-            >
+            <Link href="/dashboard/children" className="btn-press inline-block mt-4 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white text-sm font-bold rounded-2xl shadow-md shadow-emerald-100 transition-all">
               + Tambah Anak
             </Link>
           </div>
@@ -209,11 +249,7 @@ export default async function ParentDashboardPage() {
             { href: '/dashboard/ledger',  icon: '📊', label: 'Lihat Saldo', color: 'from-blue-500 to-blue-600' },
             { href: '/dashboard/billing', icon: '💳', label: 'Billing',     color: 'from-purple-500 to-purple-600' },
           ].map(({ href, icon, label, color }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`btn-press flex flex-col items-center gap-2 p-4 rounded-2xl bg-gradient-to-br ${color} text-white shadow-md transition-all`}
-            >
+            <Link key={href} href={href} className={`btn-press flex flex-col items-center gap-2 p-4 rounded-2xl bg-gradient-to-br ${color} text-white shadow-md transition-all`}>
               <span className="text-2xl">{icon}</span>
               <span className="text-[10px] font-bold text-center leading-tight">{label}</span>
             </Link>
@@ -224,44 +260,23 @@ export default async function ParentDashboardPage() {
   )
 }
 
-function SummaryTile({
-  icon,
-  value,
-  label,
-  sub,
-  href,
-  alert = false,
-}: {
-  icon: string
-  value: string
-  label: string
-  sub?: string
-  href: string
-  alert?: boolean
+const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899']
+
+function SummaryTile({ icon, value, label, sub, href, alert = false }: {
+  icon: string; value: string; label: string; sub?: string; href: string; alert?: boolean
 }) {
   return (
-    <Link
-      href={href}
-      className={`flex flex-col items-center text-center gap-1 px-2 py-3 rounded-2xl transition-all active:scale-95 ${
-        alert
-          ? 'bg-amber-400/30 ring-2 ring-amber-300/60'
-          : 'bg-white/15 hover:bg-white/25'
-      }`}
-    >
+    <Link href={href} className={`flex flex-col items-center text-center gap-1 px-2 py-3 rounded-2xl transition-all active:scale-95 ${alert ? 'bg-amber-400/30 ring-2 ring-amber-300/60' : 'bg-white/15 hover:bg-white/25'}`}>
       <span className="text-xl leading-none">{icon}</span>
       <span className="text-xl font-black text-white leading-none">{value}</span>
       <span className="text-[10px] text-emerald-100 font-medium leading-tight">{label}</span>
       {sub && <span className="text-[9px] text-emerald-200/70">{sub}</span>}
-      {alert && value !== '0' && (
-        <span className="text-[9px] font-bold text-amber-200 bg-amber-500/40 px-1.5 py-0.5 rounded-full">Tap →</span>
-      )}
+      {alert && value !== '0' && <span className="text-[9px] font-bold text-amber-200 bg-amber-500/40 px-1.5 py-0.5 rounded-full">Tap →</span>}
     </Link>
   )
 }
 
-function StatCard({
-  label, value, icon, color, alert = false,
-}: {
+function StatCard({ label, value, icon, color, alert = false }: {
   label: string; value: string; icon: string; color: string; alert?: boolean
 }) {
   const colors: Record<string, string> = {
