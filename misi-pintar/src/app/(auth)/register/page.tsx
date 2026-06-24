@@ -4,10 +4,10 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { registerFamilySpace } from '@/actions/auth'
+import { loginParent } from '@/actions/auth'
 
 export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null)
-  const [spaceCode, setSpaceCode] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
@@ -16,59 +16,33 @@ export default function RegisterPage() {
     e.preventDefault()
     setError(null)
     const formData = new FormData(e.currentTarget)
+    const phone = formData.get('phone')?.toString() ?? ''
+    const password = formData.get('password')?.toString() ?? ''
 
     startTransition(async () => {
       const result = await registerFamilySpace(formData)
-      if (result.success) {
-        setSpaceCode(result.data.spaceCode)
-      } else {
+      if (!result.success) {
         setError(result.error ?? 'Terjadi kesalahan.')
+        return
+      }
+
+      // Auto-login after registration, then go straight to onboarding
+      const loginFd = new FormData()
+      loginFd.set('phone', phone)
+      loginFd.set('password', password)
+      const loginResult = await loginParent(loginFd)
+
+      if (loginResult.success) {
+        router.push('/dashboard/onboarding')
+      } else {
+        // Registration succeeded but login failed — show spaceCode and redirect to login
+        router.push(`/login?onboarding=1&spaceCode=${result.data.spaceCode}`)
       }
     })
   }
 
-  if (spaceCode) {
-    return (
-      <div className="animate-scale-in">
-        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl shadow-gray-200/60 dark:shadow-black/40 border border-gray-100 dark:border-gray-800 p-8 text-center transition-colors duration-200">
-          <div className="animate-pop-in inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-950/60 mb-4">
-            <span className="text-4xl">🎉</span>
-          </div>
-          <h2 className="text-2xl font-black text-gray-900 dark:text-gray-50 mb-2">Selamat!</h2>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 leading-relaxed">
-            FamilySpace berhasil dibuat. Simpan kode ini — anak-anakmu membutuhkannya untuk login.
-          </p>
-
-          <div className="animate-fade-up delay-200 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/50 dark:to-teal-950/50 rounded-2xl p-6 mb-4 border border-emerald-100 dark:border-emerald-900">
-            <p className="text-xs text-emerald-700 dark:text-emerald-400 font-bold uppercase tracking-widest mb-3">🏠 Kode Keluarga</p>
-            <p className="text-5xl font-black tracking-[0.4em] text-emerald-700 dark:text-emerald-400 font-mono">
-              {spaceCode}
-            </p>
-          </div>
-
-          <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900 rounded-xl p-3 mb-6 text-left">
-            <p className="text-amber-700 dark:text-amber-300 text-xs font-semibold mb-1">💡 Tip: Lengkapi profil</p>
-            <p className="text-amber-600 dark:text-amber-400 text-xs">
-              Setelah login, kamu bisa menambahkan alamat email di halaman Profil untuk backup akun.
-            </p>
-          </div>
-
-          <p className="text-xs text-gray-400 dark:text-gray-500 mb-6 leading-relaxed">
-            📸 Screenshot atau catat kode ini sekarang. Kamu juga bisa melihatnya di pengaturan.
-          </p>
-
-          <button
-            onClick={() => router.push('/login')}
-            className="btn-press w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-bold rounded-2xl shadow-md shadow-emerald-100 dark:shadow-emerald-900/20 transition-all text-sm"
-          >
-            Lanjut ke Login →
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  const inputClass = 'w-full px-4 py-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:bg-white dark:focus:bg-gray-750 transition-all'
+  const inputClass =
+    'w-full px-4 py-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:bg-white dark:focus:bg-gray-750 transition-all'
 
   return (
     <div className="animate-fade-up">
@@ -155,7 +129,6 @@ export default function RegisterPage() {
             <p className="text-xs text-gray-400 dark:text-gray-500 px-1">Nama ini terlihat oleh semua anggota keluarga</p>
           </div>
 
-          {/* Info email */}
           <div className="rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 p-3 flex items-start gap-2">
             <span className="text-base flex-shrink-0">ℹ️</span>
             <p className="text-blue-700 dark:text-blue-300 text-xs leading-relaxed">
@@ -168,15 +141,17 @@ export default function RegisterPage() {
             disabled={isPending}
             className="btn-press w-full py-4 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 disabled:from-emerald-300 disabled:to-emerald-300 dark:disabled:from-gray-700 dark:disabled:to-gray-700 text-white font-bold rounded-2xl shadow-md shadow-emerald-100 dark:shadow-emerald-900/20 transition-all text-sm mt-2"
           >
-            {isPending
-              ? <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                  </svg>
-                  Membuat akun...
-                </span>
-              : 'Buat FamilySpace 🏠'}
+            {isPending ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+                Membuat akun...
+              </span>
+            ) : (
+              'Buat FamilySpace 🏠'
+            )}
           </button>
         </form>
 

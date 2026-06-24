@@ -172,6 +172,29 @@ export default async function ParentDashboardPage() {
         <p className="text-emerald-600 dark:text-emerald-400 text-sm font-semibold">{familySpace?.name}</p>
       </div>
 
+      {/* ── Onboarding Banner (only when no children yet) ── */}
+      {activeChildren.length === 0 && (
+        <div className="animate-fade-up">
+          <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 rounded-3xl p-5 shadow-xl shadow-emerald-100 dark:shadow-emerald-900/30">
+            <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full" />
+            <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full" />
+            <div className="relative z-10">
+              <p className="text-emerald-200 text-xs font-bold uppercase tracking-widest mb-1">🚀 Mulai Sekarang</p>
+              <h2 className="text-lg font-black text-white mb-1">Lengkapi Setup Keluargamu</h2>
+              <p className="text-emerald-100 text-xs leading-relaxed mb-4">
+                Tambahkan akun anak dan buat misi pertama — hanya butuh 2 menit!
+              </p>
+              <Link
+                href="/dashboard/onboarding"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-emerald-700 font-bold text-sm rounded-2xl shadow-md hover:bg-emerald-50 transition-all"
+              >
+                Mulai Setup →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Family Summary Widget ── */}
       <div className="animate-fade-up delay-75">
         <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 rounded-3xl p-5 shadow-xl shadow-emerald-100 dark:shadow-emerald-900/30">
