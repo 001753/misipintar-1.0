@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
@@ -15,6 +16,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const themeScript = `(function(){try{var s=localStorage.getItem('mp-theme');var p=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';if((s||p)==='dark')document.documentElement.classList.add('dark');}catch(e){}})();`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -22,24 +25,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className="h-full antialiased" suppressHydrationWarning>
-      <head>
-        {/* Prevent flash of unstyled content — runs before React hydrates */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(){
-                try {
-                  var saved = localStorage.getItem('mp-theme');
-                  var preferred = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                  var theme = saved || preferred;
-                  if (theme === 'dark') document.documentElement.classList.add('dark');
-                } catch(e) {}
-              })();
-            `,
-          }}
+      <body className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-950 transition-colors duration-200" suppressHydrationWarning>
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeScript }}
         />
-      </head>
-      <body className="min-h-full flex flex-col bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
         <ThemeProvider>
           {children}
         </ThemeProvider>
