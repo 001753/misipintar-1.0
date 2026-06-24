@@ -306,6 +306,85 @@ export async function resetPasswordWithToken(
   }
 }
 
+// ─── Ganti No. WA: Kirim OTP ke nomor baru ───────────────
+
+export async function sendChangePhoneOtp(
+  userId: string,
+  rawPhone: string
+): Promise<ActionResult<{ phone: string }>> {
+  if (!validatePhone(rawPhone)) {
+    return { success: false, error: 'Format nomor WhatsApp tidak valid.' }
+  }
+
+  const newPhone = normalizePhone(rawPhone)
+
+  // Pastikan nomor belum dipakai akun lain
+  const conflict = await prisma.user.findUnique({ where: { phone: newPhone } })
+  if (conflict && conflict.id !== userId) {
+    return { success: false, error: 'Nomor WhatsApp ini sudah digunakan akun lain.' }
+  }
+
+  // Pastikan bukan nomor yang sama
+  const me = await prisma.user.findUnique({ where: { id: userId }, select: { phone: true } })
+  if (me?.phone === newPhone) {
+    return { success: false, error: 'Nomor baru sama dengan nomor saat ini.' }
+  }
+
+  try {
+    const { code } = await createOtp(newPhone, 'VERIFY_PHONE')
+    await sendWhatsAppOtp(newPhone, code)
+    return { success: true, data: { phone: newPhone } }
+  } catch (err: any) {
+    const msg = err?.message ?? ''
+    if (msg.startsWith('COOLDOWN:')) {
+      const secs = msg.split(':')[1]
+      return { success: false, error: `Tunggu ${secs} detik sebelum minta OTP baru.` }
+    }
+    console.error('[sendChangePhoneOtp]', err)
+    return { success: false, error: 'Gagal mengirim OTP. Coba beberapa saat lagi.' }
+  }
+}
+
+// ─── Ganti No. WA: Verifikasi OTP & simpan nomor baru ────
+
+export async function verifyAndChangePhone(
+  userId: string,
+  newPhone: string,
+  code: string
+): Promise<ActionResult<{ newPhone: string }>> {
+  if (!newPhone || code.length !== 6) {
+    return { success: false, error: 'Data tidak lengkap.' }
+  }
+
+  const normalizedPhone = normalizePhone(newPhone)
+
+  // Periksa sekali lagi apakah ada konflik (bisa saja ada race condition)
+  const conflict = await prisma.user.findUnique({ where: { phone: normalizedPhone } })
+  if (conflict && conflict.id !== userId) {
+    return { success: false, error: 'Nomor ini sudah dipakai akun lain.' }
+  }
+
+  try {
+    const { otpId } = await verifyOtp(normalizedPhone, code, 'VERIFY_PHONE')
+
+    // Tandai OTP sebagai terpakai
+    await prisma.otpCode.update({
+      where: { id: otpId },
+      data: { usedAt: new Date() },
+    })
+
+    // Update nomor di DB
+    await prisma.user.update({
+      where: { id: userId },
+      data: { phone: normalizedPhone },
+    })
+
+    return { success: true, data: { newPhone: normalizedPhone } }
+  } catch (err: any) {
+    return { success: false, error: err?.message ?? 'Verifikasi gagal.' }
+  }
+}
+
 // ─── Update Email dari Dashboard ─────────────────────────
 
 export async function updateUserEmail(
