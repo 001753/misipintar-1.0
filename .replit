@@ -27,7 +27,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd misi-pintar && node_modules/.bin/next dev --webpack --port 5000"
+args = "cd misi-pintar && npm run dev"
 waitForPort = 5000
 
 [[ports]]
