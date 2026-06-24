@@ -157,4 +157,28 @@ export async function deleteChild(childId: string): Promise<ActionResult<null>> 
   return { success: true, data: null }
 }
 
+// ─── [2.1e] restoreChild (undo soft delete) ──────────────
+
+export async function restoreChild(childId: string): Promise<ActionResult<null>> {
+  const { familySpaceId } = await getParentSession()
+
+  const child = await prisma.child.findUnique({ where: { id: childId } })
+  if (!child || child.familySpaceId !== familySpaceId || !child.deletedAt) {
+    return { success: false, error: 'Anak tidak ditemukan atau sudah aktif.' }
+  }
+
+  // Cek limit plan sebelum restore
+  const limits = await getPlanLimits(familySpaceId)
+  const maxChildren = limits.maxChildren ?? 2
+  const activeCount = await prisma.child.count({
+    where: { familySpaceId, deletedAt: null },
+  })
+  if (maxChildren !== -1 && activeCount >= maxChildren) {
+    return { success: false, error: `Batas ${maxChildren} anak aktif tercapai. Hapus atau upgrade plan terlebih dahulu.` }
+  }
+
+  await prisma.child.update({ where: { id: childId }, data: { deletedAt: null } })
+  return { success: true, data: null }
+}
+
 export { getPlanLimits }
