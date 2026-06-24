@@ -47,6 +47,8 @@ async function runInterestEngine(): Promise<{
           savingsBalance: { gt: 0 },
           familySpace: {
             subscription: {
+              // Hanya proses bunga untuk langganan yang masih aktif
+              status: { in: ["TRIAL", "PRO", "EDUCATOR", "SCHOOL"] },
               plan: {
                 // hasInterest is stored in plan.limits JSON
                 NOT: { limits: {} },
@@ -169,6 +171,8 @@ async function runTaxEngine(): Promise<{
           deletedAt: null,
           familySpace: {
             subscription: {
+              // Hanya kenakan pajak untuk langganan yang masih aktif
+              status: { in: ["TRIAL", "PRO", "EDUCATOR", "SCHOOL"] },
               plan: { NOT: { limits: {} } },
             },
           },

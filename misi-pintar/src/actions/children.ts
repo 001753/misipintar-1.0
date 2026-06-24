@@ -18,12 +18,20 @@ async function getParentSession() {
   return { familySpaceId: session.user.familySpaceId! }
 }
 
+// Status yang dianggap aktif (berhak menikmati limit premium)
+const ACTIVE_SUB_STATUSES = new Set(["TRIAL", "FREE", "PRO", "EDUCATOR", "SCHOOL"])
+
+// Fallback ke limit FREE jika langganan EXPIRED/CANCELLED
+const FREE_LIMITS: Record<string, number> = { maxChildren: 2, maxTasksPerMonth: 10 }
+
 async function getPlanLimits(familySpaceId: string) {
   const sub = await prisma.subscription.findUnique({
     where: { familySpaceId },
     include: { plan: true },
   })
-  return (sub?.plan.limits ?? { maxChildren: 2, maxTasksPerMonth: 10 }) as Record<string, number>
+  // Jika langganan expired atau dibatalkan, downgrade ke limit gratis
+  if (!sub || !ACTIVE_SUB_STATUSES.has(sub.status)) return FREE_LIMITS
+  return (sub.plan.limits ?? FREE_LIMITS) as Record<string, number>
 }
 
 
