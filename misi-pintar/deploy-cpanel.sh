@@ -1,20 +1,11 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────────────────────
 # MISI PINTAR — Deploy Script untuk cPanel / Shared Hosting
-# Jalankan di server via SSH setelah git pull
 #
-# Usage (dari root repo):
-#   cd ~/public_html/misipintar
+# Usage (dari root repo ~/public_html/misipintar):
 #   chmod +x misi-pintar/deploy-cpanel.sh
 #   ./misi-pintar/deploy-cpanel.sh
-#
-# Prasyarat:
-#   - File .env sudah diisi (cp misi-pintar/.env.example misi-pintar/.env)
-#   - Node.js >= 20 tersedia di PATH
-#   - PostgreSQL database sudah dibuat dan DATABASE_URL diisi di .env
 # ─────────────────────────────────────────────────────────────────────────────
-
-set -e
 
 # Warna output
 RED='\033[0;31m'
@@ -24,9 +15,9 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 log() { echo -e "${BLUE}[$(date '+%H:%M:%S')]${NC} $1"; }
-ok()  { echo -e "${GREEN}✅${NC} $1"; }
-warn(){ echo -e "${YELLOW}⚠️ ${NC} $1"; }
-err() { echo -e "${RED}❌${NC} $1"; exit 1; }
+ok()  { echo -e "${GREEN}[OK]${NC} $1"; }
+warn(){ echo -e "${YELLOW}[WARN]${NC} $1"; }
+err() { echo -e "${RED}[ERR]${NC} $1"; exit 1; }
 
 echo ""
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -34,30 +25,39 @@ echo -e "${BLUE}   MISI PINTAR — Deploy Script${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-# Deteksi root repo (bisa dipanggil dari mana saja)
+# ── Deteksi direktori (bisa dipanggil dari mana saja) ────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 APP_DIR="$SCRIPT_DIR"   # misi-pintar/ directory
 
-echo -e "📂 Repo root : $REPO_ROOT"
-echo -e "📂 App dir   : $APP_DIR"
+echo -e "📂 App dir : $APP_DIR"
 echo ""
 
-cd "$APP_DIR"
+cd "$APP_DIR" || err "Tidak bisa masuk ke $APP_DIR"
 
 # ── Cek .env ──────────────────────────────────────────────────────────────────
 if [ ! -f ".env" ]; then
-  err "File .env tidak ditemukan di $APP_DIR!\n   Buat dulu: cp .env.example .env && nano .env"
+  err "File .env tidak ditemukan di $APP_DIR\n   Buat dulu: cp .env.example .env && nano .env"
 fi
 ok ".env ditemukan"
 
-# ── Load .env untuk cek DATABASE_URL ──────────────────────────────────────────
-set -a; source .env; set +a
+# ── Load .env — strip Windows CRLF (\r) sebelum source ───────────────────────
+# File .env yang dibuat di Windows mengandung carriage return (\r) yang
+# menyebabkan error "$'\r': command not found". Baris ini membersihkannya.
+TMP_ENV=$(mktemp /tmp/misipintar-env.XXXXXX)
+sed 's/\r//' .env > "$TMP_ENV"
+set -a
+# shellcheck source=/dev/null
+source "$TMP_ENV"
+set +a
+rm -f "$TMP_ENV"
 
 if [ -z "$DATABASE_URL" ]; then
   err "DATABASE_URL belum diisi di .env"
 fi
 ok "DATABASE_URL tersedia"
+
+# Ab ini pakai set -e agar script berhenti jika ada error
+set -e
 
 # ── Step 1: Install dependencies ──────────────────────────────────────────────
 log "[1/6] Install production dependencies..."
@@ -98,28 +98,27 @@ if [ ! -d "$STANDALONE" ]; then
 fi
 
 if [ -d "public" ]; then
-  cp -r public "$STANDALONE/public"
-  ok "public/ → .next/standalone/public/"
+  cp -rf public "$STANDALONE/public"
+  ok "public/ -> .next/standalone/public/"
 fi
 
 if [ -d ".next/static" ]; then
   mkdir -p "$STANDALONE/.next/static"
-  cp -r .next/static "$STANDALONE/.next/static"
-  ok ".next/static/ → .next/standalone/.next/static/"
+  cp -rf .next/static "$STANDALONE/.next/static"
+  ok ".next/static/ -> .next/standalone/.next/static/"
 fi
 
 # ── Selesai ───────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}   ✅  Build selesai!${NC}"
+echo -e "${GREEN}   BUILD SELESAI!${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
-echo -e "📋 ${YELLOW}Langkah selanjutnya:${NC}"
-echo "   1. Buka cPanel → Node.js App → Restart Application"
-echo "   2. Pastikan startup file di cPanel diset ke: app.js"
-echo "   3. Akses aplikasi di domain Anda"
+echo "   1. cPanel -> Node.js App -> Restart Application"
+echo "   2. Pastikan startup file: app.js"
+echo "   3. Buka domain Anda"
 echo ""
 if [ -n "$SEED_ADMIN_EMAIL" ]; then
-  echo -e "   ${RED}⚠️  PENTING: Hapus SEED_ADMIN_EMAIL & SEED_ADMIN_PASSWORD dari .env!${NC}"
+  echo -e "   ${RED}PENTING: Hapus SEED_ADMIN_EMAIL & SEED_ADMIN_PASSWORD dari .env!${NC}"
   echo ""
 fi
