@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { planTypeToSubStatus } from "@/lib/utils";
 import { sendPushNotification, getUserFcmTokens } from "@/lib/notifications/fcm";
 import { publishToFamily, incrementUnreadBadge } from "@/lib/notifications/sse";
+import { sendReceiptEmail } from "@/lib/send-receipt-email";
 
 // POST /api/webhooks/midtrans
 // WAJIB: Validasi signature SHA-512 sebelum apapun — tolak jika tidak valid
@@ -170,6 +171,47 @@ export async function POST(req: NextRequest) {
       }
     } catch (err) {
       console.error("[Webhook] Post-payment notification error (non-fatal):", err);
+    }
+
+    // [5.4] Email kuitansi PDF — non-fatal, tidak memblokir response webhook
+    try {
+      const owner = await prisma.user.findUnique({
+        where: { id: familySpace.ownerId },
+        select: { name: true, email: true, phone: true },
+      });
+
+      if (owner) {
+        const billingCycle: "MONTHLY" | "YEARLY" =
+          invoice.amount >= plan.yearlyPrice && plan.yearlyPrice > 0
+            ? "YEARLY"
+            : "MONTHLY";
+
+        // Run async — do not await so webhook returns immediately
+        sendReceiptEmail({
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.midtransOrderId ?? `INV-${invoice.id.slice(0, 8).toUpperCase()}`,
+          orderId: invoice.midtransOrderId ?? "",
+          issuedAt: invoice.createdAt,
+          paidAt: now,
+          amount: invoice.amount,
+          currency: plan.currency,
+          paymentMethod: payMethod ?? null,
+          billingCycle,
+          plan: { name: plan.name, type: plan.type as string },
+          customer: {
+            name: owner.name,
+            email: owner.email,
+            phone: owner.phone,
+          },
+          familySpaceName: familySpace.name,
+          periodStart: now,
+          periodEnd,
+        }).catch((emailErr) => {
+          console.error("[Webhook] Receipt email error (non-fatal):", emailErr);
+        });
+      }
+    } catch (err) {
+      console.error("[Webhook] Receipt email setup error (non-fatal):", err);
     }
   } else if (isFailure) {
     await prisma.invoice.update({

@@ -31,6 +31,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "qris.online" },
     ],
   },
+  serverExternalPackages: ["nodemailer"],
   turbopack: {
     root: path.resolve(__dirname),
   },

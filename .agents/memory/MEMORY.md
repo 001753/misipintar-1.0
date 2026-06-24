@@ -1,3 +1,4 @@
 - [Misi Pintar project setup](misi-pintar-setup.md) — Prisma v7 requires db URL via --url flag for CLI commands; schema has no url field by design.
 - [Misi Pintar PRD rules](misi-pintar-prd.md) — Critical architecture constraints for this Next.js family finance app.
 - [Misi Pintar Replit dev server](misi-pintar-replit-dev.md) — Must use `--webpack` flag; Next.js 16 + Tailwind v4 Turbopack breaks on `@vercel/turbopack/postcss`.
+- [Turbopack serverExternalPackages](turbopack-server-external.md) — CJS-heavy Node packages (nodemailer, etc.) must be in `serverExternalPackages` in next.config.ts or Turbopack fails to resolve them.
