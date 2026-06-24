@@ -28,12 +28,19 @@ type TaskCounts = {
   approved: number
 }
 
+type RecentTask = {
+  title: string
+  rewardAmount: number
+  approvedAt: Date | null
+}
+
 type Props = {
   activeChildren: Child[]
   archivedChildren: Child[]
   maxChildren: number
   avatars: string[]
   taskCountMap: Record<string, TaskCounts>
+  recentTaskMap: Record<string, RecentTask[]>
 }
 
 type Tab = 'active' | 'archived'
@@ -52,6 +59,7 @@ export default function ChildrenClient({
   maxChildren,
   avatars,
   taskCountMap,
+  recentTaskMap,
 }: Props) {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('active')
@@ -202,6 +210,7 @@ export default function ChildrenClient({
                 key={child.id}
                 child={child}
                 tasks={taskCountMap[child.id]}
+                recentTasks={recentTaskMap[child.id] ?? []}
                 onEdit={() => openEdit(child)}
                 onPassword={() => { setError(null); setModal({ type: 'password', child }) }}
                 onDeactivate={() => { setError(null); setModal({ type: 'deactivate', child }) }}
@@ -398,12 +407,14 @@ export default function ChildrenClient({
 function ChildCard({
   child,
   tasks,
+  recentTasks,
   onEdit,
   onPassword,
   onDeactivate,
 }: {
   child: Child
   tasks?: TaskCounts
+  recentTasks: RecentTask[]
   onEdit: () => void
   onPassword: () => void
   onDeactivate: () => void
@@ -446,17 +457,38 @@ function ChildCard({
           <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 rounded-2xl">
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <span>📋</span>
-              <span><strong className="text-gray-800">{tasks.total}</strong> total tugas</span>
+              <span><strong className="text-gray-800">{tasks.total}</strong> total</span>
             </div>
             <div className="w-px h-3 bg-gray-200" />
             <div className="flex items-center gap-1.5 text-xs text-amber-600">
               <span>⏳</span>
-              <span><strong>{tasks.pending}</strong> menunggu</span>
+              <span><strong>{tasks.pending}</strong> pending</span>
             </div>
             <div className="w-px h-3 bg-gray-200" />
             <div className="flex items-center gap-1.5 text-xs text-emerald-600">
               <span>✅</span>
               <span><strong>{tasks.approved}</strong> selesai</span>
+            </div>
+          </div>
+        )}
+
+        {/* Recent activity timeline */}
+        {recentTasks.length > 0 && (
+          <div className="mt-3">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Aktivitas Terakhir</p>
+            <div className="space-y-1.5">
+              {recentTasks.map((t, i) => (
+                <div key={i} className="flex items-center gap-2.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                  <p className="text-xs text-gray-600 flex-1 truncate">{t.title}</p>
+                  <span className="text-[10px] font-bold text-emerald-600 flex-shrink-0">
+                    +{t.rewardAmount >= 1000 ? `${(t.rewardAmount / 1000).toFixed(0)}k` : t.rewardAmount}
+                  </span>
+                  <span className="text-[10px] text-gray-300 flex-shrink-0">
+                    {t.approvedAt ? timeAgo(t.approvedAt) : ''}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -736,4 +768,17 @@ function Spinner() {
   return (
     <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
   )
+}
+
+function timeAgo(date: Date): string {
+  const now = Date.now()
+  const diff = now - new Date(date).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60) return mins <= 1 ? '1m' : `${mins}m`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}j`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}h`
+  if (days < 30) return `${Math.floor(days / 7)}mg`
+  return `${Math.floor(days / 30)}bln`
 }

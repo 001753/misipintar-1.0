@@ -10,7 +10,7 @@ export default async function ChildrenPage() {
 
   const familySpaceId = session.user.familySpaceId!
 
-  const [activeChildren, archivedChildren, subscription, taskCounts] = await Promise.all([
+  const [activeChildren, archivedChildren, subscription, taskCounts, recentTasks] = await Promise.all([
     prisma.child.findMany({
       where: { familySpaceId, deletedAt: null },
       orderBy: { createdAt: 'asc' },
@@ -27,6 +27,12 @@ export default async function ChildrenPage() {
       by: ['childId', 'status'],
       where: { familySpaceId },
       _count: true,
+    }),
+    prisma.task.findMany({
+      where: { familySpaceId, status: 'APPROVED' },
+      orderBy: { approvedAt: 'desc' },
+      select: { childId: true, title: true, rewardAmount: true, approvedAt: true },
+      take: 100,
     }),
   ])
 
@@ -47,6 +53,12 @@ export default async function ChildrenPage() {
     }
   }
 
+  const recentTaskMap: Record<string, { title: string; rewardAmount: number; approvedAt: Date | null }[]> = {}
+  for (const t of recentTasks) {
+    if (!recentTaskMap[t.childId]) recentTaskMap[t.childId] = []
+    if (recentTaskMap[t.childId].length < 3) recentTaskMap[t.childId].push(t)
+  }
+
   return (
     <ChildrenClient
       activeChildren={activeChildren}
@@ -54,6 +66,7 @@ export default async function ChildrenPage() {
       maxChildren={maxChildren}
       avatars={AVATARS}
       taskCountMap={taskCountMap}
+      recentTaskMap={recentTaskMap}
     />
   )
 }
