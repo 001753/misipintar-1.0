@@ -1,0 +1,35 @@
+---
+# ─────────────────────────────────────────────────────────────────────────────
+# cPanel Git Version Control — Auto-Deploy Script
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# File ini dijalankan OTOMATIS oleh cPanel setelah git pull dari GitHub.
+# Semua perintah dijalankan dari dalam folder repository (application root).
+#
+# Cara setup di cPanel:
+#   1. cPanel → Git Version Control → Create
+#   2. Clone URL : https://github.com/USERNAME/REPO.git
+#   3. Repository Path: /home/USERNAME/public_html/misipintar
+#   4. cPanel otomatis menjalankan file ini setiap kali ada push ke GitHub
+#
+# PENTING: File .env WAJIB sudah ada di server sebelum deploy pertama!
+#   cp .env.example .env && nano .env
+# ─────────────────────────────────────────────────────────────────────────────
+
+deployment:
+  tasks:
+    # 1. Install production dependencies saja
+    - npm ci --omit=dev --prefer-offline
+
+    # 2. Generate Prisma Client (binary untuk linux server)
+    - npx prisma generate
+
+    # 3. Jalankan database migrations (aman untuk production — tidak hapus data)
+    - npx prisma migrate deploy
+
+    # 4. Build Next.js (output: standalone)
+    - npm run build
+
+    # 5. Copy static assets ke dalam standalone output
+    - cp -r public .next/standalone/public
+    - cp -r .next/static .next/standalone/.next/static
