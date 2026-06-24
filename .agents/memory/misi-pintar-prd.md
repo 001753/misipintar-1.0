@@ -33,3 +33,17 @@ Phase 0 Setup → 1 Auth/FamilySpace → 2 Child/Task → 3 Ledger → 4 Midtran
 
 ## Upload endpoint
 `POST /api/upload/proof` — CHILD only, max 5MB, JPG/PNG/WebP. Cloudflare R2 optional (placeholder URL returned if R2 not configured).
+
+## Auth System (updated June 2026)
+
+**Parent login uses phone number (WhatsApp), NOT email.**
+- `User.phone` — `String? @unique`, primary identity for parents
+- `User.email` — `String? @unique`, now optional (can be added post-login from `/dashboard/settings`)
+- SuperAdmin still found via email (OR query in NextAuth config)
+- FONNTE_TOKEN secret — Fonnte API for WA OTP; if missing, OTP prints to server console
+- OTP table: `OtpCode` model + `OtpPurpose` enum (RESET_PASSWORD, VERIFY_PHONE)
+- Forgot password flow: `/forgot-password` → `/forgot-password/verify` (6-box OTP) → `/forgot-password/reset`
+- sessionStorage keys for flow state: `fp_phone`, `fp_reset_token`
+- Key libs: `src/lib/whatsapp.ts` (Fonnte), `src/lib/otp.ts` (OTP CRUD)
+- Session/JWT type augmented with `phone: string | null` in `src/types/index.ts`
+- Dashboard settings page at `/dashboard/settings` for email add/update
