@@ -27,7 +27,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd misi-pintar && npm run dev"
+args = "cd misi-pintar && npx next dev --port 5000 -H 0.0.0.0"
 waitForPort = 5000
 
 [[ports]]
@@ -42,7 +42,9 @@ publicDir = "dist"
 [userenv]
 
 [userenv.shared]
-NEXTAUTH_URL = "https://1e0fc9d7-a661-49cb-9685-45ddec337660-00-32v08gvanj33t.sisko.replit.dev"
-APP_URL = "https://1e0fc9d7-a661-49cb-9685-45ddec337660-00-32v08gvanj33t.sisko.replit.dev"
-MIDTRANS_IS_PRODUCTION = "true"
+MIDTRANS_IS_PRODUCTION = "false"
 NODE_ENV = "development"
+TRUST_PROXY = "1"
+NEXTAUTH_URL = "https://ae1e2170-773e-49c2-b97b-30264ccbe2ad-00-34otty73qmdei.sisko.replit.dev"
+APP_URL = "https://ae1e2170-773e-49c2-b97b-30264ccbe2ad-00-34otty73qmdei.sisko.replit.dev"
+NEXTAUTH_URL_INTERNAL = "http://localhost:5000"
