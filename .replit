@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web", "bash", "postgresql-16"]
+modules = ["nodejs-20", "web", "bash"]
 [agent]
 expertMode = true
 stack = "BEST_EFFORT_FALLBACK"
@@ -44,4 +44,5 @@ publicDir = "dist"
 [userenv.shared]
 NEXTAUTH_URL = "https://1e0fc9d7-a661-49cb-9685-45ddec337660-00-32v08gvanj33t.sisko.replit.dev"
 APP_URL = "https://1e0fc9d7-a661-49cb-9685-45ddec337660-00-32v08gvanj33t.sisko.replit.dev"
-MIDTRANS_IS_PRODUCTION = "true"
+MIDTRANS_IS_PRODUCTION = "false"
+NODE_ENV = "development"
