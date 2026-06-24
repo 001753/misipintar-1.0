@@ -12,6 +12,7 @@ import FaqSection from './FaqSection'
 import PricingBanner from './PricingBanner'
 import Footer from './Footer'
 import CoinTrail from './CoinTrail'
+import LiterasisSection from './LiterasisSection'
 
 export default function LandingPage() {
   return (
@@ -20,6 +21,7 @@ export default function LandingPage() {
       <Navbar />
       <HeroSection />
       <StatsBar />
+      <LiterasisSection />
       <PainSection />
       <MisiPintarSection />
       <PahlawanRumahSection />
