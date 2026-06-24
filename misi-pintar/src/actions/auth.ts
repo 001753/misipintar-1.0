@@ -385,6 +385,53 @@ export async function verifyAndChangePhone(
   }
 }
 
+// ─── Ganti Password dari Dashboard ───────────────────────
+
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<ActionResult<null>> {
+  if (!currentPassword || !newPassword) {
+    return { success: false, error: 'Semua field wajib diisi.' }
+  }
+
+  // Ambil hash password lama
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { passwordHash: true },
+  })
+  if (!user) return { success: false, error: 'Akun tidak ditemukan.' }
+
+  // Verifikasi password lama
+  const isMatch = await bcrypt.compare(currentPassword, user.passwordHash)
+  if (!isMatch) {
+    return { success: false, error: 'Password saat ini tidak sesuai.' }
+  }
+
+  // Pastikan password baru tidak sama dengan lama
+  const isSame = await bcrypt.compare(newPassword, user.passwordHash)
+  if (isSame) {
+    return { success: false, error: 'Password baru tidak boleh sama dengan password saat ini.' }
+  }
+
+  // Validasi kekuatan password baru
+  try {
+    validateParentPassword(newPassword)
+  } catch (err: any) {
+    return { success: false, error: err?.errors?.[0]?.message ?? err?.message ?? 'Password tidak memenuhi syarat.' }
+  }
+
+  // Simpan hash baru
+  const newHash = await bcrypt.hash(newPassword, 12)
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: newHash },
+  })
+
+  return { success: true, data: null }
+}
+
 // ─── Update Email dari Dashboard ─────────────────────────
 
 export async function updateUserEmail(
