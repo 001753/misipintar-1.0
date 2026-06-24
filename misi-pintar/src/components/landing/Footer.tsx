@@ -12,7 +12,7 @@ const links = {
     { label: 'Tentang Kami', href: '/tentang-kami' },
     { label: 'Blog', href: '#' },
     { label: 'Karir', href: '#' },
-    { label: 'Kontak', href: '#' },
+    { label: 'Kontak', href: '/hubungi-kami' },
   ],
   Legal: [
     { label: 'Kebijakan Privasi', href: '/kebijakan-privasi' },
