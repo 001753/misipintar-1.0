@@ -1,6 +1,9 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────────────────────
-# cpanel-install.sh — Dipanggil otomatis via "prebuild" di package.json
+# cpanel-install.sh — Install dependencies ke ./node_modules/ lokal di cPanel
+#
+# Dipanggil oleh deploy-cpanel.sh (bukan lagi via "prebuild" di package.json).
+# Cara jalankan langsung: bash scripts/cpanel-install.sh
 #
 # MASALAH:
 #   cPanel membungkus `npm` dengan wrapper yang menambahkan --prefix $NODEVENV

@@ -4,33 +4,29 @@
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # File ini dijalankan OTOMATIS oleh cPanel setelah git pull dari GitHub.
-# Semua perintah dijalankan dari folder ROOT repository (bukan misi-pintar/).
+# Semua perintah dijalankan dari folder ROOT repository.
 #
-# Cara setup di cPanel:
-#   1. cPanel → Git Version Control → Create
-#   2. Clone URL : https://github.com/USERNAME/REPO.git
-#   3. Repository Path: /home/USERNAME/public_html/misipintar
-#   4. cPanel otomatis menjalankan file ini setiap kali ada push ke GitHub
-#
-# PENTING: File .env WAJIB sudah ada di server sebelum deploy pertama!
+# PRASYARAT (lakukan SEKALI via SSH sebelum push pertama):
 #   cd ~/public_html/misipintar/misi-pintar
-#   cp .env.example .env && nano .env
+#   cp .env.example .env && nano .env   # isi semua nilai wajib
+#
+# SETUP cPanel:
+#   1. cPanel → Git Version Control → Create
+#      Clone URL      : https://github.com/USERNAME/REPO.git
+#      Repository Path: /home/USERNAME/public_html/misipintar
+#   2. cPanel → Node.js App → Create Application
+#      Application root       : public_html/misipintar
+#      Application startup file: app.js
+#      Node.js version        : 22.x
 # ─────────────────────────────────────────────────────────────────────────────
 
 deployment:
   tasks:
-    # 1. Masuk ke direktori misi-pintar dan install production dependencies
-    - cd misi-pintar && npm ci --omit=dev --prefer-offline
-
-    # 2. Generate Prisma Client (binary untuk linux server)
-    - cd misi-pintar && npx prisma generate
-
-    # 3. Jalankan database migrations (aman untuk production — tidak hapus data)
-    - cd misi-pintar && npx prisma migrate deploy
-
-    # 4. Build Next.js (output: standalone)
-    - cd misi-pintar && npm run build
-
-    # 5. Copy static assets ke dalam standalone output
-    - cp -r misi-pintar/public misi-pintar/.next/standalone/public
-    - mkdir -p misi-pintar/.next/standalone/.next && cp -r misi-pintar/.next/static misi-pintar/.next/standalone/.next/static
+    # deploy-cpanel.sh menangani segalanya:
+    #   1. Deteksi npm asli (bukan wrapper cPanel)
+    #   2. Install deps ke ./node_modules lokal
+    #   3. prisma generate
+    #   4. prisma migrate deploy
+    #   5. next build (tanpa prebuild hook — langsung ./node_modules/.bin/next build)
+    #   6. Copy public/ dan .next/static/ ke standalone output
+    - bash misi-pintar/deploy-cpanel.sh

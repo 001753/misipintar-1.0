@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 5000",
-    "prebuild": "bash scripts/cpanel-install.sh",
     "build": "next build",
+    "build:cpanel": "bash scripts/cpanel-install.sh && next build",
     "start": "next start --port 5000",
     "lint": "eslint",
     "test": "vitest run --reporter=verbose",
