@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import Script from "next/script";
 import {
   createCheckout,
+  createQrisCheckout,
   cancelSubscription,
   resumeSubscription,
   BillingCycle,
 } from "@/actions/subscription";
+import QrisModal from "./qris-modal";
 
 declare global {
   interface Window {
@@ -112,6 +114,15 @@ export default function BillingClient({
   const snapLoaded = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [qrisModal, setQrisModal] = useState<{
+    orderId: string;
+    qrCodeUrl: string;
+    qrString: string;
+    amount: number;
+    planName: string;
+    expiredAt: string;
+  } | null>(null);
+
   useEffect(() => {
     if (toast) {
       const t = setTimeout(() => setToast(null), 6000);
@@ -167,9 +178,6 @@ export default function BillingClient({
       }
       window.snap.pay(result.snapToken, {
         onSuccess: () => {
-          // WAJIB PRD: Jangan aktifkan subscription dari sini.
-          // Aktifasi hanya via webhook Midtrans server-to-server.
-          // Tampilkan pesan menunggu dan polling status maksimal 10x.
           setToast("Menunggu konfirmasi pembayaran dari server...");
           startPolling();
         },
@@ -184,6 +192,28 @@ export default function BillingClient({
           setToast("Jendela pembayaran ditutup. Jika sudah bayar, tunggu konfirmasi otomatis.");
           router.refresh();
         },
+      });
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function handleQrisCheckout(planId: string, planName: string, amount: number) {
+    setError(null);
+    setLoading(`qris-${planId}`);
+    try {
+      const result = await createQrisCheckout(planId, billingCycle);
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
+      setQrisModal({
+        orderId: result.orderId,
+        qrCodeUrl: result.qrCodeUrl,
+        qrString: result.qrString,
+        amount,
+        planName,
+        expiredAt: result.expiredAt,
       });
     } finally {
       setLoading(null);
@@ -242,6 +272,24 @@ export default function BillingClient({
         <div className="fixed top-4 right-4 z-50 bg-emerald-600 text-white text-sm px-4 py-3 rounded-xl shadow-lg max-w-sm">
           {toast}
         </div>
+      )}
+
+      {/* QRIS Modal */}
+      {qrisModal && (
+        <QrisModal
+          orderId={qrisModal.orderId}
+          qrCodeUrl={qrisModal.qrCodeUrl}
+          qrString={qrisModal.qrString}
+          amount={qrisModal.amount}
+          planName={qrisModal.planName}
+          expiredAt={qrisModal.expiredAt}
+          onClose={() => setQrisModal(null)}
+          onSuccess={() => {
+            setQrisModal(null);
+            setToast("🎉 Pembayaran berhasil! Langganan Anda sedang diaktifkan.");
+            startPolling();
+          }}
+        />
       )}
 
       <div className="space-y-8">
@@ -387,21 +435,38 @@ export default function BillingClient({
 
                 <PlanFeatures planType={plan.type} limits={plan.limits as Record<string, unknown>} />
 
-                <button
-                  onClick={() => handleCheckout(plan.id)}
-                  disabled={isCurrentPlan || isLoading || !!loading}
-                  className={`mt-5 w-full py-2.5 text-sm font-semibold rounded-xl transition-colors ${
-                    isCurrentPlan
-                      ? "bg-emerald-50 text-emerald-600 cursor-default"
-                      : "bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
-                  }`}
-                >
-                  {isLoading
-                    ? "Memproses..."
-                    : isCurrentPlan
-                    ? "Plan Aktif"
-                    : `Upgrade ke ${plan.name}`}
-                </button>
+                {isCurrentPlan ? (
+                  <button
+                    disabled
+                    className="mt-5 w-full py-2.5 text-sm font-semibold rounded-xl bg-emerald-50 text-emerald-600 cursor-default"
+                  >
+                    Plan Aktif
+                  </button>
+                ) : (
+                  <div className="mt-5 space-y-2">
+                    <button
+                      onClick={() => handleCheckout(plan.id)}
+                      disabled={!!loading}
+                      className="w-full py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                    >
+                      {loading === plan.id ? "Memproses..." : `Bayar Sekarang`}
+                    </button>
+                    <button
+                      onClick={() => handleQrisCheckout(plan.id, plan.name, price)}
+                      disabled={!!loading}
+                      className="w-full py-2 text-sm font-semibold rounded-xl border-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      {loading === `qris-${plan.id}` ? (
+                        "Memproses..."
+                      ) : (
+                        <>
+                          <span className="text-base leading-none">⊡</span>
+                          Bayar via QRIS
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}

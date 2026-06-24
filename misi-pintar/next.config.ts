@@ -23,6 +23,14 @@ const nextConfig: NextConfig = {
     "*.replit.dev",
     "*.sisko.replit.dev",
   ],
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "api.sandbox.midtrans.com" },
+      { protocol: "https", hostname: "api.midtrans.com" },
+      { protocol: "https", hostname: "*.midtrans.com" },
+      { protocol: "https", hostname: "qris.online" },
+    ],
+  },
   turbopack: {
     root: path.resolve(__dirname),
   },

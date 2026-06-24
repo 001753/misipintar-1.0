@@ -160,6 +160,167 @@ export async function createCheckout(
 }
 
 // ─────────────────────────────────────────────────────────────
+// Create QRIS charge via Midtrans Core API (server-side only)
+// Subscription diaktifkan HANYA oleh webhook — bukan di sini
+// ─────────────────────────────────────────────────────────────
+export async function createQrisCheckout(
+  planId: string,
+  billingCycle: BillingCycle
+): Promise<
+  | { success: true; qrCodeUrl: string; qrString: string; orderId: string; expiredAt: string }
+  | { error: string }
+> {
+  const session = await requireParentSession();
+  const familySpaceId = session.user.familySpaceId!;
+
+  const plan = await prisma.plan.findUnique({ where: { id: planId } });
+  if (!plan) return { error: "Plan tidak ditemukan." };
+  if (plan.price === 0 && plan.yearlyPrice === 0)
+    return { error: "Plan ini gratis, tidak perlu pembayaran." };
+
+  const amount = billingCycle === "YEARLY" ? plan.yearlyPrice : plan.price;
+  if (amount <= 0) return { error: "Harga plan tidak valid." };
+
+  const subscription = await prisma.subscription.upsert({
+    where: { familySpaceId },
+    create: {
+      familySpaceId,
+      planId: plan.id,
+      status: "FREE",
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+    update: {},
+  });
+
+  // Idempotency: kembalikan QRIS yang masih valid (belum expired, masih PENDING)
+  const existing = await prisma.invoice.findFirst({
+    where: {
+      subscriptionId: subscription.id,
+      status: "PENDING",
+      expiredAt: { gt: new Date() },
+      amount,
+      NOT: { qrisQrUrl: null },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (existing?.qrisQrUrl && existing.qrisQrString && existing.midtransOrderId) {
+    return {
+      success: true,
+      qrCodeUrl: existing.qrisQrUrl,
+      qrString: existing.qrisQrString,
+      orderId: existing.midtransOrderId,
+      expiredAt: existing.expiredAt.toISOString(),
+    };
+  }
+
+  // QRIS berlaku 15 menit
+  const expiredAt = new Date(Date.now() + 15 * 60 * 1000);
+
+  const invoice = await prisma.invoice.create({
+    data: {
+      subscriptionId: subscription.id,
+      amount,
+      status: "PENDING",
+      expiredAt,
+    },
+  });
+
+  const orderId = `QRIS-${invoice.id}`;
+
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: session.user.id },
+    select: { name: true, email: true },
+  });
+
+  try {
+    const { coreApi } = await import("@/lib/midtrans");
+
+    const chargeResp = await coreApi.charge({
+      payment_type: "qris",
+      transaction_details: {
+        order_id: orderId,
+        gross_amount: amount,
+      },
+      customer_details: {
+        first_name: user.name,
+        email: user.email ?? undefined,
+      },
+      item_details: [
+        {
+          id: `plan-${plan.type.toLowerCase()}-${billingCycle.toLowerCase()}`,
+          price: amount,
+          quantity: 1,
+          name: `Misi Pintar ${plan.name} — ${billingCycle === "YEARLY" ? "Tahunan" : "Bulanan"}`,
+        },
+      ],
+      qris: { acquirer: "gopay" },
+    }) as Record<string, unknown>;
+
+    // Midtrans returns QR URL under actions array
+    let qrCodeUrl = "";
+    let qrString = "";
+    const actions = chargeResp.actions as Array<{ name: string; url: string }> | undefined;
+    if (Array.isArray(actions)) {
+      const qrAction = actions.find((a) => a.name === "generate-qr-code");
+      if (qrAction) qrCodeUrl = qrAction.url;
+    }
+    if (chargeResp.qr_string) qrString = chargeResp.qr_string as string;
+    if (!qrCodeUrl && chargeResp.qr_code_url) qrCodeUrl = chargeResp.qr_code_url as string;
+
+    await prisma.invoice.update({
+      where: { id: invoice.id },
+      data: {
+        midtransOrderId: orderId,
+        qrisQrUrl: qrCodeUrl,
+        qrisQrString: qrString,
+      },
+    });
+
+    return {
+      success: true,
+      qrCodeUrl,
+      qrString,
+      orderId,
+      expiredAt: expiredAt.toISOString(),
+    };
+  } catch (err: unknown) {
+    await prisma.invoice.update({
+      where: { id: invoice.id },
+      data: { status: "FAILED" },
+    });
+    return {
+      error:
+        err instanceof Error ? err.message : "Gagal membuat transaksi QRIS.",
+    };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Check QRIS invoice status from DB (called by polling)
+// Tidak memanggil Midtrans API — status diperbarui oleh webhook
+// ─────────────────────────────────────────────────────────────
+export async function checkQrisStatus(
+  orderId: string
+): Promise<{ status: string; paidAt?: string } | { error: string }> {
+  const session = await requireParentSession();
+  if (!session) return { error: "Tidak terautentikasi." };
+
+  const invoice = await prisma.invoice.findUnique({
+    where: { midtransOrderId: orderId },
+    select: { status: true, paidAt: true, subscriptionId: true },
+  });
+
+  if (!invoice) return { error: "Invoice tidak ditemukan." };
+
+  return {
+    status: invoice.status,
+    paidAt: invoice.paidAt?.toISOString(),
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
 // Cancel subscription — efektif di akhir periode
 // ─────────────────────────────────────────────────────────────
 export async function cancelSubscription(

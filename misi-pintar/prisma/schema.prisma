@@ -243,6 +243,8 @@ model Invoice {
   status          InvStatus    @default(PENDING)
   midtransOrderId String?      @unique
   snapToken       String?
+  qrisQrUrl       String?
+  qrisQrString    String?
   paymentMethod   PayMethod?
   paidAt          DateTime?
   expiredAt       DateTime
