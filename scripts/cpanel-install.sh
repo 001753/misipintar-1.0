@@ -139,3 +139,9 @@ if [ -f "node_modules/.bin/prisma" ]; then
 fi
 
 echo "[prebuild] ✅ node_modules lokal siap — lanjut ke next build"
+echo ""
+echo "[prebuild] ⚠️  PENTING: Jangan jalankan 'npm run build' langsung di cPanel!"
+echo "[prebuild]    Turbopack akan panic (EAGAIN) karena limit thread shared hosting."
+echo "[prebuild]    Gunakan: npm run build:cpanel  ← sudah ada RAYON_NUM_THREADS=1"
+echo "[prebuild]    Atau:    ./deploy-cpanel.sh    ← full deploy otomatis"
+echo ""

@@ -6,7 +6,7 @@
     "dev": "next dev --port 5000",
     "build": "next build",
     "build:prod": "prisma generate && prisma migrate deploy && next build",
-    "build:cpanel": "bash scripts/cpanel-install.sh && next build",
+    "build:cpanel": "bash scripts/cpanel-install.sh && RAYON_NUM_THREADS=1 UV_THREADPOOL_SIZE=4 NODE_OPTIONS='--max-old-space-size=512' next build",
     "start": "next start --port 5000",
     "lint": "eslint",
     "test": "vitest run --reporter=verbose",
