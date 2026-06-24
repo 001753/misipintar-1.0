@@ -4,8 +4,26 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "Misi Pintar",
-  description: "Platform gamifikasi keuangan untuk keluarga",
+  title: {
+    default: "MisiPintar - Solusi Misi Edukatif & Literasi Keuangan Anak",
+    template: "%s | MisiPintar",
+  },
+  description:
+    "Ubah kuota marah-marah menjadi kuota senyuman. Aplikasi manajemen tugas anak dan pembentukan karakter berbasis misi pintar untuk mendidik kedisiplinan sejak dini.",
+  metadataBase: new URL("https://jobenapps.cloud"),
+  openGraph: {
+    title: "MisiPintar - Solusi Misi Edukatif & Literasi Keuangan Anak",
+    description:
+      "Ubah kuota marah-marah menjadi kuota senyuman. Aplikasi manajemen tugas anak dan pembentukan karakter berbasis misi pintar untuk mendidik kedisiplinan sejak dini.",
+    url: "https://jobenapps.cloud",
+    siteName: "MisiPintar",
+    locale: "id_ID",
+    type: "website",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export const viewport: Viewport = {

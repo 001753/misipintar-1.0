@@ -1,0 +1,32 @@
+Act as an Expert Next.js 14 and Technical SEO Specialist. Based on our production environment at "https://jobenapps.cloud", implement a complete SEO structure for our landing page using Next.js App Router Metadata API, reflecting our latest brand change to "MisiPintar".
+
+Please generate and update the following files exactly with zero TypeScript errors:
+
+1. Update or Create `src/app/layout.tsx`:
+- Add a global `metadata` object of type `Metadata` from 'next'.
+- Define the following metadata fields:
+  * title: { default: "MisiPintar - Solusi Misi Edukatif & Literasi Keuangan Anak", template: "%s | MisiPintar" }
+  * description: "Ubah kuota marah-marah menjadi kuota senyuman. Aplikasi manajemen tugas anak dan pembentukan karakter berbasis misi pintar untuk mendidik kedisiplinan sejak dini."
+  * metadataBase: new URL("https://jobenapps.cloud")
+  * openGraph: { title, description, url: "https://jobenapps.cloud", siteName: "MisiPintar", locale: "id_ID", type: "website" }
+  * robots: { index: true, follow: true }
+
+2. Create a dynamic robots file at `src/app/robots.ts`:
+- Import `MetadataRoute` from 'next'.
+- Export default function `robots()` that returns `MetadataRoute.Robots`.
+- Configure rules:
+  * Allow indexing for the public routes: `/`, `/register`, `/tentang-kami`, `/privasi`, and `/hubungi-kami`.
+  * STRICTLY Disallow indexing for any internal dashboards by blocking `/dashboard`, `/dashboard/*`, and `/api/*` to protect user data and prevent duplicate content.
+  * Point the sitemap URL directly to "https://jobenapps.cloud/sitemap.xml".
+
+3. Create a dynamic sitemap file at `src/app/sitemap.ts`:
+- Import `MetadataRoute` from 'next'.
+- Export default function `sitemap()` that returns `MetadataRoute.Sitemap`.
+- Return an array containing our updated public pages structure:
+  * Route `/` (Landing Page) -> lastModified: new Date(), changeFrequency: 'daily', priority: 1.0
+  * Route `/register` -> lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8
+  * Route `/tentang-kami` -> lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7
+  * Route `/privasi` -> lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5
+  * Route `/hubungi-kami` -> lastModified: new Date(), changeFrequency: 'monthly', priority: 0.7
+
+Ensure all code follows the strict Next.js 14 standards, has proper TypeScript types, and compiles cleanly without errors in production mode.
