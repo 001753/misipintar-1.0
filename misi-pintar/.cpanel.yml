@@ -4,7 +4,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # File ini dijalankan OTOMATIS oleh cPanel setelah git pull dari GitHub.
-# Semua perintah dijalankan dari dalam folder repository (application root).
+# Semua perintah dijalankan dari folder ROOT repository (bukan misi-pintar/).
 #
 # Cara setup di cPanel:
 #   1. cPanel → Git Version Control → Create
@@ -13,23 +13,24 @@
 #   4. cPanel otomatis menjalankan file ini setiap kali ada push ke GitHub
 #
 # PENTING: File .env WAJIB sudah ada di server sebelum deploy pertama!
+#   cd ~/public_html/misipintar/misi-pintar
 #   cp .env.example .env && nano .env
 # ─────────────────────────────────────────────────────────────────────────────
 
 deployment:
   tasks:
-    # 1. Install production dependencies saja
-    - npm ci --omit=dev --prefer-offline
+    # 1. Masuk ke direktori misi-pintar dan install production dependencies
+    - cd misi-pintar && npm ci --omit=dev --prefer-offline
 
     # 2. Generate Prisma Client (binary untuk linux server)
-    - npx prisma generate
+    - cd misi-pintar && npx prisma generate
 
     # 3. Jalankan database migrations (aman untuk production — tidak hapus data)
-    - npx prisma migrate deploy
+    - cd misi-pintar && npx prisma migrate deploy
 
     # 4. Build Next.js (output: standalone)
-    - npm run build
+    - cd misi-pintar && npm run build
 
     # 5. Copy static assets ke dalam standalone output
-    - cp -r public .next/standalone/public
-    - cp -r .next/static .next/standalone/.next/static
+    - cp -r misi-pintar/public misi-pintar/.next/standalone/public
+    - mkdir -p misi-pintar/.next/standalone/.next && cp -r misi-pintar/.next/static misi-pintar/.next/standalone/.next/static

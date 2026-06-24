@@ -3,12 +3,13 @@
 # MISI PINTAR — Deploy Script untuk cPanel / Shared Hosting
 # Jalankan di server via SSH setelah git pull
 #
-# Usage:
-#   chmod +x deploy-cpanel.sh
-#   ./deploy-cpanel.sh
+# Usage (dari root repo):
+#   cd ~/public_html/misipintar
+#   chmod +x misi-pintar/deploy-cpanel.sh
+#   ./misi-pintar/deploy-cpanel.sh
 #
 # Prasyarat:
-#   - File .env sudah diisi (cp .env.example .env && nano .env)
+#   - File .env sudah diisi (cp misi-pintar/.env.example misi-pintar/.env)
 #   - Node.js >= 20 tersedia di PATH
 #   - PostgreSQL database sudah dibuat dan DATABASE_URL diisi di .env
 # ─────────────────────────────────────────────────────────────────────────────
@@ -33,9 +34,20 @@ echo -e "${BLUE}   MISI PINTAR — Deploy Script${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
+# Deteksi root repo (bisa dipanggil dari mana saja)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+APP_DIR="$SCRIPT_DIR"   # misi-pintar/ directory
+
+echo -e "📂 Repo root : $REPO_ROOT"
+echo -e "📂 App dir   : $APP_DIR"
+echo ""
+
+cd "$APP_DIR"
+
 # ── Cek .env ──────────────────────────────────────────────────────────────────
 if [ ! -f ".env" ]; then
-  err "File .env tidak ditemukan!\n   Buat dulu: cp .env.example .env && nano .env"
+  err "File .env tidak ditemukan di $APP_DIR!\n   Buat dulu: cp .env.example .env && nano .env"
 fi
 ok ".env ditemukan"
 
