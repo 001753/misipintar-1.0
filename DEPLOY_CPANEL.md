@@ -6,17 +6,15 @@
 /home/USER/public_html/misipintar/    ← Application Root di cPanel
 ├── app.js                            ← Startup file Passenger (JANGAN diganti)
 ├── server.js                         ← Alias dari app.js
-├── package.json                      ← Workspace root
-├── misi-pintar/                      ← Kode aplikasi Next.js
-│   ├── deploy-cpanel.sh              ← Script deploy — JALANKAN INI untuk install & build
-│   ├── .cpanel.yml                   ← Auto-deploy via cPanel Git
-│   ├── .env                          ← Konfigurasi (JANGAN commit ke git!)
-│   ├── .env.example                  ← Template konfigurasi lengkap
-│   ├── prisma/
-│   ├── src/
-│   └── .next/standalone/             ← Hasil build Next.js (dibuat oleh deploy-cpanel.sh)
-└── tmp/
-    └── restart.txt                   ← Passenger restart trigger
+├── package.json                      ← Deps lengkap Next.js
+├── deploy-cpanel.sh                  ← Script deploy — JALANKAN INI untuk install & build
+├── .cpanel.yml                       ← Auto-deploy via cPanel Git
+├── .env                              ← Konfigurasi (JANGAN commit ke git!)
+├── .env.example                      ← Template konfigurasi lengkap
+├── prisma/
+├── src/
+├── public/
+└── .next/standalone/                 ← Hasil build Next.js (dibuat oleh deploy-cpanel.sh)
 ```
 
 ## Prasyarat
@@ -90,7 +88,7 @@ Di cPanel → **PostgreSQL Databases**:
 
 Via **cPanel → Terminal** atau SSH:
 ```bash
-cd ~/public_html/misipintar/misi-pintar
+cd ~/public_html/misipintar
 cp .env.example .env
 nano .env
 ```
@@ -114,13 +112,13 @@ SEED_ADMIN_PASSWORD="PasswordAdmin@Aman123"
 
 ```bash
 cd ~/public_html/misipintar
-chmod +x misi-pintar/deploy-cpanel.sh
-bash misi-pintar/deploy-cpanel.sh
+chmod +x deploy-cpanel.sh
+./deploy-cpanel.sh
 ```
 
 Script otomatis:
 1. ✅ Deteksi npm asli (bukan wrapper cPanel)
-2. 📦 Install 876 dependencies ke `./misi-pintar/node_modules/` lokal
+2. 📦 Install dependencies ke `./node_modules/` lokal
 3. ⚙️  Generate Prisma Client
 4. 🗄️  Jalankan database migrations
 5. 🌱  Seed data awal (jika `SEED_ADMIN_EMAIL` diset di .env)
@@ -150,7 +148,7 @@ Gunakan cara ini untuk update biasa atau jika tidak menggunakan cPanel Git:
 ```bash
 cd ~/public_html/misipintar
 git pull origin main
-bash misi-pintar/deploy-cpanel.sh
+./deploy-cpanel.sh
 # Lalu: cPanel → Node.js App → Restart
 ```
 
@@ -158,7 +156,7 @@ bash misi-pintar/deploy-cpanel.sh
 
 ## Checklist Lengkap Env Variables
 
-Lihat `misi-pintar/.env.example` untuk daftar lengkap semua variabel.
+Lihat `.env.example` untuk daftar lengkap semua variabel.
 
 | Variabel | Status | Catatan |
 |----------|--------|---------|
@@ -192,7 +190,18 @@ Lihat `misi-pintar/.env.example` untuk daftar lengkap semua variabel.
 **Solusi:** Jangan gunakan tombol di App Manager. Gunakan SSH:
 ```bash
 cd ~/public_html/misipintar
-bash misi-pintar/deploy-cpanel.sh
+./deploy-cpanel.sh
+```
+
+### ❌ `Cannot find module '@tailwindcss/postcss'`
+
+**Penyebab:** Paket di `devDependencies` tidak terinstall saat `NODE_ENV=production`.
+
+**Solusi:** Sudah diperbaiki — `@tailwindcss/postcss` dan `tailwindcss` dipindah ke `dependencies`. Jalankan `npm install` ulang lalu build:
+```bash
+cd ~/public_html/misipintar
+npm install
+./deploy-cpanel.sh
 ```
 
 ### ❌ `Turbopack panic: Symlink is invalid, points out of root`
@@ -205,11 +214,11 @@ bash misi-pintar/deploy-cpanel.sh
 
 ```bash
 # Pastikan build sudah ada
-ls ~/public_html/misipintar/misi-pintar/.next/standalone/server.js
+ls ~/public_html/misipintar/.next/standalone/server.js
 
 # Jika tidak ada, rebuild:
 cd ~/public_html/misipintar
-bash misi-pintar/deploy-cpanel.sh
+./deploy-cpanel.sh
 ```
 
 ### ❌ Push notification tidak berfungsi di production
@@ -219,7 +228,7 @@ bash misi-pintar/deploy-cpanel.sh
 **Solusi:** Isi semua `NEXT_PUBLIC_FIREBASE_*` di `.env`, lalu **rebuild**:
 ```bash
 cd ~/public_html/misipintar
-bash misi-pintar/deploy-cpanel.sh
+./deploy-cpanel.sh
 # Restart di cPanel
 ```
 
@@ -233,7 +242,7 @@ bash misi-pintar/deploy-cpanel.sh
 
 ```bash
 # Test koneksi
-cd ~/public_html/misipintar/misi-pintar
+cd ~/public_html/misipintar
 ./node_modules/.bin/prisma db pull
 
 # Verifikasi .env
@@ -243,7 +252,7 @@ cat .env | grep DATABASE_URL
 ### ❌ Migrations failed
 
 ```bash
-cd ~/public_html/misipintar/misi-pintar
+cd ~/public_html/misipintar
 # Lihat status
 ./node_modules/.bin/prisma migrate status
 

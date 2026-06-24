@@ -3,8 +3,8 @@
 # MISI PINTAR — Deploy Script untuk cPanel / Shared Hosting
 #
 # Usage (dari root repo ~/public_html/misipintar):
-#   chmod +x misi-pintar/deploy-cpanel.sh
-#   ./misi-pintar/deploy-cpanel.sh
+#   chmod +x deploy-cpanel.sh
+#   ./deploy-cpanel.sh
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Warna output
@@ -27,7 +27,7 @@ echo ""
 
 # ── Deteksi direktori (bisa dipanggil dari mana saja) ────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_DIR="$SCRIPT_DIR"   # misi-pintar/ directory
+APP_DIR="$SCRIPT_DIR"   # root repo directory (~/public_html/misipintar)
 
 echo -e "📂 App dir : $APP_DIR"
 echo ""

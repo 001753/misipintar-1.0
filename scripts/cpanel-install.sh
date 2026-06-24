@@ -17,7 +17,7 @@
 #   3. Fallback: kirim --prefix $(pwd) ke wrapper (jika flag kita datang terakhir)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Jalankan dari direktori misi-pintar/ (parent scripts/)
+# Jalankan dari root repo (parent scripts/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$APP_DIR" || exit 1

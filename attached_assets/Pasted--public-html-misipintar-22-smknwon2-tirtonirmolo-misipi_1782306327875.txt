@@ -1,0 +1,41 @@
+[public_html/misipintar (22)] [smknwon2@tirtonirmolo misipintar]$ npm run build
+
+> misi-pintar@0.1.0 build
+> next build
+
+▲ Next.js 16.2.9 (Turbopack)
+- Environments: .env
+- Experiments (use with caution):
+  · serverActions
+
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+./public_html/misipintar/src/app/globals.css
+Error evaluating Node.js code
+Error: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- /home/smknwon2/public_html/misipintar/.next/build/chunks/[root-of-the-server]__0ca78pu._.js
+- /home/smknwon2/public_html/misipintar/.next/build/chunks/[turbopack]_runtime.js
+- /home/smknwon2/public_html/misipintar/.next/build/3f06cb7e5bc99d90.js
+    [at Module._resolveFilename (node:internal/modules/cjs/loader:1430:15)]
+    [at defaultResolveImpl (node:internal/modules/cjs/loader:1040:19)]
+    [at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1045:22)]
+    [at Module._load (node:internal/modules/cjs/loader:1216:25)]
+    [at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)]
+    [at Module.require (node:internal/modules/cjs/loader:1527:12)]
+    [at require (node:internal/modules/helpers:147:16)]
+    at require (turbopack:///[turbopack-node]/transforms/postcss.ts:49:25) [/home/smknwon2/public_html/misipintar/.next/build/chunks/[root-of-the-server]__0ca78pu._.js:134:33]
+    [at <anonymous>]
+    at map (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33) [/home/smknwon2/public_html/misipintar/.next/build/chunks/[root-of-the-server]__0ca78pu._.js:129:35]
+
+Import trace:
+  Client Component Browser:
+    ./public_html/misipintar/src/app/globals.css [Client Component Browser]
+    ./public_html/misipintar/src/app/layout.tsx [Server Component]
+
+
+    at require (turbopack:///[turbopack-node]/transforms/postcss.ts:49:25) [/home/smknwon2/public_html/misipintar/.next/build/chunks/[root-of-the-server]__0ca78pu._.js:134:33])
+    at map (turbopack:///[turbopack-node]/transforms/postcss.ts:43:33) [/home/smknwon2/public_html/misipintar/.next/build/chunks/[root-of-the-server]__0ca78pu._.js:129:35])
+[public_html/misipintar (22)] [smknwon2@tirtonirmolo misipintar]$

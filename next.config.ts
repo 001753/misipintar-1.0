@@ -22,10 +22,10 @@ const securityHeaders = [
 //   cPanel's Node.js virtual env installs packages into nodevenv/:
 //     /home/<user>/nodevenv/public_html/…/node_modules  (real packages here)
 //   Then it creates a SYMLINK in the project directory:
-//     /home/<user>/public_html/misipintar/misi-pintar/node_modules -> ↑
+//     /home/<user>/public_html/misipintar/node_modules -> ↑
 //
 //   Turbopack's Rust filesystem refuses to follow symlinks that point OUTSIDE
-//   its declared root. If root = misi-pintar/, the nodevenv path is outside →
+//   its declared root. If root = misipintar/, the nodevenv path is outside →
 //   PANIC: "Symlink [project]/node_modules is invalid, points out of root".
 //   If no root is set, Turbopack auto-detects parent dir via lockfile scan and
 //   still can't find next/package.json → "couldn't find Next.js package".
