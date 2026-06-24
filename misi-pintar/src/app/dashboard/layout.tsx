@@ -6,6 +6,8 @@ import { getUnreadCount } from '@/lib/notifications/sse'
 import NotificationBell from '@/components/notification-bell'
 import ThemeToggle from '@/components/ThemeToggle'
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardLayout({
   children,
 }: {

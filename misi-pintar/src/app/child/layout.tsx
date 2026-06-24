@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { logoutAction } from '@/actions/auth'
 import ThemeToggle from '@/components/ThemeToggle'
 
+export const dynamic = 'force-dynamic';
+
 export default async function ChildLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
   if (!session || session.user.role !== 'CHILD') redirect('/login')

@@ -1,5 +1,7 @@
 import { getRevenueAnalytics } from "@/actions/admin";
-import RevenueChartClient from "./revenue-chart-client";
+import RevenueChartWrapper from "./revenue-chart-wrapper";
+
+export const dynamic = 'force-dynamic';
 
 function fmt(n: number) {
   return `Rp ${n.toLocaleString("id-ID")}`;
@@ -51,7 +53,7 @@ export default async function AnalyticsPage() {
       {/* Revenue Chart (Client Component karena recharts butuh browser) */}
       <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
         <h2 className="text-lg font-semibold text-white mb-6">Revenue 12 Bulan Terakhir</h2>
-        <RevenueChartClient data={data.revenueChart} />
+        <RevenueChartWrapper data={data.revenueChart} />
       </div>
 
       {/* Plan Distribution */}

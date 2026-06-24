@@ -43,7 +43,6 @@ publicDir = "dist"
 
 [userenv.shared]
 MIDTRANS_IS_PRODUCTION = "false"
-NODE_ENV = "development"
 TRUST_PROXY = "1"
 NEXTAUTH_URL = "https://ae1e2170-773e-49c2-b97b-30264ccbe2ad-00-34otty73qmdei.sisko.replit.dev"
 APP_URL = "https://ae1e2170-773e-49c2-b97b-30264ccbe2ad-00-34otty73qmdei.sisko.replit.dev"
