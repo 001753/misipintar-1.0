@@ -12,7 +12,13 @@ const securityHeaders = [
   },
 ];
 
-const isDev = process.env.NODE_ENV !== "production";
+// Detect whether this config is loaded for a production build or dev server.
+// process.argv is checked directly (more reliable than NODE_ENV timing):
+//   next build  → argv contains "build"  → use webpack (no turbopack key)
+//   next dev    → argv contains "dev"    → include turbopack.root so
+//                 Turbopack picks the right workspace root on Replit
+//                 (two lockfiles confuse the auto-detection).
+const isProductionBuild = process.argv.some((a) => a === "build");
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -34,11 +40,10 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ["nodemailer"],
-  // turbopack.root is needed in dev (Replit has two lockfiles and Turbopack
-  // picks the wrong workspace root). In production (next build), we use
-  // webpack which resolves modules via NODE_PATH — compatible with cPanel's
-  // virtual env package layout.
-  ...(isDev && {
+  // Only include turbopack config in dev — cPanel creates node_modules as a
+  // symlink outside the project root, which causes Turbopack's Rust resolver
+  // to panic. Webpack (used when this key is absent) follows symlinks fine.
+  ...(!isProductionBuild && {
     turbopack: {
       root: path.resolve(__dirname),
     },
