@@ -128,12 +128,19 @@ else
 fi
 
 # ── Step 5: Build Next.js ─────────────────────────────────────────────────────
-log "[5/6] Build Next.js (standalone, webpack)..."
+log "[5/6] Build Next.js (standalone, webpack + Babel)..."
 #
-# Menggunakan webpack (bukan Turbopack) — flag --webpack memastikan build
-# berjalan stabil di shared hosting tanpa butuh thread pool Rust/rayon.
+# Di shared hosting (cPanel), SWC/Rust tidak bisa spawn thread pool karena
+# ulimit -u rendah → EAGAIN. Babel (JS murni) tidak butuh Rust thread sama sekali.
+# .babelrc dibuat sementara hanya untuk proses build ini, lalu dihapus.
 #
+echo '{"presets":["next/babel"]}' > .babelrc
+export RAYON_NUM_THREADS=1
+export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=1024"
 ./node_modules/.bin/next build --webpack
+BUILD_RC=$?
+rm -f .babelrc
+[ $BUILD_RC -ne 0 ] && err "Build gagal (exit $BUILD_RC)"
 ok "Build berhasil"
 
 # ── Step 6: Copy static assets ────────────────────────────────────────────────
