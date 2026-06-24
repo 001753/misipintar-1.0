@@ -24,6 +24,14 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MisiPintar - Solusi Misi Edukatif & Literasi Keuangan Anak',
+    description:
+      'Ubah kuota marah-marah menjadi kuota senyuman. Aplikasi manajemen tugas anak berbasis gamifikasi. Gratis selamanya.',
+    site: '@misipintar',
+    creator: '@jobenapps',
+  },
   ...(process.env.GOOGLE_SITE_VERIFICATION && {
     verification: {
       google: process.env.GOOGLE_SITE_VERIFICATION,
