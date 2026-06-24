@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import TentangKamiPage from '@/components/landing/TentangKamiPage'
+import JsonLd from '@/components/JsonLd'
 
 export const metadata: Metadata = {
   title: 'Tentang MisiPintar - Platform Literasi Keuangan Keluarga #1 Indonesia',
@@ -26,6 +27,30 @@ export const metadata: Metadata = {
   },
 }
 
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Beranda',
+      item: 'https://jobenapps.cloud',
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Tentang Kami',
+      item: 'https://jobenapps.cloud/tentang-kami',
+    },
+  ],
+}
+
 export default function Page() {
-  return <TentangKamiPage />
+  return (
+    <>
+      <JsonLd schema={breadcrumbSchema} />
+      <TentangKamiPage />
+    </>
+  )
 }

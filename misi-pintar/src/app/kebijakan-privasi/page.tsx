@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import KebijanPrivasiPage from '@/components/landing/KebijanPrivasiPage'
+import JsonLd from '@/components/JsonLd'
 
 export const metadata: Metadata = {
   title: 'Kebijakan Privasi',
@@ -24,6 +25,30 @@ export const metadata: Metadata = {
   },
 }
 
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Beranda',
+      item: 'https://jobenapps.cloud',
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Kebijakan Privasi',
+      item: 'https://jobenapps.cloud/kebijakan-privasi',
+    },
+  ],
+}
+
 export default function Page() {
-  return <KebijanPrivasiPage />
+  return (
+    <>
+      <JsonLd schema={breadcrumbSchema} />
+      <KebijanPrivasiPage />
+    </>
+  )
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import HubungiKamiClient from './hubungi-kami-client'
+import JsonLd from '@/components/JsonLd'
 
 export const metadata: Metadata = {
   title: 'Hubungi Kami - Dukungan & Bantuan',
@@ -26,6 +27,30 @@ export const metadata: Metadata = {
   },
 }
 
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Beranda',
+      item: 'https://jobenapps.cloud',
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Hubungi Kami',
+      item: 'https://jobenapps.cloud/hubungi-kami',
+    },
+  ],
+}
+
 export default function HubungiKamiPage() {
-  return <HubungiKamiClient />
+  return (
+    <>
+      <JsonLd schema={breadcrumbSchema} />
+      <HubungiKamiClient />
+    </>
+  )
 }

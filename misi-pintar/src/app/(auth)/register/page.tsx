@@ -89,10 +89,30 @@ const softwareAppSchema = {
   },
 }
 
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    {
+      '@type': 'ListItem',
+      position: 1,
+      name: 'Beranda',
+      item: 'https://jobenapps.cloud',
+    },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: 'Daftar Gratis',
+      item: 'https://jobenapps.cloud/register',
+    },
+  ],
+}
+
 export default function RegisterPage() {
   return (
     <>
       <JsonLd schema={softwareAppSchema} />
+      <JsonLd schema={breadcrumbSchema} />
       <RegisterForm />
     </>
   )
