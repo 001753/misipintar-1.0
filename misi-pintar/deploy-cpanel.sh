@@ -41,8 +41,6 @@ fi
 ok ".env ditemukan"
 
 # ── Load .env — strip Windows CRLF (\r) sebelum source ───────────────────────
-# File .env yang dibuat di Windows mengandung carriage return (\r) yang
-# menyebabkan error "$'\r': command not found". Baris ini membersihkannya.
 TMP_ENV=$(mktemp /tmp/misipintar-env.XXXXXX)
 sed 's/\r//' .env > "$TMP_ENV"
 set -a
@@ -59,25 +57,71 @@ ok "DATABASE_URL tersedia"
 # Ab ini pakai set -e agar script berhenti jika ada error
 set -e
 
-# ── Step 1: Install dependencies ──────────────────────────────────────────────
-log "[1/6] Install production dependencies..."
-npm ci --omit=dev
-ok "Dependencies terinstall"
+# ── Deteksi npm yang tepat ─────────────────────────────────────────────────────
+# cPanel membungkus `npm` dengan virtual env wrapper yang menginstall paket ke
+# ~/nodevenv/ bukan ke ./node_modules/. Turbopack butuh paket di ./node_modules/
+# lokal (directory traversal — tidak bisa pakai NODE_PATH).
+#
+# Solusi: gunakan npm sistem cPanel yang asli (bukan wrapper-nya).
+# Path: /opt/cpanel/ea-nodejsNN/bin/npm  (NN = versi node, misal 22)
+detect_system_npm() {
+  # Cari npm sistem cPanel berdasarkan versi Node yang aktif
+  NODE_MAJOR=$(node --version 2>/dev/null | grep -oP '^\d+' || echo "22")
+  SYSTEM_NPM="/opt/cpanel/ea-nodejs${NODE_MAJOR}/bin/npm"
+  if [ -f "$SYSTEM_NPM" ]; then
+    echo "$SYSTEM_NPM"
+    return
+  fi
+  # Fallback: cari semua versi dan ambil yang terbaru
+  FOUND=$(ls /opt/cpanel/ea-nodejs*/bin/npm 2>/dev/null | sort -t's' -k2 -rn | head -1)
+  if [ -n "$FOUND" ]; then
+    echo "$FOUND"
+    return
+  fi
+  # Last resort: coba unset prefix lalu pakai npm biasa
+  echo "env -u npm_config_prefix -u NPM_CONFIG_PREFIX npm"
+}
+
+NPM_BIN=$(detect_system_npm)
+echo -e "📦 npm    : $NPM_BIN"
+echo ""
+
+# ── Step 1: Install dependencies ke local node_modules ──────────────────────
+log "[1/6] Install dependencies ke local node_modules..."
+
+# Hapus node_modules lama supaya tidak ada sisa symlink cPanel yang salah
+if [ -d "node_modules" ]; then
+  warn "Hapus node_modules lama..."
+  rm -rf node_modules
+fi
+
+# Instal menggunakan npm sistem (bukan wrapper cPanel)
+# Ini memastikan paket masuk ke ./node_modules lokal bukan ke nodevenv
+eval "$NPM_BIN install" || err "npm install gagal"
+
+# Verifikasi — pastikan paket penting ada di lokal
+if [ ! -d "node_modules/next" ]; then
+  err "GAGAL: node_modules/next tidak ditemukan setelah install.\n   Coba jalankan manual: $NPM_BIN install"
+fi
+if [ ! -d "node_modules/lucide-react" ]; then
+  warn "lucide-react tidak ditemukan di node_modules — mungkin ada masalah install"
+fi
+ok "Dependencies terinstall di ./node_modules"
 
 # ── Step 2: Generate Prisma Client ────────────────────────────────────────────
 log "[2/6] Generate Prisma Client..."
-npx prisma generate
+./node_modules/.bin/prisma generate
 ok "Prisma Client terbuat"
 
 # ── Step 3: Jalankan Migrations ───────────────────────────────────────────────
 log "[3/6] Jalankan database migrations..."
-npx prisma migrate deploy
+./node_modules/.bin/prisma migrate deploy
 ok "Migrations berhasil"
 
 # ── Step 4: Seed data awal (opsional) ─────────────────────────────────────────
 if [ -n "$SEED_ADMIN_EMAIL" ] && [ -n "$SEED_ADMIN_PASSWORD" ]; then
   log "[4/6] Seed data awal (Plans + SuperAdmin)..."
-  npx prisma db seed || warn "Seeding dilewati (mungkin sudah ada data)"
+  ./node_modules/.bin/prisma db seed || warn "Seeding dilewati (mungkin sudah ada data)"
   ok "Seeding selesai — hapus SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD dari .env setelah ini!"
 else
   warn "[4/6] SEED_ADMIN_EMAIL tidak diset — seeding dilewati"
@@ -85,7 +129,7 @@ fi
 
 # ── Step 5: Build Next.js ─────────────────────────────────────────────────────
 log "[5/6] Build Next.js (standalone)..."
-npm run build
+./node_modules/.bin/next build
 ok "Build berhasil"
 
 # ── Step 6: Copy static assets ────────────────────────────────────────────────
