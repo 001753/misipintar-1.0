@@ -8,6 +8,7 @@ declare module 'next-auth' {
       role: 'PARENT' | 'CHILD' | 'SUPER_ADMIN'
       familySpaceId: string | null
       childId: string | null
+      phone: string | null
     } & DefaultSession['user']
   }
 }
@@ -18,6 +19,7 @@ declare module 'next-auth/jwt' {
     role: 'PARENT' | 'CHILD' | 'SUPER_ADMIN'
     familySpaceId: string | null
     childId: string | null
+    phone: string | null
   }
 }
 
