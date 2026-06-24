@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/dashboard", "/dashboard/", "/api/"],
       },
     ],
-    sitemap: "https://jobenapps.cloud/sitemap.xml",
+    sitemap: "https://mp.jobenapp.cloud/sitemap.xml",
   };
 }

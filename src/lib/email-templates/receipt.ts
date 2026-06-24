@@ -233,7 +233,7 @@ export function buildReceiptEmailHtml(data: ReceiptEmailData): string {
                     <p style="margin:0;color:#9ca3af;font-size:11px;">Platform Literasi Keuangan Keluarga</p>
                     <p style="margin:6px 0 0;color:#9ca3af;font-size:11px;">
                       Pertanyaan? Hubungi kami di
-                      <a href="mailto:${process.env.SMTP_USER ?? "support@misipintar.id"}" style="color:#059669;text-decoration:none;">support@misipintar.id</a>
+                      <a href="mailto:${process.env.SMTP_USER ?? "support@jobenapp.cloud"}" style="color:#059669;text-decoration:none;">support@jobenapp.cloud</a>
                     </p>
                   </td>
                   <td align="right" valign="middle">
@@ -303,7 +303,7 @@ Kuitansi PDF juga terlampir di email ini.
 
 --
 Misi Pintar — Platform Literasi Keuangan Keluarga
-Pertanyaan? Hubungi support@misipintar.id
+Pertanyaan? Hubungi support@jobenapp.cloud
 `.trim();
 }
 

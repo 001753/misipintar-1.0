@@ -20,13 +20,13 @@ export const metadata: Metadata = {
     'jobenapps',
   ],
   alternates: {
-    canonical: 'https://jobenapps.cloud',
+    canonical: 'https://mp.jobenapp.cloud',
   },
   openGraph: {
     title: 'MisiPintar - Ubah Kuota Marah-Marah Jadi Kuota Senyuman',
     description:
       'Misi seru berhadiah saldo virtual. Anak belajar nilai kerja keras, orang tua tenang. 100% gratis selamanya.',
-    url: 'https://jobenapps.cloud',
+    url: 'https://mp.jobenapp.cloud',
     siteName: 'MisiPintar',
     locale: 'id_ID',
     type: 'website',
@@ -38,10 +38,10 @@ const organizationSchema = {
   '@type': 'Organization',
   name: 'MisiPintar',
   alternateName: 'JobenApps',
-  url: 'https://jobenapps.cloud',
+  url: 'https://mp.jobenapp.cloud',
   logo: {
     '@type': 'ImageObject',
-    url: 'https://jobenapps.cloud/logo.png',
+    url: 'https://mp.jobenapp.cloud/logo.png',
     width: 512,
     height: 512,
   },
@@ -90,20 +90,20 @@ const webSiteSchema = {
   '@type': 'WebSite',
   name: 'MisiPintar',
   alternateName: 'Misi Pintar',
-  url: 'https://jobenapps.cloud',
+  url: 'https://mp.jobenapp.cloud',
   description:
     'Platform gamifikasi keuangan keluarga #1 Indonesia. Buat misi, kumpulkan reward, dan bangun karakter anak sejak dini.',
   inLanguage: 'id-ID',
   publisher: {
     '@type': 'Organization',
     name: 'MisiPintar',
-    url: 'https://jobenapps.cloud',
+    url: 'https://mp.jobenapp.cloud',
   },
   potentialAction: {
     '@type': 'SearchAction',
     target: {
       '@type': 'EntryPoint',
-      urlTemplate: 'https://jobenapps.cloud/?q={search_term_string}',
+      urlTemplate: 'https://mp.jobenapp.cloud/?q={search_term_string}',
     },
     'query-input': 'required name=search_term_string',
   },

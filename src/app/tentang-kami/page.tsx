@@ -14,13 +14,13 @@ export const metadata: Metadata = {
     'edutech fintech keluarga',
   ],
   alternates: {
-    canonical: 'https://jobenapps.cloud/tentang-kami',
+    canonical: 'https://mp.jobenapp.cloud/tentang-kami',
   },
   openGraph: {
     title: 'Tentang MisiPintar - Platform Literasi Keuangan Keluarga #1 Indonesia',
     description:
       'Membangun 1 Juta Keluarga Pintar Indonesia. Platform gamifikasi keuangan keluarga #1 by JobenApps.',
-    url: 'https://jobenapps.cloud/tentang-kami',
+    url: 'https://mp.jobenapp.cloud/tentang-kami',
     siteName: 'MisiPintar',
     locale: 'id_ID',
     type: 'website',
@@ -35,13 +35,13 @@ const breadcrumbSchema = {
       '@type': 'ListItem',
       position: 1,
       name: 'Beranda',
-      item: 'https://jobenapps.cloud',
+      item: 'https://mp.jobenapp.cloud',
     },
     {
       '@type': 'ListItem',
       position: 2,
       name: 'Tentang Kami',
-      item: 'https://jobenapps.cloud/tentang-kami',
+      item: 'https://mp.jobenapp.cloud/tentang-kami',
     },
   ],
 }

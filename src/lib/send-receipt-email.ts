@@ -42,7 +42,7 @@ export async function sendReceiptEmail(params: SendReceiptEmailParams): Promise<
   const appUrl =
     process.env.APP_URL ??
     process.env.NEXTAUTH_URL ??
-    "https://misipintar.id";
+    "https://mp.jobenapp.cloud";
 
   const receiptUrl = `${appUrl}/dashboard/billing/invoice/${params.invoiceId}`;
 

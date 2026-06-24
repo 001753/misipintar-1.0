@@ -47,6 +47,8 @@ const nextConfig: NextConfig = {
     "*.pike.replit.dev",
     "*.replit.dev",
     "*.sisko.replit.dev",
+    "mp.jobenapp.cloud",
+    "*.jobenapp.cloud",
   ],
   images: {
     remotePatterns: [

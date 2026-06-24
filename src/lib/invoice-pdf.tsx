@@ -228,7 +228,7 @@ export function InvoiceReceiptPDF({ data }: { data: InvoiceReceiptData }) {
             <Text style={S.brandName}>Misi Pintar</Text>
             <Text style={S.brandTagline}>PLATFORM LITERASI KEUANGAN KELUARGA</Text>
             <Text style={[S.brandTagline, { marginTop: 6 }]}>
-              support@misipintar.id
+              support@jobenapp.cloud
             </Text>
           </View>
           <View style={S.badgeWrap}>
@@ -368,7 +368,7 @@ export function InvoiceReceiptPDF({ data }: { data: InvoiceReceiptData }) {
             </Text>
           </View>
           <View style={{ alignItems: "flex-end", gap: 2 }}>
-            <Text style={S.footerText}>support@misipintar.id</Text>
+            <Text style={S.footerText}>support@jobenapp.cloud</Text>
             <Text style={[S.footerText, { color: "#d1d5db" }]}>
               {data.invoiceNumber}
             </Text>

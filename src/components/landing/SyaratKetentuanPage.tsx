@@ -17,7 +17,7 @@ const sections = [
     border: 'border-emerald-100 dark:border-emerald-900/30',
     title: 'Penerimaan Syarat & Ketentuan',
     paragraphs: [
-      'Dengan mendaftarkan akun, mengakses, atau menggunakan platform MisiPintar (jobenapps.cloud), Anda ("Orang Tua" atau "Pengguna") menyatakan telah membaca, memahami, dan menyetujui seluruh Syarat dan Ketentuan yang tercantum dalam dokumen ini.',
+      'Dengan mendaftarkan akun, mengakses, atau menggunakan platform MisiPintar (mp.jobenapp.cloud), Anda ("Orang Tua" atau "Pengguna") menyatakan telah membaca, memahami, dan menyetujui seluruh Syarat dan Ketentuan yang tercantum dalam dokumen ini.',
       'Jika Anda tidak menyetujui salah satu ketentuan di bawah ini, harap berhenti menggunakan layanan kami. Penggunaan layanan secara berkelanjutan setelah perubahan dipublikasikan dianggap sebagai penerimaan atas perubahan tersebut.',
     ],
   },
@@ -354,8 +354,8 @@ export default function SyaratKetentuanPage() {
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Pertanyaan Hukum atau Kepatuhan?</h2>
           <p className="text-slate-600 dark:text-gray-400 text-sm leading-relaxed mb-6 max-w-xl mx-auto">
             Tim legal kami siap membantu. Untuk pertanyaan terkait Syarat & Ketentuan, hak pengguna, atau kepatuhan hukum, hubungi kami melalui email resmi di{' '}
-            <a href="mailto:legal@jobenapps.cloud" className="text-amber-600 dark:text-amber-400 font-semibold hover:underline">
-              legal@jobenapps.cloud
+            <a href="mailto:legal@jobenapp.cloud" className="text-amber-600 dark:text-amber-400 font-semibold hover:underline">
+              legal@jobenapp.cloud
             </a>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

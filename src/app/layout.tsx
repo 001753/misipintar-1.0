@@ -11,12 +11,12 @@ export const metadata: Metadata = {
   },
   description:
     "Ubah kuota marah-marah menjadi kuota senyuman. Aplikasi manajemen tugas anak dan pembentukan karakter berbasis misi pintar untuk mendidik kedisiplinan sejak dini.",
-  metadataBase: new URL("https://jobenapps.cloud"),
+  metadataBase: new URL("https://mp.jobenapp.cloud"),
   openGraph: {
     title: "MisiPintar - Solusi Misi Edukatif & Literasi Keuangan Anak",
     description:
       "Ubah kuota marah-marah menjadi kuota senyuman. Aplikasi manajemen tugas anak dan pembentukan karakter berbasis misi pintar untuk mendidik kedisiplinan sejak dini.",
-    url: "https://jobenapps.cloud",
+    url: "https://mp.jobenapp.cloud",
     siteName: "MisiPintar",
     locale: "id_ID",
     type: "website",

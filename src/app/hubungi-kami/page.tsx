@@ -14,13 +14,13 @@ export const metadata: Metadata = {
     'whatsapp misipintar',
   ],
   alternates: {
-    canonical: 'https://jobenapps.cloud/hubungi-kami',
+    canonical: 'https://mp.jobenapp.cloud/hubungi-kami',
   },
   openGraph: {
     title: 'Hubungi Kami - Dukungan & Bantuan | MisiPintar',
     description:
       'Tim MisiPintar siap membantu. Respons WhatsApp rata-rata 15 menit, email dibalas dalam 1×24 jam kerja.',
-    url: 'https://jobenapps.cloud/hubungi-kami',
+    url: 'https://mp.jobenapp.cloud/hubungi-kami',
     siteName: 'MisiPintar',
     locale: 'id_ID',
     type: 'website',
@@ -35,13 +35,13 @@ const breadcrumbSchema = {
       '@type': 'ListItem',
       position: 1,
       name: 'Beranda',
-      item: 'https://jobenapps.cloud',
+      item: 'https://mp.jobenapp.cloud',
     },
     {
       '@type': 'ListItem',
       position: 2,
       name: 'Hubungi Kami',
-      item: 'https://jobenapps.cloud/hubungi-kami',
+      item: 'https://mp.jobenapp.cloud/hubungi-kami',
     },
   ],
 }
