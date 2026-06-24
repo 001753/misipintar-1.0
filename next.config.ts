@@ -33,6 +33,16 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ["nodemailer"],
+  webpack: (config, { isServer }) => {
+    config.parallelism = 1;
+    if (isServer) {
+      const existing = config.externals || [];
+      config.externals = Array.isArray(existing)
+        ? [...existing, "bullmq"]
+        : [existing, "bullmq"];
+    }
+    return config;
+  },
   experimental: {
     serverActions: {
       allowedOrigins: ["*"],

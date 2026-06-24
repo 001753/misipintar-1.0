@@ -1,0 +1,74 @@
+Fix Next.js build failure on shared hosting (cPanel/Linux) caused by Rust/SWC thread pool 
+exhaustion. The build crashes with:
+
+  "The global thread pool has not been initialized.: ThreadPoolBuildError 
+   { kind: IOError(Os { code: 11, kind: WouldBlock, message: Resource temporarily unavailable }) }
+   Next.js build worker exited with code: null and signal: SIGABRT"
+
+Root cause: Next.js 16 uses SWC (Rust compiler) which spawns a rayon thread pool. 
+Shared hosting enforces a low process/thread limit (ulimit -u), causing EAGAIN (code 11) 
+when SWC tries to initialize threads.
+
+There is also a secondary webpack warning from BullMQ:
+  "Critical dependency: the request of a dependency is an expression"
+  from: bullmq/dist/esm/classes/child-processor.js → src/queues/index.ts → 
+  src/app/api/queue/worker/route.ts
+
+Apply ALL of the following fixes:
+
+---
+
+FIX 1 — Add .babelrc to disable SWC compiler (most reliable fix for shared hosting):
+Create file `.babelrc` in the project root with content:
+{
+  "presets": ["next/babel"]
+}
+This forces Next.js to use Babel instead of SWC, eliminating the Rust thread pool entirely.
+
+---
+
+FIX 2 — Update next.config.js (or next.config.ts) to:
+  a) Limit webpack parallelism to 1
+  b) Externalize bullmq on server-side to fix the critical dependency warning
+  c) Keep existing config (experimental.serverActions, output: 'standalone', etc.) intact
+
+The webpack config addition should be:
+  webpack: (config, { isServer }) => {
+    config.parallelism = 1;
+    if (isServer) {
+      const existing = config.externals || [];
+      config.externals = Array.isArray(existing)
+        ? [...existing, 'bullmq']
+        : [existing, 'bullmq'];
+    }
+    return config;
+  }
+
+---
+
+FIX 3 — Update the "build" script in package.json to add environment variables 
+that limit thread usage:
+  "build": "RAYON_NUM_THREADS=1 NODE_OPTIONS='--max-old-space-size=512' next build"
+
+If the project uses a custom deploy/build shell script (e.g. deploy.sh or scripts/build.sh), 
+also add `export RAYON_NUM_THREADS=1` at the top of that script.
+
+---
+
+FIX 4 — Add RAYON_NUM_THREADS=1 to the .env file (append, do not remove existing vars):
+  RAYON_NUM_THREADS=1
+
+---
+
+IMPORTANT CONSTRAINTS:
+- Do NOT change any database schema, Prisma models, or migrations
+- Do NOT modify any API routes or business logic
+- Do NOT remove or alter BullMQ queue logic in src/queues/ — only externalize it from webpack
+- Do NOT upgrade or downgrade any package versions
+- Do NOT remove the experimental.serverActions config
+- Preserve the existing output: 'standalone' setting if present in next.config.js
+- After making changes, show me the final content of: .babelrc, next.config.js, and 
+  the build script section of package.json
+
+After applying all fixes, explain in one sentence what each fix does and why it helps 
+on resource-constrained shared hosting.
