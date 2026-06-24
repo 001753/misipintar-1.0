@@ -204,6 +204,25 @@ npm install
 ./deploy-cpanel.sh
 ```
 
+### ❌ `Turbopack panic: ThreadPoolBuildError: Resource temporarily unavailable`
+
+**Penyebab:** cPanel shared hosting membatasi jumlah thread OS (`nproc` limit). Turbopack's Rust engine (rayon) mencoba membuat thread pool paralel tapi kernel menolak dengan `EAGAIN (code 11)`.
+
+**Solusi:** Sudah ditangani di `deploy-cpanel.sh` — script otomatis set:
+```bash
+export RAYON_NUM_THREADS=1       # rayon hanya pakai 1 thread
+export UV_THREADPOOL_SIZE=4      # batasi libuv thread pool
+export NODE_OPTIONS="--max-old-space-size=512"
+```
+
+Jika masih error, coba jalankan manual via SSH:
+```bash
+cd ~/public_html/misipintar
+RAYON_NUM_THREADS=1 UV_THREADPOOL_SIZE=4 NODE_OPTIONS="--max-old-space-size=512" ./node_modules/.bin/next build
+```
+
+---
+
 ### ❌ `Turbopack panic: Symlink is invalid, points out of root`
 
 **Penyebab:** Turbopack tidak bisa follow symlink `node_modules` yang menuju `~/nodevenv/`.
