@@ -6,8 +6,10 @@
 
 export async function register() {
   // Jangan jalankan workers saat build phase — mencegah SIGSEGV di cPanel
-  // karena BullMQ/Firebase mendaftarkan signal handler di worker process next build
-  if (process.env.NEXT_PHASE === 'phase-production-build') return
+  // karena BullMQ/Firebase mendaftarkan signal handler di worker process next build.
+  // NEXT_BUILD=1 di-set secara eksplisit di npm run build (lebih andal dari NEXT_PHASE
+  // yang tidak selalu di-inject ke subprocess worker oleh Next.js 16).
+  if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.NEXT_BUILD === '1') return
 
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     // Cleanup cron: delete LoginAttempt older than 30 days

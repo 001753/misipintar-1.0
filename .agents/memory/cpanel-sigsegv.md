@@ -1,34 +1,69 @@
 ---
 name: cPanel build SIGSEGV fix
-description: Why next build --webpack crashes with SIGSEGV on cPanel and the correct fix.
+description: Why next build --webpack crashes with SIGSEGV on cPanel and the complete multi-layer fix.
 ---
 
-# cPanel build SIGSEGV — Root Cause & Fix
+# cPanel build SIGSEGV — Complete Root Cause & Fix
 
-## The symptom
+## Symptom
 ```
 ✓ Collecting page data using 1 worker in 5.3s
 ⨯ Next.js build worker exited with code: null and signal: SIGSEGV
 ```
 
-## Root cause
-`instrumentation.ts` (`register()`) runs inside Next.js's build worker during the "Collecting page data" phase. When no Redis/Firebase is configured it logs warnings and returns early — BUT the dynamic imports still load `bullmq` (`Worker` class) and `firebase-admin`. These packages register process-level signal handlers (`SIGTERM`, `SIGINT`, etc.) at import time. When the worker process exits normally after finishing page data collection, those handlers fire and cause a SIGSEGV on cPanel's low-ulimit environment.
+## Full root cause chain
 
-**Why `engineType = "binary"` alone doesn't fix it:** the crash is not from Prisma's native addon — it happens after Prisma is never even initialized, purely from the BullMQ/Firebase cleanup handlers at process exit.
+1. **`tasks.ts` (server action) is evaluated by the build worker** during "Collecting page data"
+2. `tasks.ts` statically imports `@/lib/notifications/fcm`
+3. `fcm.ts` had `import * as admin from "firebase-admin"` at the **top level**
+4. Webpack (serverExternalPackages) turns this into `require("firebase-admin")` at module load time
+5. `firebase-admin` includes `@grpc/grpc-js` with **native C++ bindings**
+6. When the build worker process exits after finishing page collection, gRPC native teardown crashes → SIGSEGV
 
-## The fix
-Guard `instrumentation.ts` against the build phase at the very top of `register()`:
+Same problem existed in `firebase-admin.ts` with `import admin from "firebase-admin"`.
+
+## Why `NEXT_PHASE` guard didn't help
+`NEXT_PHASE === 'phase-production-build'` is set in the main build process but **NOT injected into the child worker subprocess** by Next.js 16.x. So the instrumentation guard silently failed.
+
+## Three-layer fix applied
+
+### Layer 1: Lazy require() in fcm.ts and firebase-admin.ts
+Replaced static top-level import with a `getAdmin()` helper using `require()` inside the function:
 
 ```typescript
-export async function register() {
-  if (process.env.NEXT_PHASE === 'phase-production-build') return
-  // ... rest of workers bootstrap
+// REMOVED: import * as admin from "firebase-admin"
+import type * as AdminType from "firebase-admin"; // type-only, no JS output
+
+function getAdmin(): typeof AdminType {
+  return require("firebase-admin") as typeof AdminType;
+}
+
+function initFirebase() {
+  if (!process.env.FIREBASE_PROJECT_ID || ...) {
+    console.warn("...");
+    return undefined; // ← getAdmin() never called → native code never loads
+  }
+  const admin = getAdmin(); // only reached when Firebase IS configured
+  ...
 }
 ```
 
-**Why:** `NEXT_PHASE` is set to `'phase-production-build'` during `next build`. Workers never need to run during build — they're only needed at server runtime. This single guard prevents all signal handler registration in the build worker.
+**Why this works:** cPanel has no Firebase env vars → `initFirebase()` returns early → `getAdmin()` / `require("firebase-admin")` never executes → gRPC native code never loads → no SIGSEGV.
 
-## Also applied
-`prisma/schema.prisma` has `engineType = "binary"` as an additional safety measure (avoids native .node addon in worker threads), though it's not the primary fix.
+### Layer 2: NEXT_BUILD=1 env var in all build scripts (package.json)
+```
+"build": "NEXT_BUILD=1 ... next build --webpack"
+"build:prod": "... NEXT_BUILD=1 ... next build --webpack"
+"build:cpanel": "... NEXT_BUILD=1 ... next build --webpack"
+```
 
-**How to apply:** Any time `instrumentation.ts` is modified, ensure the build-phase guard stays at the top.
+### Layer 3: Dual guard in instrumentation.ts
+```typescript
+if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.NEXT_BUILD === '1') return
+```
+Prevents worker bootstrap (BullMQ, Firebase) from running in the build worker even if imports somehow happen.
+
+## Key principle
+**Never use static top-level `import` for packages with native bindings in files that get imported by server actions or pages.** Use `require()` inside function bodies so native code loads lazily and only when actually needed at runtime.
+
+**How to apply:** If adding new server-only modules with native bindings (e.g., sharp, canvas, grpc-based SDKs), always use lazy `require()` pattern — never a static import.

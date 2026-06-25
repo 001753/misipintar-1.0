@@ -1,16 +1,34 @@
 /**
  * [5.1] Firebase Admin SDK — FCM Push Notifications
  * Init sekali (singleton via globalThis) dari env variables.
+ *
+ * PENTING: firebase-admin di-require() secara lazy di dalam fungsi (bukan static
+ * import di atas) untuk mencegah gRPC native code dimuat saat build worker
+ * Next.js berjalan — penyebab utama SIGSEGV di lingkungan cPanel.
  */
 
-import * as admin from "firebase-admin";
 import { prisma } from "@/lib/prisma";
 
+// Type-only import — tidak menghasilkan require() di output JS
+import type * as AdminType from "firebase-admin";
+
+type AdminApp = AdminType.app.App;
+
 const globalForFirebase = globalThis as unknown as {
-  firebaseApp: admin.app.App | undefined;
+  firebaseApp: AdminApp | undefined;
 };
 
-function initFirebase(): admin.app.App | undefined {
+/**
+ * Lazy loader — require() hanya dipanggil saat benar-benar dibutuhkan.
+ * Saat build phase (tidak ada Firebase env), initFirebase() return early
+ * sebelum memanggil fungsi ini, sehingga native gRPC tidak pernah dimuat.
+ */
+function getAdmin(): typeof AdminType {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require("firebase-admin") as typeof AdminType;
+}
+
+function initFirebase(): AdminApp | undefined {
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
@@ -20,6 +38,7 @@ function initFirebase(): admin.app.App | undefined {
     return undefined;
   }
 
+  const admin = getAdmin();
   if (admin.apps.length > 0) return admin.apps[0]!;
 
   return admin.initializeApp({
@@ -44,6 +63,7 @@ export async function sendPushNotification(
     return { successCount: 0, failureCount: 0 };
   }
 
+  const admin = getAdmin();
   const messaging = admin.messaging(firebaseApp);
 
   try {
@@ -57,7 +77,6 @@ export async function sendPushNotification(
       },
     });
 
-    // Hapus token tidak valid dari DB secara otomatis
     const invalidTokens: string[] = [];
     response.responses.forEach((res, idx) => {
       if (!res.success) {
