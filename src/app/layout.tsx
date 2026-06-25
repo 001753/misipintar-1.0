@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import NavigationProgress from "@/components/NavigationProgress";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 export const metadata: Metadata = {
@@ -64,6 +65,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: themeScript }}
         />
         <ThemeProvider>
+          <NavigationProgress />
           {children}
         </ThemeProvider>
         <ServiceWorkerRegistration />

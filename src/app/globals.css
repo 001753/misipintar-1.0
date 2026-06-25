@@ -196,6 +196,23 @@ html {
 :focus:not(:focus-visible) { outline: none; }
 :focus-visible { outline: 2px solid #059669; outline-offset: 2px; }
 
+/* ─── Tap responsiveness ─────────────────────────────────── */
+/* Remove 300ms tap delay on mobile */
+a, button, [role="button"], input[type="submit"], input[type="button"], label {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Instant visual feedback on press */
+a:active, button:active, [role="button"]:active {
+  opacity: 0.75;
+  transform: scale(0.97);
+  transition: opacity 60ms ease, transform 60ms ease;
+}
+/* Smooth release */
+a, button, [role="button"] {
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
 /* ─── Dark mode base ─────────────────────────────────────── */
 .dark {
   color-scheme: dark;
