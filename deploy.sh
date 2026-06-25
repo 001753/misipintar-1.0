@@ -294,6 +294,29 @@ mkdir -p "$APP_DIR/tmp"
 touch "$APP_DIR/tmp/restart.txt"
 log_ok "tmp/restart.txt diperbarui — Passenger akan restart"
 
+# ── Health check otomatis (tunggu Passenger siap, max 60 detik) ───────────────
+HEALTH_URL="${APP_URL:-}/api/health"
+HEALTH_OK=false
+
+if [ -n "${APP_URL:-}" ]; then
+  log_info "Menunggu Passenger siap — health check ke $HEALTH_URL ..."
+  for i in $(seq 1 12); do
+    sleep 5
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$HEALTH_URL" 2>/dev/null || echo "000")
+    if [ "$HTTP_CODE" = "200" ]; then
+      HEALTH_OK=true
+      log_ok "Health check OK (HTTP $HTTP_CODE) setelah $((i * 5))s"
+      break
+    fi
+    log_info "  ... percobaan $i/12 — HTTP $HTTP_CODE"
+  done
+  if [ "$HEALTH_OK" = "false" ]; then
+    log_warn "Health check belum OK setelah 60s — cek manual di cPanel → Node.js App → Restart"
+  fi
+else
+  log_warn "APP_URL tidak diset di .env — health check dilewati"
+fi
+
 # ═════════════════════════════════════════════════════════════════════════════
 # BANNER PENUTUP
 # ═════════════════════════════════════════════════════════════════════════════
@@ -306,12 +329,16 @@ printf "Build   : %ss\n" "$BUILD_SECS"
 printf ".env    : TIDAK DIUBAH\n"
 printf "app.js  : TIDAK DIUBAH (dari cPanel)\n"
 printf "Log     : %s\n" "$LOG_FILE"
+if [ "$HEALTH_OK" = "true" ]; then
+  printf "Health  : ✓ %s/api/health\n" "${APP_URL:-}"
+else
+  printf "Health  : ⚠ cek manual — %s/api/health\n" "${APP_URL:-[set APP_URL di .env]}"
+fi
 printf "══════════════════════════════\n"
-printf "${CY}Jika site belum merespons dalam 30 detik:\n"
+printf "${CY}Jika site belum merespons:\n"
 printf "  cPanel → Node.js App → klik RESTART manual.\n"
-printf "Test: curl https://[domain]/api/health\n"
 printf "══════════════════════════════\n"
 printf "${CX}"
 
-printf "[%s] [ OK ] Deploy selesai: %s → %s (build %ss)\n" \
-  "$(date '+%Y-%m-%d %H:%M:%S')" "$COMMIT_BEFORE" "$COMMIT_AFTER" "$BUILD_SECS" >> "$LOG_FILE"
+printf "[%s] [ OK ] Deploy selesai: %s → %s (build %ss, health=%s)\n" \
+  "$(date '+%Y-%m-%d %H:%M:%S')" "$COMMIT_BEFORE" "$COMMIT_AFTER" "$BUILD_SECS" "$HEALTH_OK" >> "$LOG_FILE"
