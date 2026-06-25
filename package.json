@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --port 5000",
-    "build": "RAYON_NUM_THREADS=1 NODE_OPTIONS='--max-old-space-size=4096' next build --webpack",
-    "build:prod": "prisma generate && prisma migrate deploy && RAYON_NUM_THREADS=1 NODE_OPTIONS='--max-old-space-size=4096' next build --webpack",
-    "build:cpanel": "bash scripts/cpanel-install.sh && RAYON_NUM_THREADS=1 NODE_OPTIONS='--max-old-space-size=1024' next build --webpack",
+    "build": "RAYON_NUM_THREADS=1 TOKIO_WORKER_THREADS=1 NODE_OPTIONS='--max-old-space-size=4096' next build --webpack",
+    "build:prod": "prisma generate && prisma migrate deploy && RAYON_NUM_THREADS=1 TOKIO_WORKER_THREADS=1 NODE_OPTIONS='--max-old-space-size=4096' next build --webpack",
+    "build:cpanel": "bash scripts/cpanel-install.sh && RAYON_NUM_THREADS=1 TOKIO_WORKER_THREADS=1 NODE_OPTIONS='--max-old-space-size=1024' next build --webpack",
     "start": "next start --port 5000",
     "lint": "eslint",
     "test": "vitest run --reporter=verbose",
