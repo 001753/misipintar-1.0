@@ -1,56 +1,73 @@
 ---
 name: cPanel build SIGSEGV fix
-description: Why next build --webpack crashes with SIGSEGV on cPanel and the complete multi-layer fix.
+description: Complete root cause analysis and fix for SIGSEGV during next build --webpack on cPanel.
 ---
 
-# cPanel build SIGSEGV — Complete Root Cause & Fix
+# cPanel build SIGSEGV — Complete Analysis & Fix
 
 ## Symptom
 ```
-✓ Collecting page data using 1 worker in 5.3s
+✓ Collecting page data using 1 worker in 5.8s
 ⨯ Next.js build worker exited with code: null and signal: SIGSEGV
 ```
 
-## Full root cause chain
+## Full root cause chain (multiple, compounding)
 
-1. **`tasks.ts` (server action) is evaluated by the build worker** during "Collecting page data"
-2. `tasks.ts` statically imports `@/lib/notifications/fcm`
-3. `fcm.ts` had `import * as admin from "firebase-admin"` at the **top level**
-4. Webpack (serverExternalPackages) turns this into `require("firebase-admin")` at module load time
-5. `firebase-admin` includes `@grpc/grpc-js` with **native C++ bindings**
-6. When the build worker process exits after finishing page collection, gRPC native teardown crashes → SIGSEGV
+During `next build`, a worker subprocess evaluates ALL page modules and server action modules to collect export metadata. Any code that runs at **module level** (top-level imports and statements) executes inside this worker. When the worker exits normally after collection, native C++ destructors and registered signal handlers run — if any of these are unstable (due to cPanel's low ulimit or mismatched environment), SIGSEGV occurs.
 
-Same problem existed in `firebase-admin.ts` with `import admin from "firebase-admin"`.
+### Cause 1: `firebase-admin` static import (MAIN CRASH)
+`tasks.ts` (server action) statically imports `fcm.ts`, which had `import * as admin from "firebase-admin"`. Webpack turns this into `require("firebase-admin")` at module load. `firebase-admin` includes gRPC native C++ code. On worker exit, gRPC native teardown → SIGSEGV.
 
-## Why `NEXT_PHASE` guard didn't help
-`NEXT_PHASE === 'phase-production-build'` is set in the main build process but **NOT injected into the child worker subprocess** by Next.js 16.x. So the instrumentation guard silently failed.
+### Cause 2: BullMQ/Firebase signal handlers via instrumentation
+`instrumentation.ts`'s `register()` runs inside the build worker (NEXT_RUNTIME='nodejs'). It imports BullMQ and firebase-admin even when Redis/Firebase are unavailable, registering process-level signal handlers. Worker exit triggers these → SIGSEGV.
 
-## Three-layer fix applied
+### Cause 3: `NEXT_PHASE` not injected into build worker subprocess
+`NEXT_PHASE === 'phase-production-build'` is set in the main build process but Next.js 16 does NOT propagate it to the child worker subprocess. Guards based on NEXT_PHASE silently fail.
 
-### Layer 1: Lazy require() in fcm.ts and firebase-admin.ts
-Replaced static top-level import with a `getAdmin()` helper using `require()` inside the function:
+### Cause 4: `@prisma/client` static import
+`import { PrismaClient } from '@prisma/client'` at the top of `prisma.ts` loads Prisma's module-level initialization code (engine lifecycle handlers, binary subprocess management setup). Even with the Proxy pattern preventing `new PrismaClient()`, the module-level import alone registers cleanup handlers that crash on worker exit.
 
+### Cause 5: `midtrans-client` module-level instantiation
+`midtrans.ts` had `new midtransClient.Snap({...})` and `new midtransClient.CoreApi({...})` at module level. Any page importing `subscription.ts` → `midtrans.ts` would trigger this.
+
+## Complete fix (5 layers)
+
+### Layer 1: Lazy require() for all packages with native code or heavy init
+
+**`prisma.ts`** — remove `import { PrismaClient } from '@prisma/client'`; use `require()` inside `createPrismaClient()`:
 ```typescript
-// REMOVED: import * as admin from "firebase-admin"
-import type * as AdminType from "firebase-admin"; // type-only, no JS output
-
-function getAdmin(): typeof AdminType {
-  return require("firebase-admin") as typeof AdminType;
-}
-
-function initFirebase() {
-  if (!process.env.FIREBASE_PROJECT_ID || ...) {
-    console.warn("...");
-    return undefined; // ← getAdmin() never called → native code never loads
-  }
-  const admin = getAdmin(); // only reached when Firebase IS configured
-  ...
+import type { PrismaClient as PrismaClientType } from '@prisma/client' // type-only, no JS output
+function createPrismaClient() {
+  const { PrismaClient } = require('@prisma/client') as typeof import('@prisma/client')
+  return new PrismaClient({...})
 }
 ```
 
-**Why this works:** cPanel has no Firebase env vars → `initFirebase()` returns early → `getAdmin()` / `require("firebase-admin")` never executes → gRPC native code never loads → no SIGSEGV.
+**`fcm.ts`** — remove `import * as admin from "firebase-admin"`; use lazy `getAdmin()`:
+```typescript
+import type * as AdminType from "firebase-admin" // type-only
+function getAdmin() { return require("firebase-admin") as typeof AdminType }
+function initFirebase() {
+  if (!FIREBASE_env_vars) { console.warn(...); return undefined } // getAdmin() never called
+  const admin = getAdmin(); ...
+}
+```
 
-### Layer 2: NEXT_BUILD=1 env var in all build scripts (package.json)
+**`firebase-admin.ts`** — same pattern as fcm.ts.
+
+**`midtrans.ts`** — remove `import midtransClient` + module-level `new Snap({})`; use Proxy:
+```typescript
+import type midtransClientType from "midtrans-client" // type-only
+function getMidtransClient() { return require("midtrans-client") }
+export const snap = new Proxy({} as Snap, {
+  get(_, prop) {
+    if (!_snap) _snap = new (getMidtransClient()).Snap({...})
+    return Reflect.get(_snap, prop, _snap)
+  }
+})
+```
+
+### Layer 2: NEXT_BUILD=1 in all build scripts (package.json)
 ```
 "build": "NEXT_BUILD=1 ... next build --webpack"
 "build:prod": "... NEXT_BUILD=1 ... next build --webpack"
@@ -61,9 +78,17 @@ function initFirebase() {
 ```typescript
 if (process.env.NEXT_PHASE === 'phase-production-build' || process.env.NEXT_BUILD === '1') return
 ```
-Prevents worker bootstrap (BullMQ, Firebase) from running in the build worker even if imports somehow happen.
 
-## Key principle
-**Never use static top-level `import` for packages with native bindings in files that get imported by server actions or pages.** Use `require()` inside function bodies so native code loads lazily and only when actually needed at runtime.
+### Layer 4: engineType = "binary" in prisma/schema.prisma
+Uses standalone binary process for queries — avoids loading .node native addon.
 
-**How to apply:** If adding new server-only modules with native bindings (e.g., sharp, canvas, grpc-based SDKs), always use lazy `require()` pattern — never a static import.
+## The master rule for cPanel Next.js apps
+**Never use static top-level `import` for any package that:**
+- Has native C++ bindings (.node files, gRPC, canvas, sharp, etc.)
+- Registers process-level signal/exit handlers at module load
+- Creates instances or connections at module level
+
+Always use `import type` for TypeScript types + lazy `require()` inside function bodies for the actual runtime code.
+
+**Packages requiring lazy treatment in this codebase:** `@prisma/client`, `firebase-admin`, `midtrans-client`.
+Pure JS packages (ioredis v5, bullmq, bcryptjs, nodemailer) are safe as static imports.
