@@ -128,16 +128,21 @@ else
 fi
 
 # ── Step 5: Build Next.js ─────────────────────────────────────────────────────
-log "[5/6] Build Next.js (standalone, Turbopack)..."
+log "[5/6] Build Next.js (standalone, webpack + SWC)..."
 #
-# RAYON_NUM_THREADS=1 membatasi thread Rust/SWC agar tidak memicu EAGAIN
-# di shared hosting yang punya ulimit -u rendah.
-# Tidak perlu .babelrc atau --webpack — SWC/Turbopack bawaan Next.js 16 sudah
-# handle semua paket via serverExternalPackages di next.config.ts.
+# --webpack: wajib di cPanel karena Turbopack panic saat node_modules adalah
+#   symlink ke ~/nodevenv/ (error: "Symlink points out of the filesystem root").
+#   Webpack mengikuti symlink via resolusi Node.js standar — tidak ada panic.
+#
+# TANPA .babelrc: webpack memakai SWC loader bawaan Next.js (via @swc/helpers).
+#   Menambahkan .babelrc akan men-disable SWC dan merusak Server Actions.
+#
+# RAYON_NUM_THREADS=1: batasi thread Rust/SWC agar tidak memicu EAGAIN
+#   di shared hosting yang punya ulimit -u rendah.
 #
 export RAYON_NUM_THREADS=1
 export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=1024"
-./node_modules/.bin/next build
+./node_modules/.bin/next build --webpack
 BUILD_RC=$?
 [ $BUILD_RC -ne 0 ] && err "Build gagal (exit $BUILD_RC)"
 ok "Build berhasil"

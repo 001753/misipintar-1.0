@@ -1,30 +1,39 @@
 ---
 name: Misi Pintar Replit dev server
-description: How the dev server is configured for Replit and cPanel, including build toolchain decisions.
+description: Build toolchain decisions for Replit dev and cPanel production builds.
 ---
 
 ## Dev server (Replit)
 
-`npm run dev` runs `next dev --port 5000` — **no `--webpack` flag**.
+`npm run dev` → `next dev --port 5000` — **Turbopack** (default Next.js 16, no flag needed).
+Turbopack berjalan normal di Replit karena node_modules bukan symlink.
 
-Next.js 16.2.9 now uses **Turbopack by default** and is fully compatible with:
-- Tailwind v4 via `@tailwindcss/postcss` in `postcss.config.mjs`
-- `serverExternalPackages` for CJS-heavy packages (nodemailer, bullmq)
+## Production / cPanel build
 
-The previous `--webpack` flag was required when Turbopack broke on `@vercel/turbopack/postcss` with Tailwind v4, but that is fixed in 16.2.9.
+`npm run build:cpanel` → `next build --webpack` — **WAJIB pakai --webpack di cPanel**.
 
-## cPanel build (`npm run build:cpanel`)
+### Root cause Turbopack panic di cPanel
 
-- Runs `bash scripts/cpanel-install.sh` then `next build` (no `--webpack`, no `.babelrc`)
-- `.babelrc` creation was removed — it disabled SWC and caused `Module not found` errors for packages like `next-nprogress-bar`
-- `RAYON_NUM_THREADS=1 NODE_OPTIONS='--max-old-space-size=1024'` kept for shared hosting memory limits
+cPanel menginstall `node_modules` sebagai **symlink** yang menunjuk ke `~/nodevenv/<app>/`.
+Turbopack menolak symlink di luar project root → panic:
+`Symlink [project]/node_modules is invalid, it points out of the filesystem root`
 
-**Why:** The `.babelrc` with `next/babel` preset disabled SWC entirely and prevented proper module resolution for ESM packages. Turbopack + native SWC handles everything correctly.
+Webpack mengikuti symlink via resolusi Node.js standar → tidak ada masalah.
 
-## serverExternalPackages
+### Mengapa TIDAK pakai .babelrc
 
-CJS-heavy packages listed in `next.config.ts`:
-- `nodemailer`
-- `bullmq`
+Sebelumnya `.babelrc` dengan `next/babel` preset ditambahkan sementara agar Babel menggantikan SWC.
+Ini **merusak Server Actions** karena Babel tidak handle `"use server"` directive dengan benar.
 
-Add any new CJS-only Node.js packages here to prevent Turbopack bundling failures.
+Solusi: `--webpack` tanpa `.babelrc` → webpack tetap pakai **SWC loader bawaan Next.js**
+(via `@swc/helpers` yang sudah ada di dependencies). `RAYON_NUM_THREADS=1` membatasi
+thread Rust/SWC agar tidak memicu EAGAIN di shared hosting.
+
+**Why:** Urutan prioritas: `--webpack` (no panic) > no `.babelrc` (SWC tetap aktif, Server Actions jalan).
+
+## serverExternalPackages + webpack externals
+
+Paket CJS-heavy dikecualikan di dua tempat agar kompatibel dengan kedua bundler:
+- `serverExternalPackages: ["nodemailer", "bullmq"]` → berlaku untuk Turbopack (dev)
+- `webpack.externals += "bullmq"` → berlaku untuk webpack (cPanel build)
+- `config.parallelism = 1` di webpack config → batasi memory usage saat build di shared hosting

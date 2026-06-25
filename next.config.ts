@@ -33,6 +33,18 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ["nodemailer", "bullmq"],
+  webpack: (config, { isServer }) => {
+    // Batasi parallelism — cPanel shared hosting punya ulimit -u rendah
+    config.parallelism = 1;
+    if (isServer) {
+      // bullmq pakai CJS + dynamic require; jangan di-bundle webpack server
+      const existing = config.externals || [];
+      config.externals = Array.isArray(existing)
+        ? [...existing, "bullmq"]
+        : [existing, "bullmq"];
+    }
+    return config;
+  },
   experimental: {
     serverActions: {
       allowedOrigins: ["*"],
