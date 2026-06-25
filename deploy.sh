@@ -229,17 +229,55 @@ export RAYON_NUM_THREADS=1
 export TOKIO_WORKER_THREADS=1
 export UV_THREADPOOL_SIZE=1
 export NEXT_TELEMETRY_DISABLED=1
-# 768MB heap — webpack compilation butuh ~600-700MB untuk app ini.
-# SIGSEGV yang dulu terjadi di static generation worker sudah diatasi via
-# lazy PrismaClient (Proxy pattern di src/lib/prisma.ts), bukan via limit memori.
-# Jadi limit bisa dinaikkan ke 768MB agar webpack tidak OOM.
-# --max-semi-space-size=32 tetap dibatasi agar young gen tidak rakus.
-export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=768 --max-semi-space-size=32"
+
+# Simpan NODE_OPTIONS awal dari environment cPanel sebelum dimodifikasi
+_BASE_NODE_OPTIONS="${NODE_OPTIONS:-}"
+
+# ── Build dengan progressive memory retry ────────────────────────────────────
+# Webpack butuh ~600-700MB; SIGSEGV di static generation sudah diatasi via
+# lazy PrismaClient (prisma.ts) sehingga limit tinggi aman.
+# Urutan: 768 → 896 → 1024 MB. Hanya retry jika OOM terdeteksi di output.
+BUILD_MEM_LEVELS=(768 896 1024)
+BUILD_DONE=false
+BUILD_TMPLOG=$(mktemp /tmp/misipintar-build-XXXXXX.log)
 
 BUILD_START="$(date +%s)"
-NODE_ENV=production ./node_modules/.bin/next build --webpack 2>&1 | \
-  sed 's/^/  [build] /' | tee -a "$LOG_FILE"
+
+for BUILD_MEM in "${BUILD_MEM_LEVELS[@]}"; do
+  log_info "Build heap ${BUILD_MEM}MB..."
+  export NODE_OPTIONS="${_BASE_NODE_OPTIONS:+$_BASE_NODE_OPTIONS }--max-old-space-size=${BUILD_MEM} --max-semi-space-size=32"
+
+  > "$BUILD_TMPLOG"
+
+  set +e
+  NODE_ENV=production ./node_modules/.bin/next build --webpack 2>&1 | \
+    tee "$BUILD_TMPLOG" | sed 's/^/  [build] /' | tee -a "$LOG_FILE"
+  BUILD_EXIT="${PIPESTATUS[0]}"
+  set -e
+
+  if [ "$BUILD_EXIT" -eq 0 ]; then
+    BUILD_DONE=true
+    log_ok "Build sukses dengan heap ${BUILD_MEM}MB"
+    break
+  fi
+
+  if grep -q "heap out of memory\|Reached heap limit" "$BUILD_TMPLOG" 2>/dev/null; then
+    log_warn "OOM dengan ${BUILD_MEM}MB heap — retry dengan memory lebih besar..."
+  else
+    log_err "Build gagal (exit $BUILD_EXIT) — bukan OOM, tidak retry"
+    rm -f "$BUILD_TMPLOG"
+    exit 1
+  fi
+done
+
+rm -f "$BUILD_TMPLOG"
 BUILD_SECS="$(( $(date +%s) - BUILD_START ))"
+
+if [ "$BUILD_DONE" = "false" ]; then
+  log_err "Build gagal OOM di semua level memory (768 / 896 / 1024 MB)"
+  log_err "Hubungi hosting provider untuk meningkatkan memory / process limit"
+  exit 1
+fi
 
 # ── Verifikasi post-build ────────────────────────────────────────────────────
 log_info "Verifikasi output build..."
