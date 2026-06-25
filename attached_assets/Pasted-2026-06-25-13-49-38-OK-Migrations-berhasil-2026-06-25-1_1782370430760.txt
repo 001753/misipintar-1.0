@@ -1,0 +1,37 @@
+2026-06-25 13:49:38] [ OK ] Migrations berhasil
+[2026-06-25 13:49:38] [WARN] SEED_ADMIN_EMAIL tidak diset — seeding dilewati
+[2026-06-25 13:49:38] [INFO] [7/8] Build Next.js + verifikasi + copy static...
+  [build] ▲ Next.js 16.2.9 (webpack)
+  [build] - Environments: .env
+  [build] - Experiments (use with caution):
+  [build]   · cpus: 1
+  [build]   · serverActions
+  [build]
+  [build]   Creating an optimized production build ...
+  [build]
+  [build] <--- Last few GCs --->
+  [build]
+  [build] [899212:0x14c0000]    83263 ms: Mark-Compact 501.7 (524.1) -> 501.0 (522.6) MB, pooled: 3 MB, 539.58 / 0.00 ms  (average mu = 0.106, current mu = 0.018) allocation failure; GC in old space requested
+  [build] [899212:0x14c0000]    83634 ms: Mark-Compact 504.3 (524.0) -> 502.5 (524.3) MB, pooled: 2 MB, 354.98 / 0.00 ms  (average mu = 0.078, current mu = 0.043) allocation failure; scavenge might not succeed
+  [build]
+  [build]
+  [build] <--- JS stacktrace --->
+  [build]
+  [build] FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory
+  [build] ----- Native stack trace -----
+  [build]
+  [build]  1: 0x7fce2c1a6741  [/opt/alt/alt-nodejs22/root/usr/bin/../lib/libnode.so.127]
+  [build]  2: 0x7fce2d11dad4 v8::Utils::ReportOOMFailure(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [/opt/alt/alt-nodejs22/root/usr/bin/../lib/libnode.so.127]
+  [build]  3: 0x7fce2d11deb1 v8::internal::V8::FatalProcessOutOfMemory(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [/opt/alt/alt-nodejs22/root/usr/bin/../lib/libnode.so.127]
+  [build]  4: 0x7fce2d32746b  [/opt/alt/alt-nodejs22/root/usr/bin/../lib/libnode.so.127]
+  [build]  5: 0x7fce2d341c6d v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags) [/opt/alt/alt-nodejs22/root/usr/bin/../lib/libnode.so.127]
+  [build]  6: 0x7fce2d31d466 v8::internal::HeapAllocator::AllocateRawWithLightRetrySlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [/opt/alt/alt-nodejs22/root/usr/bin/../lib/libnode.so.127]
+  [build]  7: 0x7fce2d31e409 v8::internal::HeapAllocator::AllocateRawWithRetryOrFailSlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [/opt/alt/alt-nodejs22/root/usr/bin/../lib/libnode.so.127]
+  [build]  8: 0x7fce2d301d1b v8::internal::Factory::NewFillerObject(int, v8::internal::AllocationAlignment, v8::internal::AllocationType, v8::internal::AllocationOrigin) [/opt/alt/alt-nodejs22/root/usr/bin/../lib/libnode.so.127]
+  [build]  9: 0x7fce2d6e375f v8::internal::Runtime_AllocateInYoungGeneration(int, unsigned long*, v8::internal::Isolate*) [/opt/alt/alt-nodejs22/root/usr/bin/../lib/libnode.so.127]
+  [build] 10: 0x7fce2c9e1af6  [/opt/alt/alt-nodejs22/root/usr/bin/../lib/libnode.so.127]
+deploy.sh: line 239: 899212 Aborted                 (core dumped) NODE_ENV=production ./node_modules/.bin/next build --webpack 2>&1
+     899213 Done                    | sed 's/^/  [build] /'
+     899214 Done                    | tee -a "$LOG_FILE"
+[2026-06-25 13:51:03] [ ERR] Script gagal di baris 239
+[public_html/misipintar (22)] [smknwon2@tirtonirmolo misipintar]$

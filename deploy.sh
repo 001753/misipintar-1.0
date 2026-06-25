@@ -229,10 +229,12 @@ export RAYON_NUM_THREADS=1
 export TOKIO_WORKER_THREADS=1
 export UV_THREADPOOL_SIZE=1
 export NEXT_TELEMETRY_DISABLED=1
-# 512MB heap — cPanel shared hosting ulimit VM lebih ketat dari 1024MB.
-# Worker static generation mewarisi nilai ini; terlalu besar → SIGSEGV.
-# --max-semi-space-size=32 membatasi young gen heap agar total lebih hemat.
-export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=512 --max-semi-space-size=32"
+# 768MB heap — webpack compilation butuh ~600-700MB untuk app ini.
+# SIGSEGV yang dulu terjadi di static generation worker sudah diatasi via
+# lazy PrismaClient (Proxy pattern di src/lib/prisma.ts), bukan via limit memori.
+# Jadi limit bisa dinaikkan ke 768MB agar webpack tidak OOM.
+# --max-semi-space-size=32 tetap dibatasi agar young gen tidak rakus.
+export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=768 --max-semi-space-size=32"
 
 BUILD_START="$(date +%s)"
 NODE_ENV=production ./node_modules/.bin/next build --webpack 2>&1 | \
