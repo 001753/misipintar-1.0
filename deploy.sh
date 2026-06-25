@@ -176,12 +176,13 @@ if [ -d "node_modules" ]; then
   rm -rf node_modules
 fi
 
-eval "$NPM_BIN install" 2>&1 | sed 's/^/  [npm] /' | tee -a "$LOG_FILE"
+# --prefix memaksa npm menginstall ke ./node_modules lokal, bukan ke nodevenv cPanel
+eval "$NPM_BIN install --prefix '$APP_DIR'" 2>&1 | sed 's/^/  [npm] /' | tee -a "$LOG_FILE"
 
 # Verifikasi paket kritis
 if [ ! -d "node_modules/next" ]; then
   log_err "node_modules/next tidak ditemukan setelah install"
-  log_err "Coba jalankan manual: $NPM_BIN install"
+  log_err "Coba jalankan manual: $NPM_BIN install --prefix '$APP_DIR'"
   exit 1
 fi
 if [ ! -d "node_modules/.prisma" ]; then
@@ -227,7 +228,11 @@ backup_dist
 export RAYON_NUM_THREADS=1
 export TOKIO_WORKER_THREADS=1
 export UV_THREADPOOL_SIZE=1
-export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=1024"
+export NEXT_TELEMETRY_DISABLED=1
+# 512MB heap — cPanel shared hosting ulimit VM lebih ketat dari 1024MB.
+# Worker static generation mewarisi nilai ini; terlalu besar → SIGSEGV.
+# --max-semi-space-size=32 membatasi young gen heap agar total lebih hemat.
+export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=512 --max-semi-space-size=32"
 
 BUILD_START="$(date +%s)"
 NODE_ENV=production ./node_modules/.bin/next build --webpack 2>&1 | \
