@@ -1,9 +1,11 @@
+// @react-pdf/renderer dan @/lib/invoice-pdf di-import secara lazy (dynamic import
+// di dalam handler) — BUKAN static import di atas — karena keduanya adalah
+// ESM-only / heavy modules yang tidak boleh termuat saat build worker
+// mengevaluasi modul ini (mencegah SIGABRT/SIGSEGV).
+
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { prisma } from "@/lib/prisma";
-import { renderToBuffer } from "@react-pdf/renderer";
-import React from "react";
-import { InvoiceReceiptPDF, InvoiceReceiptData } from "@/lib/invoice-pdf";
 
 // GET /api/invoice/[invoiceId]/pdf
 // Auth-gated: only the invoice owner (parent of the family space) may download
@@ -23,7 +25,6 @@ export async function GET(
     return NextResponse.json({ error: "No family space" }, { status: 403 });
   }
 
-  // Load invoice with full chain: invoice → subscription → plan + familySpace → owner
   const invoice = await prisma.invoice.findUnique({
     where: { id: invoiceId },
     include: {
@@ -42,7 +43,6 @@ export async function GET(
     return NextResponse.json({ error: "Invoice tidak ditemukan" }, { status: 404 });
   }
 
-  // Security: invoice must belong to the requesting user's family space
   if (invoice.subscription.familySpace.id !== familySpaceId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -56,7 +56,6 @@ export async function GET(
     return NextResponse.json({ error: "User tidak ditemukan" }, { status: 404 });
   }
 
-  // Detect billing cycle from order ID prefix
   const billingCycle: "MONTHLY" | "YEARLY" | null =
     invoice.midtransOrderId?.includes("-YEARLY") ? "YEARLY" :
     invoice.midtransOrderId?.includes("-MONTHLY") ? "MONTHLY" :
@@ -65,33 +64,40 @@ export async function GET(
       ? "YEARLY"
       : "MONTHLY";
 
-  const data: InvoiceReceiptData = {
-    invoiceNumber: invoice.midtransOrderId ?? `INV-${invoice.id.slice(0, 8).toUpperCase()}`,
-    orderId: invoice.midtransOrderId ?? "",
-    issuedAt: invoice.createdAt.toISOString(),
-    paidAt: invoice.paidAt?.toISOString() ?? null,
-    status: invoice.status as string,
-    amount: invoice.amount,
-    currency: invoice.subscription.plan.currency,
-    paymentMethod: invoice.paymentMethod as string | null,
-    billingCycle,
-    customer: {
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      familySpaceName: invoice.subscription.familySpace.name,
-    },
-    plan: {
-      name: invoice.subscription.plan.name,
-      type: invoice.subscription.plan.type as string,
-    },
-    periodStart: invoice.subscription.currentPeriodStart?.toISOString() ?? null,
-    periodEnd: invoice.subscription.currentPeriodEnd?.toISOString() ?? null,
-  };
-
   try {
+    // Lazy import — mencegah ESM-only @react-pdf/renderer termuat saat build
+    const [React, { renderToBuffer }, { InvoiceReceiptPDF }] = await Promise.all([
+      import("react"),
+      import("@react-pdf/renderer"),
+      import("@/lib/invoice-pdf"),
+    ])
+
+    const data = {
+      invoiceNumber: invoice.midtransOrderId ?? `INV-${invoice.id.slice(0, 8).toUpperCase()}`,
+      orderId: invoice.midtransOrderId ?? "",
+      issuedAt: invoice.createdAt.toISOString(),
+      paidAt: invoice.paidAt?.toISOString() ?? null,
+      status: invoice.status as string,
+      amount: invoice.amount,
+      currency: invoice.subscription.plan.currency,
+      paymentMethod: invoice.paymentMethod as string | null,
+      billingCycle,
+      customer: {
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        familySpaceName: invoice.subscription.familySpace.name,
+      },
+      plan: {
+        name: invoice.subscription.plan.name,
+        type: invoice.subscription.plan.type as string,
+      },
+      periodStart: invoice.subscription.currentPeriodStart?.toISOString() ?? null,
+      periodEnd: invoice.subscription.currentPeriodEnd?.toISOString() ?? null,
+    };
+
     const buffer = await renderToBuffer(
-      React.createElement(InvoiceReceiptPDF, { data })
+      React.default.createElement(InvoiceReceiptPDF, { data })
     );
 
     const filename = `Kuitansi-${data.invoiceNumber}.pdf`;

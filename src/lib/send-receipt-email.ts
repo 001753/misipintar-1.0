@@ -3,11 +3,12 @@
  *
  * Called from the Midtrans webhook handler after a successful payment.
  * Must be non-fatal — all errors are caught and logged so webhook always returns 200.
+ *
+ * @react-pdf/renderer di-import secara lazy di dalam fungsi — BUKAN static import
+ * di atas — karena ia adalah ESM-only package yang tidak boleh termuat saat build
+ * worker mengevaluasi modul ini (mencegah SIGABRT/SIGSEGV).
  */
 
-import React from "react";
-import { renderToBuffer } from "@react-pdf/renderer";
-import { InvoiceReceiptPDF, InvoiceReceiptData } from "@/lib/invoice-pdf";
 import { sendMail } from "@/lib/mailer";
 import { buildReceiptEmailHtml, buildReceiptEmailText } from "@/lib/email-templates/receipt";
 
@@ -33,7 +34,6 @@ interface SendReceiptEmailParams {
 }
 
 export async function sendReceiptEmail(params: SendReceiptEmailParams): Promise<void> {
-  // Skip silently if no email address is available
   if (!params.customer.email) {
     console.warn(`[ReceiptEmail] No email for invoice ${params.invoiceNumber} — skipped`);
     return;
@@ -46,8 +46,14 @@ export async function sendReceiptEmail(params: SendReceiptEmailParams): Promise<
 
   const receiptUrl = `${appUrl}/dashboard/billing/invoice/${params.invoiceId}`;
 
-  // ── 1. Generate PDF buffer ────────────────────────────────
-  const pdfData: InvoiceReceiptData = {
+  // ── 1. Generate PDF buffer (lazy import — ESM-only, must not load at module level) ──
+  const [React, { renderToBuffer }, { InvoiceReceiptPDF }] = await Promise.all([
+    import("react"),
+    import("@react-pdf/renderer"),
+    import("@/lib/invoice-pdf"),
+  ])
+
+  const pdfData = {
     invoiceNumber: params.invoiceNumber,
     orderId: params.orderId,
     issuedAt: params.issuedAt.toISOString(),
@@ -69,12 +75,12 @@ export async function sendReceiptEmail(params: SendReceiptEmailParams): Promise<
   };
 
   const pdfBuffer = await renderToBuffer(
-    React.createElement(InvoiceReceiptPDF, { data: pdfData })
+    React.default.createElement(InvoiceReceiptPDF, { data: pdfData })
   );
 
   const pdfFilename = `Kuitansi-${params.invoiceNumber}.pdf`;
 
-  // ── 2. Build email content ────────────────────────────────
+  // ── 2. Build email content ─────────────────────────────────
   const emailData = {
     customerName: params.customer.name,
     customerEmail: params.customer.email,
