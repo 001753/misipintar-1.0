@@ -4,9 +4,12 @@
  *
  * Call POST once after deployment (e.g. from a startup script or cron ping).
  * Requires REDIS_URL to be configured — returns 503 otherwise.
+ *
+ * Import @/queues dilakukan secara lazy (dynamic import di dalam handler) —
+ * BUKAN static import di atas — untuk mencegah bullmq/@msgpackr-extract
+ * native addon termuat saat build worker mengevaluasi modul ini.
  */
 import { NextResponse } from 'next/server'
-import { interestQueue, subscriptionQueue } from '@/queues'
 import { redis } from '@/lib/redis'
 
 let workersStarted = false
@@ -18,6 +21,9 @@ export async function POST() {
       { status: 503 }
     )
   }
+
+  // Lazy import — mencegah bullmq native addon (@msgpackr-extract) termuat saat build
+  const { interestQueue, subscriptionQueue } = await import('@/queues')
 
   if (!interestQueue || !subscriptionQueue) {
     return NextResponse.json(
@@ -81,7 +87,17 @@ export async function POST() {
 }
 
 export async function GET() {
-  if (!redis || !interestQueue || !subscriptionQueue) {
+  if (!redis) {
+    return NextResponse.json({
+      status: 'disabled',
+      reason: 'Redis not configured',
+    })
+  }
+
+  // Lazy import — mencegah bullmq native addon (@msgpackr-extract) termuat saat build
+  const { interestQueue, subscriptionQueue } = await import('@/queues')
+
+  if (!interestQueue || !subscriptionQueue) {
     return NextResponse.json({
       status: 'disabled',
       reason: 'Redis not configured',
