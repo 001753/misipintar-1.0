@@ -23,6 +23,8 @@ const SERVER_EXTERNAL_PACKAGES = [
   "prisma",
   "@react-pdf/renderer",
   "nanoid",
+  "firebase-admin",
+  "ioredis",
 ] as const;
 
 const nextConfig: NextConfig = {
