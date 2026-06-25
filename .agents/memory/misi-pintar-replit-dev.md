@@ -1,12 +1,11 @@
 ---
 name: Misi Pintar Replit dev server
-description: Build toolchain decisions for Replit dev and cPanel production builds.
+description: Build toolchain decisions for Replit dev and cPanel production builds, including module audit results.
 ---
 
 ## Dev server (Replit)
 
 `npm run dev` → `next dev --port 5000` — **Turbopack** (default Next.js 16, no flag needed).
-Turbopack berjalan normal di Replit karena node_modules bukan symlink.
 
 ## Production / cPanel build
 
@@ -14,26 +13,49 @@ Turbopack berjalan normal di Replit karena node_modules bukan symlink.
 
 ### Root cause Turbopack panic di cPanel
 
-cPanel menginstall `node_modules` sebagai **symlink** yang menunjuk ke `~/nodevenv/<app>/`.
+cPanel menginstall `node_modules` sebagai **symlink** ke `~/nodevenv/<app>/`.
 Turbopack menolak symlink di luar project root → panic:
 `Symlink [project]/node_modules is invalid, it points out of the filesystem root`
-
-Webpack mengikuti symlink via resolusi Node.js standar → tidak ada masalah.
+Webpack mengikuti symlink via resolusi Node.js → tidak ada masalah.
 
 ### Mengapa TIDAK pakai .babelrc
 
-Sebelumnya `.babelrc` dengan `next/babel` preset ditambahkan sementara agar Babel menggantikan SWC.
-Ini **merusak Server Actions** karena Babel tidak handle `"use server"` directive dengan benar.
+`.babelrc` dengan `next/babel` men-disable SWC → merusak Server Actions.
+Solusi: `--webpack` tanpa `.babelrc` → webpack pakai SWC loader bawaan Next.js via `@swc/helpers`.
 
-Solusi: `--webpack` tanpa `.babelrc` → webpack tetap pakai **SWC loader bawaan Next.js**
-(via `@swc/helpers` yang sudah ada di dependencies). `RAYON_NUM_THREADS=1` membatasi
-thread Rust/SWC agar tidak memicu EAGAIN di shared hosting.
+## Konstanta SERVER_EXTERNAL_PACKAGES (next.config.ts)
 
-**Why:** Urutan prioritas: `--webpack` (no panic) > no `.babelrc` (SWC tetap aktif, Server Actions jalan).
+Satu sumber kebenaran untuk paket yang tidak boleh di-bundle, dipakai oleh
+`serverExternalPackages` (Turbopack) DAN `webpack.externals` (cPanel build):
 
-## serverExternalPackages + webpack externals
+```ts
+const SERVER_EXTERNAL_PACKAGES = [
+  "nodemailer",      // CJS-heavy
+  "bullmq",          // CJS + dynamic require
+  "@prisma/client",  // native .node binary
+  "prisma",          // native .node binary
+  "@react-pdf/renderer", // ESM-only (type:"module")
+  "nanoid",          // ESM-only (type:"module", v5+)
+] as const;
+```
 
-Paket CJS-heavy dikecualikan di dua tempat agar kompatibel dengan kedua bundler:
-- `serverExternalPackages: ["nodemailer", "bullmq"]` → berlaku untuk Turbopack (dev)
-- `webpack.externals += "bullmq"` → berlaku untuk webpack (cPanel build)
-- `config.parallelism = 1` di webpack config → batasi memory usage saat build di shared hosting
+**Why dual registration:** `serverExternalPackages` hanya berlaku untuk Turbopack.
+Webpack butuh entri terpisah di `webpack.externals`. Keduanya harus sinkron.
+
+## Audit paket ESM-only terverifikasi (tidak perlu di-external)
+
+Paket berikut BUKAN ESM-only — aman di-bundle webpack:
+- `firebase-admin` — CJS
+- `@aws-sdk/client-s3` — dual CJS/ESM
+- `ioredis` — CJS
+- `midtrans-client` — CJS
+- `preact` — dual
+- `recharts` — dual
+- `framer-motion` — dual
+- `date-fns` — dual
+- `zod` — dual
+
+## Fix src/lib/midtrans.ts
+
+`require("crypto")` inline dihapus → `import crypto from "crypto"` di top-level.
+**Why:** Dynamic `require()` di dalam fungsi bisa gagal di bundler mode tertentu.

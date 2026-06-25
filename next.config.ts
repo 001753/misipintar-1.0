@@ -11,6 +11,20 @@ const securityHeaders = [
   },
 ];
 
+// Satu sumber kebenaran untuk paket yang tidak boleh di-bundle:
+// - CJS-heavy / native binaries (Prisma, nodemailer, bullmq)
+// - ESM-only / type:"module" (nanoid v5, @react-pdf/renderer)
+// Dipakai oleh serverExternalPackages (Turbopack) DAN webpack externals.
+// Tambahkan paket baru di sini saja — keduanya otomatis sinkron.
+const SERVER_EXTERNAL_PACKAGES = [
+  "nodemailer",
+  "bullmq",
+  "@prisma/client",
+  "prisma",
+  "@react-pdf/renderer",
+  "nanoid",
+] as const;
+
 const nextConfig: NextConfig = {
   output: "standalone",
   devIndicators: false,
@@ -32,16 +46,18 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "qris.online" },
     ],
   },
-  serverExternalPackages: ["nodemailer", "bullmq"],
+  // Satu sumber kebenaran — dipakai oleh serverExternalPackages (Turbopack/dev)
+  // dan webpack externals (--webpack build untuk cPanel) sekaligus.
+  // Tambahkan paket baru di sini saja; keduanya otomatis sinkron.
+  serverExternalPackages: SERVER_EXTERNAL_PACKAGES,
   webpack: (config, { isServer }) => {
     // Batasi parallelism — cPanel shared hosting punya ulimit -u rendah
     config.parallelism = 1;
     if (isServer) {
-      // bullmq pakai CJS + dynamic require; jangan di-bundle webpack server
       const existing = config.externals || [];
       config.externals = Array.isArray(existing)
-        ? [...existing, "bullmq"]
-        : [existing, "bullmq"];
+        ? [...existing, ...SERVER_EXTERNAL_PACKAGES]
+        : [existing, ...SERVER_EXTERNAL_PACKAGES];
     }
     return config;
   },

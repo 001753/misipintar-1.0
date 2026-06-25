@@ -1,4 +1,5 @@
 import midtransClient from "midtrans-client";
+import crypto from "crypto";
 
 const isProduction = process.env.MIDTRANS_IS_PRODUCTION === "true";
 
@@ -20,7 +21,6 @@ export function validateMidtransSignature(
   grossAmount: string,
   signature: string
 ): boolean {
-  const crypto = require("crypto");
   const serverKey = process.env.MIDTRANS_SERVER_KEY!;
   const hash = crypto
     .createHash("sha512")
