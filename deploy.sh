@@ -42,7 +42,7 @@ DIST_BACKUP="$APP_DIR/.next_backup_$$"
 backup_protected() {
   mkdir -p "$PROTECT_DIR"
   for item in "${PROTECTED_FILES[@]}"; do
-    [ -e "$APP_DIR/$item" ] && cp -r "$APP_DIR/$item" "$PROTECT_DIR/$item"
+    [ -e "$APP_DIR/$item" ] && cp -r "$APP_DIR/$item" "$PROTECT_DIR/$item" || true
   done
 }
 
@@ -58,7 +58,7 @@ restore_protected() {
 
 # ── Backup & rollback .next/ ──────────────────────────────────────────────────
 backup_dist() {
-  [ -d "$APP_DIR/.next/standalone" ] && cp -r "$APP_DIR/.next" "$DIST_BACKUP"
+  [ -d "$APP_DIR/.next/standalone" ] && cp -r "$APP_DIR/.next" "$DIST_BACKUP" || true
 }
 
 rollback_dist() {
