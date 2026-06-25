@@ -45,6 +45,7 @@ run = ["bash", "-c", "npm run start"]
 [userenv.shared]
 MIDTRANS_IS_PRODUCTION = "false"
 TRUST_PROXY = "1"
-NEXTAUTH_URL = "https://mp.jobenapp.cloud"
-APP_URL = "https://mp.jobenapp.cloud"
+NEXTAUTH_URL = "https://8f0a9bc9-ea71-42cd-b831-f2da317277aa-00-252k5u34zr2f4.pike.replit.dev"
+APP_URL = "https://8f0a9bc9-ea71-42cd-b831-f2da317277aa-00-252k5u34zr2f4.pike.replit.dev"
 NEXTAUTH_URL_INTERNAL = "http://localhost:5000"
+NODE_ENV = "development"
