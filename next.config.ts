@@ -62,6 +62,7 @@ const nextConfig: NextConfig = {
     return config;
   },
   experimental: {
+    cpus: 1,
     serverActions: {
       allowedOrigins: ["*"],
     },
