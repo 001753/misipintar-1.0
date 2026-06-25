@@ -1,32 +1,29 @@
 ---
-# ─────────────────────────────────────────────────────────────────────────────
 # cPanel Git Version Control — Auto-Deploy Script
-# ─────────────────────────────────────────────────────────────────────────────
+# Diadopsi dari model deploy SKANSAGIRI
 #
-# File ini dijalankan OTOMATIS oleh cPanel setelah git pull dari GitHub.
-# Semua perintah dijalankan dari folder ROOT repository.
-#
-# PRASYARAT (lakukan SEKALI via SSH sebelum push pertama):
+# PRASYARAT (lakukan SEKALI via SSH):
 #   cd ~/public_html/misipintar
-#   cp .env.example .env && nano .env   # isi semua nilai wajib
+#   cp .env.example .env && nano .env
 #
 # SETUP cPanel:
 #   1. cPanel → Git Version Control → Create
 #      Clone URL      : https://github.com/USERNAME/REPO.git
 #      Repository Path: /home/USERNAME/public_html/misipintar
 #   2. cPanel → Node.js App → Create Application
-#      Application root       : public_html/misipintar
+#      Application root        : public_html/misipintar
 #      Application startup file: app.js
-#      Node.js version        : 22.x
-# ─────────────────────────────────────────────────────────────────────────────
+#      Node.js version         : 22.x
 
 deployment:
   tasks:
-    # deploy-cpanel.sh menangani segalanya:
-    #   1. Deteksi npm asli (bukan wrapper cPanel)
-    #   2. Install deps ke ./node_modules lokal
-    #   3. prisma generate
-    #   4. prisma migrate deploy
-    #   5. next build (tanpa prebuild hook — langsung ./node_modules/.bin/next build)
-    #   6. Copy public/ dan .next/static/ ke standalone output
-    - bash deploy-cpanel.sh
+    # deploy.sh menangani 8 langkah:
+    #   1. Validasi .env, DATABASE_URL, git
+    #   2. Backup .env dan app.js
+    #   3. git reset --hard (pull bersih)
+    #   4. Restore .env dan app.js
+    #   5. Deteksi npm sistem cPanel + npm install ke ./node_modules lokal
+    #   6. prisma generate + prisma migrate deploy
+    #   7. next build --webpack + verifikasi + copy static → rollback jika gagal
+    #   8. touch tmp/restart.txt → Passenger restart otomatis
+    - bash deploy.sh

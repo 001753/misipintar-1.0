@@ -1,0 +1,651 @@
+# PROMPT REPLIT AI — Adopsi Model Deploy SKANSAGIRI ke MisiPintar
+
+> **Cara pakai:** Copy seluruh teks di bawah garis `---` dan paste ke Replit AI.  
+> Jangan dimodifikasi kecuali bagian yang ditandai `[SESUAIKAN]`.
+
+---
+
+## MASTER CONTEXT — BACA SEBELUM APAPUN
+
+Kamu adalah engineer yang sedang mengerjakan proyek **MisiPintar**, sebuah aplikasi Next.js 16 (App Router, TypeScript) untuk manajemen keuangan keluarga berbasis gamifikasi. App ini di-host di **cPanel shared hosting** menggunakan **Phusion Passenger** sebagai Node.js runner.
+
+Kamu sudah punya referensi proyek lain bernama **SKANSAGIRI** yang model deploy-nya lebih matang dan robust. Tugas kamu adalah **mengadopsi pola deploy SKANSAGIRI ke MisiPintar** — bukan migrasi framework, melainkan peningkatan infrastruktur deploy saja.
+
+---
+
+## BAGIAN 1 — KONTEKS TEKNIS YANG WAJIB DIPAHAMI
+
+### 1.1 Stack MisiPintar (TIDAK BERUBAH)
+- **Framework**: Next.js 16.2.9 dengan App Router
+- **Runtime backend**: Next.js standalone (`output: "standalone"` di `next.config.ts`)
+- **Database**: PostgreSQL via Prisma v7 + `@prisma/adapter-pg`
+- **Auth**: NextAuth v5 beta
+- **Build tool dev**: Turbopack (default Next.js 16, `npm run dev`)
+- **Build tool cPanel**: WAJIB `--webpack` (lihat 1.3)
+- **Entry point Passenger**: `app.js` (CJS, bukan ESM)
+- **Port**: 5000
+
+### 1.2 Constraint cPanel Shared Hosting
+- Passenger menjalankan `app.js` sebagai entry point
+- `node_modules` bisa jadi symlink ke `~/nodevenv/` — ini masalah untuk Turbopack
+- `ulimit -u` rendah → thread harus dibatasi: `RAYON_NUM_THREADS=1`, `TOKIO_WORKER_THREADS=1`, `UV_THREADPOOL_SIZE=1`
+- RAM build dibatasi: `NODE_OPTIONS=--max-old-space-size=1024`
+- Restart Passenger: `touch tmp/restart.txt` (TIDAK perlu SSH/UI cPanel)
+
+### 1.3 Kenapa WAJIB `next build --webpack` di cPanel (JANGAN DIUBAH)
+Turbopack panic di cPanel karena `node_modules` adalah symlink ke `~/nodevenv/` di luar project root:
+```
+Error: Symlink [project]/node_modules is invalid, it points out of the filesystem root
+```
+Webpack mengikuti symlink via resolusi Node.js standar → tidak panic.
+**JANGAN tambahkan `.babelrc`** — akan men-disable SWC dan merusak Server Actions.
+
+### 1.4 npm cPanel: Harus Pakai Sistem npm (Bukan Wrapper)
+cPanel membungkus `npm` dengan wrapper yang menginstall paket ke `~/nodevenv/` bukan ke `./node_modules/` lokal. Harus deteksi dan pakai npm sistem:
+```bash
+NODE_MAJOR=$(node --version | grep -oP '^\d+')
+SYSTEM_NPM="/opt/cpanel/ea-nodejs${NODE_MAJOR}/bin/npm"
+```
+Jika tidak ditemukan, fallback ke `env -u npm_config_prefix -u NPM_CONFIG_PREFIX npm`.
+
+### 1.5 Paket yang WAJIB di `serverExternalPackages` (next.config.ts)
+Satu sumber kebenaran — dipakai `serverExternalPackages` (Turbopack) DAN `webpack.externals` (build cPanel):
+```typescript
+const SERVER_EXTERNAL_PACKAGES = [
+  "nodemailer",          // CJS-heavy
+  "bullmq",              // CJS + dynamic require
+  "@prisma/client",      // native .node binary
+  "prisma",              // native .node binary
+  "@react-pdf/renderer", // ESM-only (type:"module")
+  "nanoid",              // ESM-only (type:"module", v5+)
+] as const;
+```
+
+### 1.6 Prisma v7 — Quirk CLI
+Prisma v7 menghapus `url` dari `schema.prisma`. Untuk CLI:
+```bash
+./node_modules/.bin/prisma migrate deploy
+# url diambil dari DATABASE_URL env var yang sudah di-source dari .env
+```
+Bukan `--url` flag — cukup pastikan `DATABASE_URL` sudah ada di environment sebelum perintah dijalankan.
+
+### 1.7 Output Build Next.js Standalone
+Setelah `next build --webpack`, output penting ada di:
+```
+.next/
+  standalone/
+    server.js      ← entry point yang dijalankan oleh app.js
+    node_modules/  ← subset dependensi
+  static/          ← perlu dicopy ke .next/standalone/.next/static/
+public/            ← perlu dicopy ke .next/standalone/public/
+```
+Kedua copy ini WAJIB dilakukan setelah build atau static assets tidak akan tersaji.
+
+---
+
+## BAGIAN 2 — MODEL DEPLOY SKANSAGIRI (REFERENSI UNTUK DIADOPSI)
+
+SKANSAGIRI adalah proyek berbeda (Vite + Express + flat-file JSON) tapi pola deploy-nya lebih matang. Yang diadopsi **hanya pola/filosofinya**, bukan teknologinya.
+
+### 2.1 Filosofi 8-Langkah SKANSAGIRI
+```
+[1] Validasi prasyarat (.env, DATABASE_URL, git tersedia)
+[2] Backup file-file terlindungi sebelum git pull
+[3] git fetch + reset --hard origin/<branch>   ← pull bersih, tidak ada konflik merge
+[4] Restore file-file terlindungi (overwrite-proof dari git)
+[5] Deteksi npm sistem cPanel
+[6] npm install ke ./node_modules lokal
+[7] Build + verifikasi output + rollback otomatis jika gagal
+[8] touch tmp/restart.txt → Passenger restart tanpa UI cPanel
+```
+
+### 2.2 Fitur Unggulan SKANSAGIRI yang Harus Diadopsi
+
+**A. Backup & Restore File Terlindungi**
+```bash
+PROTECT_DIR="$APP_DIR/.deploy_protect_$$"
+backup_protected() {
+  mkdir -p "$PROTECT_DIR"
+  for item in "${PROTECTED_FILES[@]}"; do
+    [ -e "$APP_DIR/$item" ] && cp -r "$APP_DIR/$item" "$PROTECT_DIR/$item"
+  done
+}
+restore_protected() {
+  for item in "${PROTECTED_FILES[@]}"; do
+    local bak="$PROTECT_DIR/$item"
+    if [ -e "$bak" ]; then
+      rm -rf "$APP_DIR/$item"
+      cp -r "$bak" "$APP_DIR/$item"
+    fi
+  done
+}
+```
+
+**B. Rollback Build Otomatis**
+```bash
+DIST_BACKUP="$APP_DIR/.next_backup_$$"
+backup_dist() {
+  [ -d "$APP_DIR/.next/standalone" ] && cp -r "$APP_DIR/.next" "$DIST_BACKUP"
+}
+rollback_dist() {
+  if [ -d "$DIST_BACKUP" ]; then
+    rm -rf "$APP_DIR/.next"
+    cp -r "$DIST_BACKUP" "$APP_DIR/.next"
+  fi
+}
+```
+
+**C. ERR Trap untuk Auto-Rollback**
+```bash
+trap 'log_err "Gagal di baris $LINENO"; rollback_dist; restore_protected; cleanup' ERR
+trap 'rm -rf "$PROTECT_DIR" "$DIST_BACKUP"' EXIT
+```
+
+**D. Logging ke File dengan Rotation**
+```bash
+LOG_FILE="$APP_DIR/deploy.log"
+MAX_LOG_LINES=2000
+_log() {
+  local ts="$(date '+%Y-%m-%d %H:%M:%S')" lv="$1" col="$2" msg="$3"
+  printf "${CC}[%s]${CX} ${CB}%s${CX} ${col}%s${CX}\n" "$ts" "[$lv]" "$msg"
+  printf "[%s] [%s] %s\n" "$ts" "$lv" "$msg" >> "$LOG_FILE"
+}
+```
+
+**E. Verifikasi Post-Build**
+Cek file wajib ada, ukuran masuk akal, baru lanjut ke restart.
+
+**F. `app.js` dengan Logging + Error Capture Dini**
+Log ke `logs/app.log` dengan rotation 512KB, tangkap `uncaughtException` dan `unhandledRejection` sebelum server dimuat.
+
+---
+
+## BAGIAN 3 — TUGAS: FILE YANG HARUS DIBUAT/DIUBAH
+
+### TUGAS 3.1 — Buat `deploy.sh` (BARU, gantikan `deploy-cpanel.sh`)
+
+Buat file `deploy.sh` di root project dengan spesifikasi lengkap berikut:
+
+**Header & Konfigurasi:**
+```bash
+#!/usr/bin/env bash
+# deploy.sh — MisiPintar, diadopsi dari model SKANSAGIRI
+# Penggunaan: bash deploy.sh [branch]   default: main
+set -euo pipefail
+
+BRANCH="${1:-main}"
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_FILE="$APP_DIR/deploy.log"
+MAX_LOG_LINES=2000
+PROTECTED_FILES=(".env" "app.js")
+```
+
+**Warna terminal (cek TTY sebelum assign):**
+```bash
+if [ -t 1 ]; then
+  CR='\033[0;31m' CG='\033[0;32m' CY='\033[1;33m'
+  CC='\033[0;36m' CB='\033[1m' CX='\033[0m'
+else
+  CR='' CG='' CY='' CC='' CB='' CX=''
+fi
+```
+
+**Fungsi logging dengan dual output (stdout + file):**
+```bash
+_log() {
+  local ts="$(date '+%Y-%m-%d %H:%M:%S')" lv="$1" col="$2" msg="$3"
+  printf "${CC}[%s]${CX} ${CB}%s${CX} ${col}%s${CX}\n" "$ts" "[$lv]" "$msg"
+  printf "[%s] [%s] %s\n" "$ts" "$lv" "$msg" >> "$LOG_FILE"
+}
+log_ok()   { _log " OK " "$CG" "$1"; }
+log_info() { _log "INFO" ""   "$1"; }
+log_warn() { _log "WARN" "$CY" "$1"; }
+log_err()  { _log " ERR" "$CR" "$1"; }
+rotate_log() {
+  [ -f "$LOG_FILE" ] && [ "$(wc -l < "$LOG_FILE")" -gt "$MAX_LOG_LINES" ] && \
+    tail -n "$MAX_LOG_LINES" "$LOG_FILE" > "${LOG_FILE}.tmp" && \
+    mv "${LOG_FILE}.tmp" "$LOG_FILE" || true
+}
+```
+
+**Backup/restore helpers (sama persis dengan model SKANSAGIRI, adaptasi untuk MisiPintar):**
+- `backup_protected()` — backup `.env` dan `app.js` ke `$APP_DIR/.deploy_protect_$$`
+- `restore_protected()` — restore dari backup
+- `backup_dist()` — backup `.next/` lama ke `.next_backup_$$`
+- `rollback_dist()` — restore `.next/` dari backup
+- `cleanup()` — `rm -rf "$PROTECT_DIR" "$DIST_BACKUP"` — dipanggil oleh EXIT trap
+
+**Trap:**
+```bash
+trap 'log_err "Script gagal di baris $LINENO"; rollback_dist; restore_protected; cleanup' ERR
+trap 'cleanup' EXIT
+```
+
+**Urutan 8 langkah yang WAJIB diimplementasikan:**
+
+```
+[1/8] Validasi prasyarat
+```
+- `rotate_log`
+- Print banner deploy
+- Cek `.env` ada
+- Load .env (strip \r Windows CRLF dengan `sed 's/\r//'` ke tmpfile, lalu `set -a; source; set +a; rm tmpfile`)
+- Cek `DATABASE_URL` tidak kosong
+- Cek `git` tersedia (`command -v git`)
+- Simpan `COMMIT_BEFORE=$(git rev-parse HEAD | head -c 8)`
+
+```
+[2/8] Backup file terlindungi
+```
+- Panggil `backup_protected()`
+- Yang dilindungi: `.env`, `app.js`
+- `.cpanel.yml` TIDAK dilindungi — biarkan git update agar selalu sinkron
+
+```
+[3/8] Git pull bersih
+```
+```bash
+git fetch origin "$BRANCH" 2>&1 | sed 's/^/  [git] /' | tee -a "$LOG_FILE"
+git checkout "$BRANCH" 2>&1 | sed 's/^/  [git] /' | tee -a "$LOG_FILE"
+git reset --hard "origin/$BRANCH" 2>&1 | sed 's/^/  [git] /' | tee -a "$LOG_FILE"
+```
+- Setelah pull, langsung `restore_protected()` dan `rm -rf "$PROTECT_DIR"`
+- Simpan `COMMIT_AFTER=$(git rev-parse HEAD | head -c 8)`
+- Log: `Pull selesai: $COMMIT_BEFORE → $COMMIT_AFTER`
+
+```
+[4/8] Deteksi npm sistem cPanel
+```
+```bash
+detect_system_npm() {
+  NODE_MAJOR=$(node --version 2>/dev/null | grep -oP '^\d+' || echo "22")
+  SYSTEM_NPM="/opt/cpanel/ea-nodejs${NODE_MAJOR}/bin/npm"
+  if [ -f "$SYSTEM_NPM" ]; then echo "$SYSTEM_NPM"; return; fi
+  FOUND=$(ls /opt/cpanel/ea-nodejs*/bin/npm 2>/dev/null | sort -t's' -k2 -rn | head -1)
+  if [ -n "$FOUND" ]; then echo "$FOUND"; return; fi
+  echo "env -u npm_config_prefix -u NPM_CONFIG_PREFIX npm"
+}
+NPM_BIN=$(detect_system_npm)
+log_ok "npm: $NPM_BIN  |  Node: $(node --version)"
+```
+
+```
+[5/8] Install dependencies
+```
+- Hapus `node_modules` lama: `rm -rf node_modules`
+- `eval "$NPM_BIN install" 2>&1 | sed 's/^/  [npm] /' | tee -a "$LOG_FILE"`
+- Verifikasi paket kritis ada: cek `node_modules/next`, `node_modules/.prisma`
+- Jika tidak ada → `log_err` dan `exit 1`
+
+```
+[6/8] Prisma generate + migrate deploy
+```
+```bash
+./node_modules/.bin/prisma generate 2>&1 | sed 's/^/  [prisma] /' | tee -a "$LOG_FILE"
+log_ok "Prisma Client terbuat"
+
+./node_modules/.bin/prisma migrate deploy 2>&1 | sed 's/^/  [prisma] /' | tee -a "$LOG_FILE"
+log_ok "Migrations berhasil"
+```
+- Seed opsional: hanya jika `SEED_ADMIN_EMAIL` dan `SEED_ADMIN_PASSWORD` diset di `.env`
+- Jika seed dijalankan, tampilkan WARNING untuk hapus kedua var tsb dari `.env`
+
+```
+[7/8] Build Next.js + verifikasi + copy static
+```
+- Panggil `backup_dist()` untuk rollback jika gagal
+- Export env vars wajib:
+  ```bash
+  export RAYON_NUM_THREADS=1
+  export TOKIO_WORKER_THREADS=1
+  export UV_THREADPOOL_SIZE=1
+  export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=1024"
+  ```
+- Build command:
+  ```bash
+  BUILD_START="$(date +%s)"
+  NODE_ENV=production ./node_modules/.bin/next build --webpack 2>&1 | \
+    sed 's/^/  [build] /' | tee -a "$LOG_FILE"
+  BUILD_SECS="$(( $(date +%s) - BUILD_START ))"
+  ```
+- **Verifikasi post-build** (rollback jika gagal):
+  ```
+  Cek ada dan tidak kosong:
+    - .next/standalone/       (folder)
+    - .next/standalone/server.js  (file)
+    - .next/static/           (folder)
+  
+  Cek ukuran .next/standalone/server.js > 10KB
+  ```
+  Jika ada yang gagal → `log_err`, `rollback_dist()`, `exit 1`
+- Copy static assets ke standalone:
+  ```bash
+  cp -rf public/ .next/standalone/public/
+  mkdir -p .next/standalone/.next/static/
+  cp -rf .next/static/ .next/standalone/.next/static/
+  ```
+- `rm -rf "$DIST_BACKUP"` (cleanup backup jika build sukses)
+
+```
+[8/8] Restart Passenger
+```
+```bash
+mkdir -p "$APP_DIR/tmp"
+touch "$APP_DIR/tmp/restart.txt"
+log_ok "tmp/restart.txt diperbarui — Passenger akan restart"
+```
+
+**Banner penutup:**
+```
+══════════════════════════════
+DEPLOY BERHASIL ✓
+Commit  : $COMMIT_BEFORE → $COMMIT_AFTER
+Branch  : $BRANCH
+Build   : ${BUILD_SECS}s
+.env    : TIDAK DIUBAH
+app.js  : TIDAK DIUBAH (dari cPanel)
+Log     : $LOG_FILE
+══════════════════════════════
+Jika site belum merespons dalam 30 detik:
+  cPanel → Node.js App → klik RESTART manual.
+Test: curl https://[domain]/api/health
+══════════════════════════════
+```
+
+---
+
+### TUGAS 3.2 — Update `app.js` (TAMBAHKAN logging, PERTAHANKAN struktur CJS)
+
+`app.js` saat ini hanya `require(standaloneServer)` tanpa logging. Update dengan menambahkan:
+
+**Logging ke file dengan rotation (diadopsi dari SKANSAGIRI):**
+```javascript
+"use strict";
+
+const path = require("path");
+const fs   = require("fs");
+
+// ── Logger dengan rotation ─────────────────────────────────────────────────
+const LOG_DIR  = path.join(__dirname, "logs");
+const LOG_FILE = path.join(LOG_DIR, "app.log");
+const LOG_OLD  = path.join(LOG_DIR, "app.log.1");
+const MAX_BYTES = 512 * 1024; // rotate setiap 512 KB
+
+function writeLog(level, message) {
+  const line = `${new Date().toISOString()} [${level}] ${message}\n`;
+  (level === "ERROR" ? process.stderr : process.stdout).write(line);
+  try {
+    if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
+    if (fs.existsSync(LOG_FILE) && fs.statSync(LOG_FILE).size > MAX_BYTES) {
+      if (fs.existsSync(LOG_OLD)) {
+        try { fs.renameSync(LOG_OLD, path.join(LOG_DIR, "app.log.2")); } catch {}
+      }
+      fs.renameSync(LOG_FILE, LOG_OLD);
+    }
+    fs.appendFileSync(LOG_FILE, line, "utf-8");
+  } catch (e) {
+    process.stderr.write(`[LOG-WRITE-FAIL] ${e.message}\n`);
+  }
+}
+```
+
+**Error capture dini (SEBELUM require apapun):**
+```javascript
+process.on("uncaughtException", (err) => {
+  writeLog("ERROR", `Uncaught exception: ${err.stack || err.message}`);
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+  writeLog("ERROR", `Unhandled rejection: ${reason instanceof Error ? reason.stack : String(reason)}`);
+  process.exit(1);
+});
+```
+
+**Load .env dan log startup:**
+```javascript
+require("dotenv").config({ path: path.join(__dirname, ".env") });
+
+writeLog("INFO", `Starting — NODE_ENV=${process.env.NODE_ENV || "production"}  Node=${process.version}  PID=${process.pid}`);
+```
+
+**Load standalone server dengan error handling:**
+```javascript
+const standaloneServer = path.join(__dirname, ".next", "standalone", "server.js");
+
+if (!fs.existsSync(standaloneServer)) {
+  writeLog("ERROR", `Build belum tersedia. Jalankan: bash deploy.sh`);
+  writeLog("ERROR", `Path: ${standaloneServer}`);
+  process.exit(1);
+}
+
+try {
+  require(standaloneServer);
+  writeLog("INFO", ".next/standalone/server.js loaded — Next.js server starting");
+} catch (err) {
+  writeLog("ERROR", `Gagal load standalone server:\n${err.stack || err.message}`);
+  process.exit(1);
+}
+```
+
+**PENTING:** `app.js` harus tetap CJS (`"use strict"`, `require`, `module.exports`). MisiPintar TIDAK punya `"type": "module"` di `package.json`. Berbeda dengan SKANSAGIRI yang ESM.
+
+---
+
+### TUGAS 3.3 — Update `.cpanel.yml` (GANTI referensi script)
+
+Update `.cpanel.yml` — ganti `bash deploy-cpanel.sh` menjadi `bash deploy.sh`, dan update komentar untuk menjelaskan 8 langkah baru:
+
+```yaml
+---
+# cPanel Git Version Control — Auto-Deploy Script
+# Diadopsi dari model deploy SKANSAGIRI
+#
+# PRASYARAT (lakukan SEKALI via SSH):
+#   cd ~/public_html/misipintar
+#   cp .env.example .env && nano .env
+#
+# SETUP cPanel:
+#   1. cPanel → Git Version Control → Create
+#      Clone URL      : https://github.com/USERNAME/REPO.git
+#      Repository Path: /home/USERNAME/public_html/misipintar
+#   2. cPanel → Node.js App → Create Application
+#      Application root        : public_html/misipintar
+#      Application startup file: app.js
+#      Node.js version         : 22.x
+
+deployment:
+  tasks:
+    # deploy.sh menangani 8 langkah:
+    #   1. Validasi .env, DATABASE_URL, git
+    #   2. Backup .env dan app.js
+    #   3. git reset --hard (pull bersih)
+    #   4. Restore .env dan app.js
+    #   5. Deteksi npm sistem cPanel + npm install ke ./node_modules lokal
+    #   6. prisma generate + prisma migrate deploy
+    #   7. next build --webpack + verifikasi + copy static → rollback jika gagal
+    #   8. touch tmp/restart.txt → Passenger restart otomatis
+    - bash deploy.sh
+```
+
+---
+
+### TUGAS 3.4 — Update `package.json` (TAMBAHKAN script deploy)
+
+Tambahkan script berikut di bagian `"scripts"` dalam `package.json`:
+
+```json
+"deploy": "bash deploy.sh",
+"deploy:branch": "bash deploy.sh"
+```
+
+Script yang sudah ada (`dev`, `build`, `build:prod`, `build:cpanel`, `start`, dll) **JANGAN DIUBAH atau DIHAPUS**.
+
+---
+
+### TUGAS 3.5 — Update `.gitignore` (TAMBAHKAN file deploy sementara)
+
+Tambahkan baris berikut ke `.gitignore` (jika belum ada):
+
+```gitignore
+# Deploy artifacts
+logs/
+deploy.log
+.deploy_protect_*/
+.next_backup_*/
+tmp/
+```
+
+---
+
+### TUGAS 3.6 — Update `.agents/memory/MEMORY.md` (TAMBAHKAN entri baru)
+
+Tambahkan baris berikut ke `MEMORY.md`:
+
+```markdown
+- [Deploy model SKANSAGIRI](deploy-model.md) — deploy.sh 8-langkah: backup/restore .env+app.js, git reset --hard, npm sistem cPanel, rollback .next, Passenger restart via tmp/restart.txt.
+```
+
+---
+
+### TUGAS 3.7 — Buat `.agents/memory/deploy-model.md` (FILE MEMORY BARU)
+
+```markdown
+---
+name: MisiPintar deploy model (adopsi SKANSAGIRI)
+description: Pola deploy 8-langkah untuk cPanel + Phusion Passenger. Idempoten — aman dijalankan berulang.
+---
+
+## Script utama: deploy.sh
+
+Jalankan dari root project:
+```bash
+bash deploy.sh          # deploy branch main
+bash deploy.sh develop  # deploy branch lain
+```
+
+## 8 Langkah
+
+1. Validasi prasyarat (.env, DATABASE_URL, git)
+2. Backup .env dan app.js ke .deploy_protect_$PID/
+3. git reset --hard origin/<branch>  (pull bersih)
+4. Restore .env dan app.js
+5. Deteksi npm sistem cPanel (/opt/cpanel/ea-nodejsNN/bin/npm)
+6. npm install ke ./node_modules lokal (hapus node_modules lama dulu)
+7. prisma generate → prisma migrate deploy → next build --webpack → verifikasi → copy static
+8. touch tmp/restart.txt → Passenger restart otomatis
+
+## File yang TIDAK pernah di-overwrite oleh deploy
+
+- `.env` — secrets
+- `app.js` — entry point versi cPanel
+
+## Rollback otomatis
+
+Jika langkah 7 gagal, `.next/` lama dipulihkan dari `.next_backup_$$`.
+Passenger di-restart dengan versi lama → site tetap online.
+
+## Logging
+
+- `deploy.log` — log setiap run deploy
+- `logs/app.log` — log runtime Passenger (rotation 512KB)
+- `logs/app.log.1`, `logs/app.log.2` — arsip rotation
+
+## Build flag wajib cPanel
+
+```bash
+export RAYON_NUM_THREADS=1
+export TOKIO_WORKER_THREADS=1
+export UV_THREADPOOL_SIZE=1
+export NODE_OPTIONS=--max-old-space-size=1024
+next build --webpack
+```
+
+Turbopack DILARANG di cPanel — symlink nodevenv → panic.
+```
+
+---
+
+## BAGIAN 4 — BATASAN KERAS (JANGAN LAKUKAN INI)
+
+❌ **JANGAN** menghapus atau mengubah `deploy-cpanel.sh` yang lama — rename saja menjadi `deploy-cpanel.sh.bak` jika mau, tapi jangan hapus.
+
+❌ **JANGAN** mengubah `next.config.ts` — sudah benar. Konstanta `SERVER_EXTERNAL_PACKAGES` harus tetap ada.
+
+❌ **JANGAN** menambahkan `.babelrc` atau `babel.config.js` — akan merusak Server Actions.
+
+❌ **JANGAN** mengubah `package.json` dependencies — hanya tambahkan script deploy.
+
+❌ **JANGAN** mengubah `prisma/schema.prisma` — sudah benar untuk Prisma v7.
+
+❌ **JANGAN** menggunakan `--webpack` flag saat `npm run dev` di Replit — hanya untuk build cPanel.
+
+❌ **JANGAN** mengubah `app.js` menjadi ESM (`import`/`export`) — MisiPintar pakai CJS. SKANSAGIRI ESM karena punya `"type":"module"` di package.json-nya, MisiPintar tidak.
+
+❌ **JANGAN** menyalin `.htaccess` dari SKANSAGIRI ke MisiPintar — MisiPintar tidak butuh `.htaccess` karena routing ditangani Next.js, bukan LiteSpeed.
+
+❌ **JANGAN** mengubah port dari 5000.
+
+---
+
+## BAGIAN 5 — URUTAN PENGERJAAN YANG BENAR
+
+Kerjakan dalam urutan ini persis:
+
+1. Buat `deploy.sh` (tugas 3.1)
+2. Update `app.js` (tugas 3.2)
+3. Update `.cpanel.yml` (tugas 3.3)
+4. Update `package.json` — tambah scripts saja (tugas 3.4)
+5. Update `.gitignore` (tugas 3.5)
+6. Update `.agents/memory/MEMORY.md` (tugas 3.6)
+7. Buat `.agents/memory/deploy-model.md` (tugas 3.7)
+
+Setelah semua file selesai, lakukan **verifikasi akhir**:
+- Pastikan `deploy.sh` punya `chmod +x` — atau instruksikan user untuk `chmod +x deploy.sh`
+- Pastikan `app.js` tidak ada syntax `import` atau `export` (harus CJS murni)
+- Pastikan `.cpanel.yml` memanggil `bash deploy.sh` (bukan `deploy-cpanel.sh`)
+- Pastikan `logs/` ada di `.gitignore`
+
+---
+
+## BAGIAN 6 — VERIFIKASI AKHIR YANG HARUS KAU LAKUKAN
+
+Setelah semua file dibuat, tampilkan daftar checklist berikut dan konfirmasi setiap item:
+
+```
+✅ deploy.sh — ada, executable, punya 8 langkah
+✅ app.js — CJS, ada writeLog(), ada uncaughtException handler, require(standaloneServer)
+✅ .cpanel.yml — memanggil bash deploy.sh
+✅ package.json — ada script "deploy"
+✅ .gitignore — ada logs/, deploy.log, .deploy_protect_*/, .next_backup_*/, tmp/
+✅ .agents/memory/MEMORY.md — ada entri deploy-model.md
+✅ .agents/memory/deploy-model.md — ada
+✅ deploy-cpanel.sh — TIDAK dihapus (masih ada sebagai referensi)
+✅ next.config.ts — TIDAK DIUBAH
+✅ package.json dependencies — TIDAK DIUBAH
+```
+
+---
+
+## BAGIAN 7 — CATATAN PENTING UNTUK DEPLOYMENT PERTAMA
+
+Informasikan ke user bahwa setelah PR/push pertama dengan perubahan ini, langkah manual berikut diperlukan di server cPanel **SEKALI SAJA**:
+
+1. SSH ke server:
+   ```bash
+   cd ~/public_html/misipintar   # atau path deployment kamu
+   git pull origin main          # pull pertama manual
+   chmod +x deploy.sh            # beri izin eksekusi
+   bash deploy.sh                # deploy pertama
+   ```
+
+2. Setelah itu, setiap push ke GitHub akan otomatis trigger `.cpanel.yml` → `bash deploy.sh`.
+
+3. Untuk deploy manual kapanpun:
+   ```bash
+   bash deploy.sh           # deploy main
+   bash deploy.sh develop   # deploy branch lain
+   ```
+
+---
+
+*Prompt ini berdasarkan analisis source code MisiPintar v1.0 dan SKANSAGIRI. Jangan ubah constraint teknis tanpa memahami root cause-nya (terutama soal Turbopack + cPanel nodevenv symlink).*

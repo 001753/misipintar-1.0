@@ -44,3 +44,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Deploy artifacts
+logs/
+deploy.log
+.deploy_protect_*/
+.next_backup_*/
+tmp/
