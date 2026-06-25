@@ -4,3 +4,4 @@
 - [Turbopack serverExternalPackages](turbopack-server-external.md) — CJS-heavy Node packages (nodemailer, bullmq) must be in `serverExternalPackages` in next.config.ts or Turbopack fails to resolve them.
 - [Misi Pintar module audit](misi-pintar-replit-dev.md) — ESM-only: @react-pdf/renderer, nanoid v5. Native: @prisma/client, prisma. All in SERVER_EXTERNAL_PACKAGES constant in next.config.ts.
 - [Deploy model SKANSAGIRI](deploy-model.md) — deploy.sh 8-langkah: backup/restore .env+app.js, git reset --hard, npm sistem cPanel, rollback .next, Passenger restart via tmp/restart.txt.
+- [cPanel build SIGSEGV fix](cpanel-sigsegv.md) — instrumentation.ts must guard against NEXT_PHASE=phase-production-build or BullMQ/Firebase signal handlers crash the build worker.

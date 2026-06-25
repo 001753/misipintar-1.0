@@ -5,6 +5,10 @@
  */
 
 export async function register() {
+  // Jangan jalankan workers saat build phase — mencegah SIGSEGV di cPanel
+  // karena BullMQ/Firebase mendaftarkan signal handler di worker process next build
+  if (process.env.NEXT_PHASE === 'phase-production-build') return
+
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     // Cleanup cron: delete LoginAttempt older than 30 days
     const { startCleanupLoginAttemptsWorker } = await import(
