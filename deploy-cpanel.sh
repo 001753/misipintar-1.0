@@ -128,18 +128,17 @@ else
 fi
 
 # ── Step 5: Build Next.js ─────────────────────────────────────────────────────
-log "[5/6] Build Next.js (standalone, webpack + Babel)..."
+log "[5/6] Build Next.js (standalone, Turbopack)..."
 #
-# Di shared hosting (cPanel), SWC/Rust tidak bisa spawn thread pool karena
-# ulimit -u rendah → EAGAIN. Babel (JS murni) tidak butuh Rust thread sama sekali.
-# .babelrc dibuat sementara hanya untuk proses build ini, lalu dihapus.
+# RAYON_NUM_THREADS=1 membatasi thread Rust/SWC agar tidak memicu EAGAIN
+# di shared hosting yang punya ulimit -u rendah.
+# Tidak perlu .babelrc atau --webpack — SWC/Turbopack bawaan Next.js 16 sudah
+# handle semua paket via serverExternalPackages di next.config.ts.
 #
-echo '{"presets":["next/babel"]}' > .babelrc
 export RAYON_NUM_THREADS=1
 export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=1024"
-./node_modules/.bin/next build --webpack
+./node_modules/.bin/next build
 BUILD_RC=$?
-rm -f .babelrc
 [ $BUILD_RC -ne 0 ] && err "Build gagal (exit $BUILD_RC)"
 ok "Build berhasil"
 
