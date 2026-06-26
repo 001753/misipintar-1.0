@@ -1,0 +1,121 @@
+[public_html/misipintar (22)] [smknwon2@tirtonirmolo misipintar]$ git pull && bash deploy.sh
+remote: Enumerating objects: 5, done.
+remote: Counting objects: 100% (5/5), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 3 (delta 2), reused 3 (delta 2), pack-reused 0 (from 0)
+Unpacking objects: 100% (3/3), 575 bytes | 31.00 KiB/s, done.
+From https://github.com/001753/misipintar-1.0
+   ab5e6fe..f7895dd  main       -> origin/main
+Updating ab5e6fe..f7895dd
+Fast-forward
+ next.config.ts | 1 +
+ 1 file changed, 1 insertion(+)
+══════════════════════════════════════════════════════
+   MISI PINTAR — Deploy Script (model SKANSAGIRI)
+   Branch : main
+   Dir    : /home/smknwon2/public_html/misipintar
+══════════════════════════════════════════════════════
+[2026-06-26 19:35:58] [INFO] [1/8] Validasi prasyarat...
+[2026-06-26 19:35:58] [ OK ] .env ditemukan
+[2026-06-26 19:35:58] [ OK ] DATABASE_URL tersedia
+[2026-06-26 19:35:58] [ OK ] git tersedia: git version 2.48.2
+[2026-06-26 19:35:58] [INFO] Commit sekarang: f7895dd5
+[2026-06-26 19:35:58] [INFO] [2/8] Backup file terlindungi (.env, app.js)...
+[2026-06-26 19:35:58] [ OK ] Backup selesai → /home/smknwon2/public_html/misipintar/.deploy_protect_2701637
+[2026-06-26 19:35:58] [INFO] [3/8] Git pull bersih dari origin/main...
+  [git] From https://github.com/001753/misipintar-1.0
+  [git]  * branch            main       -> FETCH_HEAD
+  [git] Already on 'main'
+  [git] Your branch is up to date with 'origin/main'.
+  [git] HEAD is now at f7895dd Add Turbopack configuration to Next.js settings
+[2026-06-26 19:35:58] [ OK ] Pull selesai: f7895dd5 → f7895dd5
+[2026-06-26 19:35:58] [INFO] [4/8] Deteksi npm sistem cPanel...
+[2026-06-26 19:36:00] [ OK ] npm: env -u npm_config_prefix -u NPM_CONFIG_PREFIX npm  |  Node: v22.22.3
+[2026-06-26 19:36:00] [INFO] [5/8] Install dependencies ke ./node_modules lokal...
+[2026-06-26 19:36:00] [WARN] Hapus node_modules lama...
+  [npm]
+  [npm] up to date, audited 510 packages in 8s
+  [npm]
+  [npm] 64 packages are looking for funding
+  [npm]   run `npm fund` for details
+  [npm]
+  [npm] 13 vulnerabilities (12 moderate, 1 high)
+  [npm]
+  [npm] To address issues that do not require attention, run:
+  [npm]   npm audit fix
+  [npm]
+  [npm] To address all issues (including breaking changes), run:
+  [npm]   npm audit fix --force
+  [npm]
+  [npm] Run `npm audit` for details.
+[2026-06-26 19:36:09] [ OK ] Dependencies terinstall di ./node_modules
+[2026-06-26 19:36:09] [INFO] [6/8] Prisma generate + migrate deploy...
+  [prisma] warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+  [prisma] For more information, see: https://pris.ly/prisma-config
+  [prisma]
+  [prisma] Environment variables loaded from .env
+  [prisma] Prisma schema loaded from prisma/schema.prisma
+  [prisma]
+  [prisma] ✔ Generated Prisma Client (v6.19.3, engine=binary) to ./../../nodevenv/public_html/misipintar/22/lib/node_modules/@prisma/client in 1.91s
+  [prisma]
+  [prisma] Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+  [prisma]
+  [prisma] Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+  [prisma]
+[2026-06-26 19:36:19] [ OK ] Prisma Client terbuat
+  [prisma] warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+  [prisma] For more information, see: https://pris.ly/prisma-config
+  [prisma]
+  [prisma] Environment variables loaded from .env
+  [prisma] Prisma schema loaded from prisma/schema.prisma
+  [prisma] Datasource "db": PostgreSQL database "smknwon2_misipintar_db", schema "public" at "127.0.0.1:5432"
+  [prisma]
+  [prisma] 1 migration found in prisma/migrations
+  [prisma]
+  [prisma]
+  [prisma] No pending migrations to apply.
+[2026-06-26 19:36:23] [ OK ] Migrations berhasil
+[2026-06-26 19:36:23] [WARN] SEED_ADMIN_EMAIL tidak diset — seeding dilewati
+[2026-06-26 19:36:23] [INFO] [7/8] Build Next.js + verifikasi + copy static...
+[2026-06-26 19:36:23] [INFO] Build heap 768MB...
+  [build] ▲ Next.js 16.2.9 (Turbopack)
+  [build] - Environments: .env
+  [build] - Experiments (use with caution):
+  [build]   · cpus: 1
+  [build]   · serverActions
+  [build]
+  [build]   Creating an optimized production build ...
+  [build]
+  [build] -----
+  [build] FATAL: An unexpected Turbopack error occurred. A panic log has been written to /tmp/next-panic-168a861140e16fc8a205589f296b8292.log.
+  [build]
+  [build] To help make Turbopack better, report this error by clicking here: https://bugs.nextjs.org/search?category=turbopack-error-report&title=Turbopack%20Error%3A%20Symlink%20%5Bproject%5D%2Fnode_modules%20is%20invalid%2C%20it%20points%20out%20of%20the%20filesystem%20root&body=Turbopack%20version%3A%20%60f37fad94%60%0ANext.js%20version%3A%20%600.0.0%60%0A%0AError%20message%3A%0A%60%60%60%0ASymlink%20%5Bproject%5D%2Fnode_modules%20is%20invalid%2C%20it%20points%20out%20of%20the%20filesystem%20root%0A%0ADebug%20info%3A%0A-%20Execution%20of%20get_all_written_entrypoints_with_issues_operation%20failed%0A-%20Execution%20of%20EntrypointsOperation%3A%3Anew%20failed%0A-%20Execution%20of%20all_entrypoints_write_to_disk_operation%20failed%0A-%20Execution%20of%20output_assets_operation%20failed%0A-%20Execution%20of%20Project%3A%3Aget_all_endpoint_groups_with_app_route_filter%20failed%0A-%20Execution%20of%20Project%3A%3Aentrypoints_with_app_route_filter%20failed%0A-%20Execution%20of%20AppProject%3A%3Aroutes_with_filter%20failed%0A-%20Execution%20of%20directory_tree_to_entrypoints_internal%20failed%0A-%20Execution%20of%20directory_tree_to_loader_tree%20failed%0A-%20Execution%20of%20try_get_next_package%20failed%0A-%20Execution%20of%20%2AResolveResult%3A%3Afirst_source%20failed%0A-%20Execution%20of%20resolve%20failed%0A-%20Execution%20of%20resolve_internal%20failed%0A-%20Execution%20of%20find_package%20failed%0A-%20Symlink%20%5Bproject%5D%2Fnode_modules%20is%20invalid%2C%20it%20points%20out%20of%20the%20filesystem%20root%0A%60%60%60&labels=Turbopack,Turbopack%20Panic%20Backtrace
+  [build] -----
+  [build]
+  [build]
+  [build] > Build error occurred
+  [build] Error [TurbopackInternalError]: Symlink [project]/node_modules is invalid, it points out of the filesystem root
+  [build]
+  [build] Debug info:
+  [build] - Execution of get_all_written_entrypoints_with_issues_operation failed
+  [build] - Execution of EntrypointsOperation::new failed
+  [build] - Execution of all_entrypoints_write_to_disk_operation failed
+  [build] - Execution of output_assets_operation failed
+  [build] - Execution of Project::get_all_endpoint_groups_with_app_route_filter failed
+  [build] - Execution of Project::entrypoints_with_app_route_filter failed
+  [build] - Execution of AppProject::routes_with_filter failed
+  [build] - Execution of directory_tree_to_entrypoints_internal failed
+  [build] - Execution of directory_tree_to_loader_tree failed
+  [build] - Execution of try_get_next_package failed
+  [build] - Execution of *ResolveResult::first_source failed
+  [build] - Execution of resolve failed
+  [build] - Execution of resolve_internal failed
+  [build] - Execution of find_package failed
+  [build] - Symlink [project]/node_modules is invalid, it points out of the filesystem root
+  [build]     at ignore-listed frames {
+  [build]   type: 'TurbopackInternalError',
+  [build]   location: undefined
+  [build] }
+[2026-06-26 19:36:26] [ ERR] Script gagal di baris 254
+[2026-06-26 19:36:26] [ ERR] Build gagal (exit 1) — bukan OOM, tidak retry
+[public_html/misipintar (22)] [smknwon2@tirtonirmolo misipintar]$
