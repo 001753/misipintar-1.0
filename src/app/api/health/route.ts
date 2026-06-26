@@ -3,6 +3,19 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
+function formatUptime(seconds: number): string {
+  const d = Math.floor(seconds / 86400)
+  const h = Math.floor((seconds % 86400) / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+  const parts: string[] = []
+  if (d > 0) parts.push(`${d}d`)
+  if (h > 0) parts.push(`${h}h`)
+  if (m > 0) parts.push(`${m}m`)
+  parts.push(`${s}s`)
+  return parts.join(' ')
+}
+
 export async function GET() {
   const start = Date.now()
 
@@ -36,17 +49,51 @@ export async function GET() {
     }
   }
 
+  // ── Memory usage ────────────────────────────────────────────────────────────
+  const mem = process.memoryUsage()
+  const memory = {
+    rss:       `${Math.round(mem.rss       / 1024 / 1024)} MB`,
+    heapUsed:  `${Math.round(mem.heapUsed  / 1024 / 1024)} MB`,
+    heapTotal: `${Math.round(mem.heapTotal / 1024 / 1024)} MB`,
+    external:  `${Math.round(mem.external  / 1024 / 1024)} MB`,
+  }
+
+  // ── App version dari package.json ──────────────────────────────────────────
+  let appVersion = 'unknown'
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pkg = require('../../../../package.json') as { version?: string }
+    appVersion = pkg.version ?? 'unknown'
+  } catch {
+    // tidak kritis
+  }
+
   const allOk = Object.values(checks).every((c) => c.status === 'ok')
   const totalMs = Date.now() - start
 
   const body = {
     status: allOk ? 'ok' : 'degraded',
-    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    uptime: {
+      seconds: Math.floor(process.uptime()),
+      human:   formatUptime(process.uptime()),
+    },
     totalMs,
     checks,
-    node: process.version,
-    env: process.env.NODE_ENV ?? 'unknown',
+    system: {
+      node:   process.version,
+      pid:    process.pid,
+      memory,
+      env:    process.env.NODE_ENV ?? 'unknown',
+    },
+    app: {
+      name:    'misi-pintar',
+      version: appVersion,
+    },
   }
 
-  return NextResponse.json(body, { status: allOk ? 200 : 503 })
+  return NextResponse.json(body, {
+    status: allOk ? 200 : 503,
+    headers: { 'Cache-Control': 'no-store' },
+  })
 }
