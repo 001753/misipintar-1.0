@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import ThemeToggle from '@/components/ThemeToggle'
 
 export default function AuthLayout({

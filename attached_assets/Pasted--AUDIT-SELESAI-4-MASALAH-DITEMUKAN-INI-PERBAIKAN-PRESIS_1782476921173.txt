@@ -1,0 +1,126 @@
+# AUDIT SELESAI — 4 MASALAH DITEMUKAN, INI PERBAIKAN PRESISI FINAL
+# Baca seluruh instruksi sebelum menyentuh file apapun.
+#
+# TEMUAN DARI AUDIT KODE LENGKAP:
+#
+# 1. deploy.sh BARIS 253: masih ada flag --webpack di next build
+#    → Ini yang menyebabkan crash. Package.json sudah bersih, deploy.sh BELUM.
+#
+# 2. 7 halaman 'use client' punya force-dynamic yang TIDAK EFEKTIF
+#    → force-dynamic hanya berlaku di Server Component.
+#    → Di client component, export ini diabaikan Next.js.
+#    → Solusi: pindahkan force-dynamic ke layout yang menaunginya.
+#
+# 3. 3 layout tanpa force-dynamic:
+#    src/app/(auth)/layout.tsx
+#    src/app/forgot-password/layout.tsx
+#    src/app/adm-panel/layout.tsx
+#
+# 4. next: "^16.2.9" belum diganti di package.json
+
+## FASE 1 — KONFIRMASI AUDIT (jalankan, laporkan)
+
+grep -n "next build\|--webpack" deploy.sh
+node -e "console.log(require('./node_modules/next/package.json').version)"
+
+## FASE 2 — TIGA PERBAIKAN FILE (tidak lebih)
+
+### Fix 1: deploy.sh — hapus --webpack dari baris 253
+
+CARI (persis):
+  NEXT_BUILD=1 NODE_ENV=production ./node_modules/.bin/next build --webpack 2>&1 | \
+
+GANTI DENGAN:
+  NEXT_BUILD=1 NODE_ENV=production ./node_modules/.bin/next build 2>&1 | \
+
+Hanya hapus " --webpack" — tidak ada perubahan lain di deploy.sh.
+
+### Fix 2: Tambah force-dynamic ke 3 layout yang kurang
+
+File: src/app/(auth)/layout.tsx
+Tambahkan baris ini SEBELUM baris `import` pertama:
+  export const dynamic = 'force-dynamic'
+
+File: src/app/forgot-password/layout.tsx
+Tambahkan baris ini SEBELUM baris `export default`:
+  export const dynamic = 'force-dynamic'
+
+File: src/app/adm-panel/layout.tsx
+Tambahkan baris ini SETELAH baris `export const metadata = {...}`:
+  export const dynamic = 'force-dynamic'
+
+### Fix 3: Hapus force-dynamic dari 7 client component page.tsx
+
+force-dynamic di client component tidak efektif dan bisa menyebabkan
+konflik. Hapus baris berikut dari ke-7 file ini:
+  export const dynamic = 'force-dynamic'
+
+File yang diubah:
+  src/app/forgot-password/page.tsx
+  src/app/forgot-password/verify/page.tsx
+  src/app/forgot-password/reset/page.tsx
+  src/app/webhook-test/page.tsx
+  src/app/blog/page.tsx
+  src/app/(auth)/login/page.tsx
+  src/app/adm-panel/page.tsx
+
+Pastikan 'use client' tetap di baris pertama setelah penghapusan.
+
+## FASE 3 — VERIFIKASI SEBELUM COMMIT
+
+```bash
+# 1. Konfirmasi --webpack sudah hilang
+grep "next build" deploy.sh
+
+# 2. Konfirmasi 3 layout sudah punya force-dynamic
+grep -l "force-dynamic" src/app/'(auth)'/layout.tsx \
+  src/app/forgot-password/layout.tsx src/app/adm-panel/layout.tsx
+
+# 3. Konfirmasi 7 client pages sudah tidak punya force-dynamic
+for f in "src/app/forgot-password/page.tsx" \
+         "src/app/forgot-password/verify/page.tsx" \
+         "src/app/forgot-password/reset/page.tsx" \
+         "src/app/webhook-test/page.tsx" \
+         "src/app/blog/page.tsx" \
+         "src/app/(auth)/login/page.tsx" \
+         "src/app/adm-panel/page.tsx"; do
+  echo "=== $f ===" && head -3 "$f"
+done
+```
+
+## FASE 4 — COMMIT DAN PUSH
+
+```bash
+git add deploy.sh \
+  src/app/'(auth)'/layout.tsx \
+  src/app/forgot-password/layout.tsx \
+  src/app/adm-panel/layout.tsx \
+  src/app/forgot-password/page.tsx \
+  src/app/forgot-password/verify/page.tsx \
+  src/app/forgot-password/reset/page.tsx \
+  src/app/webhook-test/page.tsx \
+  src/app/blog/page.tsx \
+  src/app/'(auth)'/login/page.tsx \
+  src/app/adm-panel/page.tsx
+
+git commit -m "fix: remove --webpack flag, fix force-dynamic placement in layouts"
+git push origin main
+```
+
+Laporkan commit hash setelah push.
+
+## BATASAN KERAS
+
+- HANYA ubah 11 file yang disebutkan di atas
+- JANGAN ubah next.config.ts, package.json, redis.ts, atau fcm.ts
+- JANGAN hapus 'use client' dari client pages
+- JANGAN install atau hapus dependency apapun
+- JANGAN ubah logika bisnis, komponen, atau query database
+
+## FORMAT LAPORAN AKHIR
+
+STATUS: [SUKSES/GAGAL]
+Output `grep "next build" deploy.sh`:
+Output `grep -c "force-dynamic" src/app/(auth)/layout.tsx`:
+Output `head -3 src/app/blog/page.tsx`:
+Commit hash:

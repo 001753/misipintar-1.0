@@ -250,7 +250,7 @@ for BUILD_MEM in "${BUILD_MEM_LEVELS[@]}"; do
   > "$BUILD_TMPLOG"
 
   set +e
-  NEXT_BUILD=1 NODE_ENV=production ./node_modules/.bin/next build --webpack 2>&1 | \
+  NEXT_BUILD=1 NODE_ENV=production ./node_modules/.bin/next build 2>&1 | \
     tee "$BUILD_TMPLOG" | sed 's/^/  [build] /' | tee -a "$LOG_FILE"
   BUILD_EXIT="${PIPESTATUS[0]}"
   set -e
