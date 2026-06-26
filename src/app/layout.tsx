@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import NavigationProgress from "@/components/NavigationProgress";
+import NavigationProgressWrapper from "@/components/NavigationProgressWrapper";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 // force-dynamic pada root layout: semua route menjadi dinamis (0 halaman statis).
@@ -73,7 +73,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: themeScript }}
         />
         <ThemeProvider>
-          <NavigationProgress />
+          <NavigationProgressWrapper />
           {children}
         </ThemeProvider>
         <ServiceWorkerRegistration />

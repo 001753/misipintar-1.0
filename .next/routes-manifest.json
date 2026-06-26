@@ -1,0 +1,483 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-DNS-Prefetch-Control",
+          "value": "on"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
+      ],
+      "regex": "^(?:/(.*))(?:/)?$"
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/javascript; charset=utf-8"
+        }
+      ],
+      "regex": "^/sw\\.js(?:/)?$"
+    }
+  ],
+  "onMatchHeaders": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/auth/[...nextauth]",
+      "regex": "^/api/auth/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPnextauth": "nxtPnextauth"
+      },
+      "namedRegex": "^/api/auth/(?<nxtPnextauth>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/invoice/[invoiceId]/pdf",
+      "regex": "^/api/invoice/([^/]+?)/pdf(?:/)?$",
+      "routeKeys": {
+        "nxtPinvoiceId": "nxtPinvoiceId"
+      },
+      "namedRegex": "^/api/invoice/(?<nxtPinvoiceId>[^/]+?)/pdf(?:/)?$"
+    },
+    {
+      "page": "/blog/[slug]",
+      "regex": "^/blog/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/blog/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/child/tasks/[taskId]/claim",
+      "regex": "^/child/tasks/([^/]+?)/claim(?:/)?$",
+      "routeKeys": {
+        "nxtPtaskId": "nxtPtaskId"
+      },
+      "namedRegex": "^/child/tasks/(?<nxtPtaskId>[^/]+?)/claim(?:/)?$"
+    },
+    {
+      "page": "/dashboard/billing/invoice/[invoiceId]",
+      "regex": "^/dashboard/billing/invoice/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPinvoiceId": "nxtPinvoiceId"
+      },
+      "namedRegex": "^/dashboard/billing/invoice/(?<nxtPinvoiceId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/dashboard/history/[childId]",
+      "regex": "^/dashboard/history/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPchildId": "nxtPchildId"
+      },
+      "namedRegex": "^/dashboard/history/(?<nxtPchildId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/superadmin/families/[id]",
+      "regex": "^/superadmin/families/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/superadmin/families/(?<nxtPid>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/adm-panel",
+      "regex": "^/adm\\-panel(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/adm\\-panel(?:/)?$"
+    },
+    {
+      "page": "/api/fcm/register",
+      "regex": "^/api/fcm/register(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/fcm/register(?:/)?$"
+    },
+    {
+      "page": "/api/health",
+      "regex": "^/api/health(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/health(?:/)?$"
+    },
+    {
+      "page": "/api/notifications/recent",
+      "regex": "^/api/notifications/recent(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/notifications/recent(?:/)?$"
+    },
+    {
+      "page": "/api/queue/worker",
+      "regex": "^/api/queue/worker(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/queue/worker(?:/)?$"
+    },
+    {
+      "page": "/api/seed/plans",
+      "regex": "^/api/seed/plans(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/seed/plans(?:/)?$"
+    },
+    {
+      "page": "/api/sse",
+      "regex": "^/api/sse(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/sse(?:/)?$"
+    },
+    {
+      "page": "/api/upload/proof",
+      "regex": "^/api/upload/proof(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/upload/proof(?:/)?$"
+    },
+    {
+      "page": "/api/webhooks/midtrans",
+      "regex": "^/api/webhooks/midtrans(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/webhooks/midtrans(?:/)?$"
+    },
+    {
+      "page": "/api/webhooks/midtrans/test",
+      "regex": "^/api/webhooks/midtrans/test(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/webhooks/midtrans/test(?:/)?$"
+    },
+    {
+      "page": "/apple-icon",
+      "regex": "^/apple\\-icon(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/apple\\-icon(?:/)?$"
+    },
+    {
+      "page": "/blog",
+      "regex": "^/blog(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/blog(?:/)?$"
+    },
+    {
+      "page": "/child/dashboard",
+      "regex": "^/child/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/child/dashboard(?:/)?$"
+    },
+    {
+      "page": "/child/history",
+      "regex": "^/child/history(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/child/history(?:/)?$"
+    },
+    {
+      "page": "/child/settings",
+      "regex": "^/child/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/child/settings(?:/)?$"
+    },
+    {
+      "page": "/child/tasks",
+      "regex": "^/child/tasks(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/child/tasks(?:/)?$"
+    },
+    {
+      "page": "/child/transfer",
+      "regex": "^/child/transfer(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/child/transfer(?:/)?$"
+    },
+    {
+      "page": "/dashboard",
+      "regex": "^/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard(?:/)?$"
+    },
+    {
+      "page": "/dashboard/billing",
+      "regex": "^/dashboard/billing(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/billing(?:/)?$"
+    },
+    {
+      "page": "/dashboard/children",
+      "regex": "^/dashboard/children(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/children(?:/)?$"
+    },
+    {
+      "page": "/dashboard/ledger",
+      "regex": "^/dashboard/ledger(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/ledger(?:/)?$"
+    },
+    {
+      "page": "/dashboard/notifications",
+      "regex": "^/dashboard/notifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/notifications(?:/)?$"
+    },
+    {
+      "page": "/dashboard/onboarding",
+      "regex": "^/dashboard/onboarding(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/onboarding(?:/)?$"
+    },
+    {
+      "page": "/dashboard/settings",
+      "regex": "^/dashboard/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/settings(?:/)?$"
+    },
+    {
+      "page": "/dashboard/tasks",
+      "regex": "^/dashboard/tasks(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/tasks(?:/)?$"
+    },
+    {
+      "page": "/dashboard/tasks/pending",
+      "regex": "^/dashboard/tasks/pending(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/tasks/pending(?:/)?$"
+    },
+    {
+      "page": "/favicon.ico",
+      "regex": "^/favicon\\.ico(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/favicon\\.ico(?:/)?$"
+    },
+    {
+      "page": "/forgot-password",
+      "regex": "^/forgot\\-password(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/forgot\\-password(?:/)?$"
+    },
+    {
+      "page": "/forgot-password/reset",
+      "regex": "^/forgot\\-password/reset(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/forgot\\-password/reset(?:/)?$"
+    },
+    {
+      "page": "/forgot-password/verify",
+      "regex": "^/forgot\\-password/verify(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/forgot\\-password/verify(?:/)?$"
+    },
+    {
+      "page": "/hubungi-kami",
+      "regex": "^/hubungi\\-kami(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/hubungi\\-kami(?:/)?$"
+    },
+    {
+      "page": "/icon",
+      "regex": "^/icon(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/icon(?:/)?$"
+    },
+    {
+      "page": "/kebijakan-privasi",
+      "regex": "^/kebijakan\\-privasi(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/kebijakan\\-privasi(?:/)?$"
+    },
+    {
+      "page": "/login",
+      "regex": "^/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/manifest.webmanifest",
+      "regex": "^/manifest\\.webmanifest(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/manifest\\.webmanifest(?:/)?$"
+    },
+    {
+      "page": "/offline",
+      "regex": "^/offline(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/offline(?:/)?$"
+    },
+    {
+      "page": "/opengraph-image",
+      "regex": "^/opengraph\\-image(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/opengraph\\-image(?:/)?$"
+    },
+    {
+      "page": "/privasi",
+      "regex": "^/privasi(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/privasi(?:/)?$"
+    },
+    {
+      "page": "/register",
+      "regex": "^/register(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/register(?:/)?$"
+    },
+    {
+      "page": "/robots.txt",
+      "regex": "^/robots\\.txt(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/robots\\.txt(?:/)?$"
+    },
+    {
+      "page": "/sitemap.xml",
+      "regex": "^/sitemap\\.xml(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/sitemap\\.xml(?:/)?$"
+    },
+    {
+      "page": "/superadmin",
+      "regex": "^/superadmin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/superadmin(?:/)?$"
+    },
+    {
+      "page": "/superadmin/analytics",
+      "regex": "^/superadmin/analytics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/superadmin/analytics(?:/)?$"
+    },
+    {
+      "page": "/superadmin/audit",
+      "regex": "^/superadmin/audit(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/superadmin/audit(?:/)?$"
+    },
+    {
+      "page": "/superadmin/families",
+      "regex": "^/superadmin/families(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/superadmin/families(?:/)?$"
+    },
+    {
+      "page": "/superadmin/payments",
+      "regex": "^/superadmin/payments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/superadmin/payments(?:/)?$"
+    },
+    {
+      "page": "/superadmin/plans",
+      "regex": "^/superadmin/plans(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/superadmin/plans(?:/)?$"
+    },
+    {
+      "page": "/superadmin/security/login-attempts",
+      "regex": "^/superadmin/security/login\\-attempts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/superadmin/security/login\\-attempts(?:/)?$"
+    },
+    {
+      "page": "/superadmin/settings",
+      "regex": "^/superadmin/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/superadmin/settings(?:/)?$"
+    },
+    {
+      "page": "/syarat-ketentuan",
+      "regex": "^/syarat\\-ketentuan(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/syarat\\-ketentuan(?:/)?$"
+    },
+    {
+      "page": "/tentang-kami",
+      "regex": "^/tentang\\-kami(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/tentang\\-kami(?:/)?$"
+    },
+    {
+      "page": "/unauthorized",
+      "regex": "^/unauthorized(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/unauthorized(?:/)?$"
+    },
+    {
+      "page": "/webhook-test",
+      "regex": "^/webhook\\-test(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/webhook\\-test(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

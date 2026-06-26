@@ -1,0 +1,29 @@
+{
+  "node": {
+    "40d0093fa141aa790b2e653733f765c159bd1b4159": {
+      "workers": {
+        "app/(auth)/login/page": {
+          "moduleId": "[project]/.next-internal/server/app/(auth)/login/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/actions/auth.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "loginParent",
+          "filename": "src/actions/auth.ts"
+        }
+      },
+      "exportedName": "loginParent",
+      "filename": "src/actions/auth.ts"
+    },
+    "40c7bad702e4b614caad389f9e673073dff289582e": {
+      "workers": {
+        "app/(auth)/login/page": {
+          "moduleId": "[project]/.next-internal/server/app/(auth)/login/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/actions/auth.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "loginChild",
+          "filename": "src/actions/auth.ts"
+        }
+      },
+      "exportedName": "loginChild",
+      "filename": "src/actions/auth.ts"
+    }
+  },
+  "edge": {}
+}

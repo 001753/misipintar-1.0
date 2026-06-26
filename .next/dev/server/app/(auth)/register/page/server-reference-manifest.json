@@ -1,0 +1,29 @@
+{
+  "node": {
+    "405d3fa8a2d3a605cd21f6cdaac1ec0263eb69fcf3": {
+      "workers": {
+        "app/(auth)/register/page": {
+          "moduleId": "[project]/.next-internal/server/app/(auth)/register/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/actions/auth.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "registerFamilySpace",
+          "filename": "src/actions/auth.ts"
+        }
+      },
+      "exportedName": "registerFamilySpace",
+      "filename": "src/actions/auth.ts"
+    },
+    "40d0093fa141aa790b2e653733f765c159bd1b4159": {
+      "workers": {
+        "app/(auth)/register/page": {
+          "moduleId": "[project]/.next-internal/server/app/(auth)/register/page/actions.js { ACTIONS_MODULE0 => \"[project]/src/actions/auth.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "loginParent",
+          "filename": "src/actions/auth.ts"
+        }
+      },
+      "exportedName": "loginParent",
+      "filename": "src/actions/auth.ts"
+    }
+  },
+  "edge": {}
+}
