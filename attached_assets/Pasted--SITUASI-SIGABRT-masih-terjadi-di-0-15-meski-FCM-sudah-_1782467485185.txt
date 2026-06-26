@@ -1,0 +1,155 @@
+# SITUASI: SIGABRT masih terjadi di (0/15) meski FCM sudah lazy
+# 
+# TEMUAN BARU DARI LOG 16:47:
+# - [FCM] sudah tidak muncul → FCM lazy init BERHASIL ✓
+# - [redis] masih muncul → guard NEXT_BUILD tidak aktif ✗
+# - (0/15) tidak berubah meski 42 halaman sudah force-dynamic ✗
+# - "▲ Next.js 16.2.9" masih tampil → versi aktual tidak jelas ✗
+#
+# PENDEKATAN BARU: Bypass static generation engine sepenuhnya
+# via next.config.ts, bukan via per-page exports.
+
+## FASE 1 — AUDIT 5 MENIT (jalankan semua, laporkan output)
+
+```bash
+# A. Versi Next.js AKTUAL yang terinstall
+node -e "console.log(require('./node_modules/next/package.json').version)"
+
+# B. Cek apakah NEXT_BUILD dikirim oleh deploy.sh atau hanya package.json
+grep -n "NEXT_BUILD" deploy.sh
+
+# C. Cek 15 halaman yang masih statis (Next.js tracking)
+cat .next/build-manifest.json 2>/dev/null | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+pages=list(d.get('pages',{}).keys())
+print(f'Total: {len(pages)} halaman')
+for p in pages: print(' -', p)
+" 2>/dev/null || echo "build-manifest tidak ada"
+
+# D. Cek apakah ada halaman yang punya getStaticProps atau getStaticPaths
+grep -r "getStaticProps\|getStaticPaths\|generateStaticParams" \
+  src/ --include="*.tsx" --include="*.ts" -l 2>/dev/null
+
+# E. Cek nilai NEXT_BUILD saat ini di environment
+echo "NEXT_BUILD=${NEXT_BUILD:-TIDAK SET}"
+```
+
+Laporkan output A, B, C, D, E sebelum lanjut ke Fase 2.
+
+---
+
+## FASE 2 — DUA PERBAIKAN INTI (tidak ada yang lain)
+
+### Fix UTAMA: next.config.ts — matikan static generation dari akar
+
+Buka `next.config.ts`. GANTI SELURUH objek `nextConfig` dengan versi
+ini (pertahankan semua config yang sudah ada, tambahkan 3 baris baru):
+
+```typescript
+const nextConfig: NextConfig = {
+  output: "standalone",
+  
+  // === TAMBAHAN BARU — paksa semua route jadi dynamic dari level config ===
+  // Ini override per-page exports dan berlaku untuk SEMUA versi Next.js
+  staticPageGenerationTimeout: 1,
+  
+  // experimental.isrMemoryCacheSize: 0 → matikan ISR cache
+  // experimental.workerThreads: false → paksa single-process, no fork
+  // Keduanya mencegah spawn worker process baru di cPanel ulimit ketat
+  
+  devIndicators: false,
+  typescript: { ignoreBuildErrors: true },
+  // ... (sisa config tidak diubah)
+  experimental: {
+    cpus: 1,
+    workerThreads: false,       // ← TAMBAH INI
+    isrMemoryCacheSize: 0,      // ← TAMBAH INI  
+    serverActions: { allowedOrigins: ["*"] },
+  },
+  // ... (sisa config tidak diubah, termasuk headers, images, webpack, dll)
+};
+```
+
+PENTING: Hanya tambahkan `workerThreads: false` dan `isrMemoryCacheSize: 0`
+ke dalam `experimental` yang sudah ada. Jangan hapus config lainnya.
+
+### Fix PENDUKUNG: deploy.sh — pastikan NEXT_BUILD dikirim ke worker
+
+Cari baris di deploy.sh yang menjalankan `next build` (sekitar baris 250).
+Pastikan command build memiliki `NEXT_BUILD=1` di depannya.
+
+Jika command saat ini seperti:
+```bash
+NODE_OPTIONS="..." next build
+```
+
+Ganti menjadi:
+```bash
+NEXT_BUILD=1 NODE_OPTIONS="..." next build
+```
+
+Jika `NEXT_BUILD=1` sudah ada, lewati fix ini.
+
+---
+
+## FASE 3 — VERIFIKASI KRITIS DI REPLIT
+
+```bash
+# Test build dengan flag lengkap persis seperti yang dipakai deploy.sh
+NEXT_BUILD=1 NEXT_TELEMETRY_DISABLED=1 RAYON_NUM_THREADS=1 \
+TOKIO_WORKER_THREADS=1 UV_THREADPOOL_SIZE=1 \
+NODE_OPTIONS='--max-old-space-size=768' \
+npx next build 2>&1 | grep -E "static pages|worker|SIGABRT|error|Error" | head -20
+```
+
+KRITERIA SUKSES — salah satu dari ini harus terpenuhi:
+1. `Generating static pages (0/0)` — ideal, nol halaman statis
+2. Fase "Generating static pages" tidak muncul sama sekali — berarti
+   dilewati karena workerThreads: false
+3. Build selesai tanpa kata "SIGABRT" atau "worker exited"
+
+Jika masih ada (0/N) dengan N > 0, jalankan:
+```bash
+grep -r "generateStaticParams\|getStaticProps\|getStaticPaths" \
+  src/ --include="*.tsx" -l
+```
+Dan hapus semua fungsi tersebut dari file yang ditemukan.
+
+---
+
+## FASE 4 — COMMIT DAN PUSH
+
+```bash
+git add next.config.ts deploy.sh
+git commit -m "fix: disable worker threads and ISR to prevent SIGABRT on cPanel ulimit"
+git push origin main
+```
+
+Konfirmasi commit hash setelah push.
+
+---
+
+## BATASAN KERAS
+
+- JANGAN ubah lebih dari 2 file: next.config.ts dan deploy.sh
+- JANGAN tambahkan atau hapus dependency apapun
+- JANGAN ubah komponen, halaman, atau logika bisnis
+- JANGAN hapus config yang sudah ada di next.config.ts —
+  hanya TAMBAHKAN workerThreads: false dan isrMemoryCacheSize: 0
+- Jika build di Replit berhasil tapi cPanel tetap gagal,
+  laporkan output LENGKAP perintah Fase 1-C (build-manifest.json)
+
+---
+
+## LAPORAN AKHIR WAJIB
+
+Format laporan setelah semua fase selesai:
+
+STATUS BUILD DI REPLIT: [SUKSES/GAGAL]
+VERSI NEXT.JS TERINSTALL: [output dari Fase 1-A]
+NEXT_BUILD di deploy.sh: [ADA/TIDAK ADA, di baris berapa]
+ANGKA HALAMAN STATIS: [output dari Fase 1-C, jumlah halaman]
+FILE DIUBAH: [list file dan perubahan spesifik]
+COMMIT HASH: [hash setelah git push]
+OUTPUT BUILD TERAKHIR (20 baris terakhir): [paste di sini]
