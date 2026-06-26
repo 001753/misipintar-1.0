@@ -1,0 +1,207 @@
+Berikut prompt lengkap untuk Replit AI yang bisa langsung Anda paste:
+
+---
+
+## 🤖 Prompt untuk Replit AI
+
+```
+# MISI: Audit, Diagnosa & Perbaikan Build Next.js untuk cPanel Shared Hosting
+
+## KONTEKS SITUASI
+Proyek ini adalah aplikasi Next.js yang di-deploy ke cPanel Shared Hosting menggunakan 
+Phusion Passenger. Target akhir: `npm run build` menghasilkan output `.next/standalone/` 
+yang SEMPURNA dan bisa langsung dijalankan oleh Passenger tanpa error.
+
+## FASE 1 — AUDIT MENYELURUH (WAJIB DILAKUKAN PERTAMA)
+
+Sebelum mengubah satu baris pun kode, lakukan audit lengkap berikut:
+
+### 1A. Baca dan analisis file-file kritis ini:
+- `package.json` → cek scripts, dependencies, devDependencies, engines
+- `next.config.ts` atau `next.config.js` → cek output mode, experimental flags, image config
+- `stderr.log` (jika ada) → baca SEMUA baris error dari atas sampai bawah
+- `.env`, `.env.production`, `.env.local` → cek environment variables
+
+### 1B. Cari pola error ini secara spesifik:
+- SIGABRT / SIGSEGV / signal abort → crash runtime Rust/SWC saat finalisasi build
+- "standalone/server.js not found" atau sejenisnya → output: 'standalone' belum aktif
+- Module not found → dependency hilang atau path salah
+- "Cannot find module" di runtime → node_modules tidak tersalin ke standalone
+- Sharp / image optimization error → perlu konfigurasi khusus shared hosting
+- Turbopack conflicts → harus dinonaktifkan di shared hosting
+- Memory/heap out of memory → perlu flag `--max-old-space-size`
+
+### 1C. Buat laporan diagnosa sebelum lanjut:
+Tulis ringkasan: "Ditemukan X masalah: [list masalah]. Akan diperbaiki dengan: [list solusi]."
+
+---
+
+## FASE 2 — PERBAIKAN PRESISI TINGGI
+
+Setelah audit selesai, lakukan perbaikan HANYA pada yang bermasalah:
+
+### 2A. Perbaiki `next.config.ts` / `next.config.js`
+
+Pastikan konfigurasi ini ada dan benar:
+
+```typescript
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = {
+  // WAJIB untuk cPanel Passenger
+  output: 'standalone',
+  
+  // Nonaktifkan Turbopack — tidak kompatibel dengan shared hosting
+  // (jangan gunakan --turbopack di package.json scripts)
+  
+  // Matikan telemetri yang bisa timeout di hosting terbatas  
+  // (set via env NEXT_TELEMETRY_DISABLED=1)
+  
+  // Optimasi image: gunakan 'unoptimized' jika Sharp bermasalah di cPanel
+  images: {
+    unoptimized: true, // Hapus ini jika Sharp berhasil diinstall
+  },
+  
+  // Jika ada error terkait ESLint/TypeScript saat build
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: false, // Set true HANYA jika ada TS error non-kritis
+  },
+}
+
+export default nextConfig
+```
+
+### 2B. Perbaiki `package.json` — scripts section
+
+```json
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "node --max-old-space-size=512 ./node_modules/.bin/next build",
+    "start": "node .next/standalone/server.js",
+    "lint": "next lint"
+  }
+}
+```
+
+CATATAN PENTING:
+- Hapus flag `--turbopack` dari script `build` jika ada
+- Tambahkan `--max-old-space-size=512` untuk batasi memory (sesuaikan angka jika perlu)
+- Script `start` harus mengarah ke `.next/standalone/server.js`
+
+### 2C. Buat/Perbarui file `deploy.sh` di root project
+
+```bash
+#!/bin/bash
+set -e
+
+echo "=== Deploy MisiPintar ke cPanel ==="
+
+# Set environment
+export NODE_ENV=production
+export NEXT_TELEMETRY_DISABLED=1
+
+# Jalankan build
+echo "[1/4] Menjalankan npm run build..."
+npm run build
+
+# Verifikasi output standalone
+echo "[2/4] Memverifikasi output standalone..."
+if [ ! -f ".next/standalone/server.js" ]; then
+  echo "[ERROR] .next/standalone/server.js tidak ditemukan!"
+  echo "Periksa apakah output: 'standalone' sudah ada di next.config"
+  exit 1
+fi
+
+# Salin aset publik dan static ke standalone
+echo "[3/4] Menyalin aset statis..."
+cp -r public .next/standalone/public 2>/dev/null || true
+cp -r .next/static .next/standalone/.next/static 2>/dev/null || true
+
+# Verifikasi final
+echo "[4/4] Verifikasi final..."
+if [ -f ".next/standalone/server.js" ]; then
+  echo "✅ Build SUKSES! .next/standalone/server.js siap."
+  echo "Upload folder .next/standalone ke server cPanel Anda."
+else
+  echo "❌ Build GAGAL. Periksa log di atas."
+  exit 1
+fi
+```
+
+### 2D. Buat file `passenger_startup_file` / `.htaccess` jika belum ada
+
+Buat file `app.js` di root (sebagai entry point Passenger):
+
+```javascript
+// app.js — Entry point untuk Phusion Passenger di cPanel
+const { createServer } = require('http')
+const { parse } = require('url')
+const next = require('next')
+
+const dev = process.env.NODE_ENV !== 'production'
+const hostname = process.env.HOST || 'localhost'
+const port = parseInt(process.env.PORT || '3000', 10)
+
+const app = next({ dev, hostname, port })
+const handle = app.getRequestHandler()
+
+app.prepare().then(() => {
+  createServer(async (req, res) => {
+    try {
+      const parsedUrl = parse(req.url, true)
+      await handle(req, res, parsedUrl)
+    } catch (err) {
+      console.error('Error occurred handling', req.url, err)
+      res.statusCode = 500
+      res.end('internal server error')
+    }
+  }).listen(port, hostname, () => {
+    console.log(`> Ready on http://${hostname}:${port}`)
+  })
+})
+```
+
+---
+
+## FASE 3 — VERIFIKASI & TEST BUILD LOKAL
+
+Setelah semua perubahan dilakukan:
+
+1. Jalankan `npm run build` dan pantau outputnya
+2. Konfirmasi bahwa file `.next/standalone/server.js` TERBENTUK secara otomatis
+3. Jika masih ada error, baca pesan error terakhir dengan seksama dan perbaiki
+4. Jangan berhenti sampai build selesai tanpa error SIGABRT atau crash
+
+---
+
+## FASE 4 — LAPORAN AKHIR
+
+Setelah build sukses, buat laporan berisi:
+1. Daftar file yang diubah beserta alasannya
+2. Konfirmasi bahwa `.next/standalone/server.js` ada dan ukurannya > 0 bytes
+3. Perintah yang harus dijalankan user di SSH cPanel:
+   ```
+   bash deploy.sh
+   pkill -u [username] node || true  
+   touch tmp/restart.txt
+   ```
+4. Checklist upload: folder apa saja yang harus diunggah ke server
+
+---
+
+## BATASAN & ATURAN KERAS
+
+- JANGAN ubah logika bisnis atau komponen UI apapun
+- JANGAN install dependency baru tanpa konfirmasi
+- JANGAN gunakan `output: 'export'` — itu untuk static site, bukan Passenger
+- JANGAN hapus file `.env` atau mengubah nilai environment variable
+- Fokus HANYA pada konfigurasi build dan deployment tooling
+```
+
+---
+
+Paste prompt ini langsung ke chat Replit AI, Bos. Struktur fase-nya memaksa AI untuk **audit dulu baru bertindak**, sehingga perbaikannya tepat sasaran dan tidak asal overwrite file yang sehat.

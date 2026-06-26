@@ -41,6 +41,9 @@ const nextConfig: NextConfig = {
     "*.jobenapp.cloud",
   ],
   images: {
+    // unoptimized: cegah Sharp (native module) crash di cPanel shared hosting
+    // (ulimit -u rendah → compile native addon gagal → SIGSEGV di runtime)
+    unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "api.sandbox.midtrans.com" },
       { protocol: "https", hostname: "api.midtrans.com" },
