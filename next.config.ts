@@ -29,6 +29,7 @@ const SERVER_EXTERNAL_PACKAGES = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  staticPageGenerationTimeout: 1,
   devIndicators: false,
   typescript: {
     ignoreBuildErrors: true,

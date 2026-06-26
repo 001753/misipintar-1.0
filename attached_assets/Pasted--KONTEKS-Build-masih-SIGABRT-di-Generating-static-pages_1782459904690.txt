@@ -1,0 +1,121 @@
+# KONTEKS: Build masih SIGABRT di "Generating static pages (0/21)"
+# Fix sebelumnya tidak berhasil karena 3 alasan spesifik berikut.
+# Baca semua instruksi ini sebelum menyentuh satu file pun.
+
+## FAKTA YANG SUDAH DIKONFIRMASI DARI LOG
+
+1. Build crash SELALU di "(0/N)" — sebelum satu halaman dirender.
+   Ini bukan crash saat render — ini crash saat fork worker process.
+   cPanel ulimit -u ketat → fork gagal → SIGABRT ke parent.
+
+2. `force-dynamic` di root layout TIDAK menghilangkan static pages
+   selama masih ada `generateStaticParams` di child page.
+   generateStaticParams adalah instruksi eksplisit ke Next.js untuk
+   pre-render — ia OVERRIDE dynamic dari parent.
+
+3. `package.json` MASIH menunjukkan next: "^16.2.9" — belum diubah
+   dari sesi sebelumnya.
+
+4. deploy.sh melakukan `git reset --hard origin/main` — semua
+   perubahan yang tidak di-commit akan hilang. Setiap fix WAJIB
+   di-commit dan di-push ke GitHub.
+
+---
+
+## FASE 1 — AUDIT (jalankan ini dulu, laporkan hasilnya)
+
+```bash
+# Cek versi next yang BENAR-BENAR terinstall
+node -e "console.log(require('./node_modules/next/package.json').version)"
+
+# Hitung total halaman statis yang akan di-generate
+grep -r "generateStaticParams" src/ --include="*.tsx" --include="*.ts" -l
+
+# Cek apakah force-dynamic sudah ada di layout
+grep -n "force-dynamic\|dynamic" src/app/layout.tsx
+```
+
+Laporkan output ketiga perintah sebelum lanjut.
+
+---
+
+## FASE 2 — EMPAT PERBAIKAN WAJIB (semua harus di-commit)
+
+### Fix 1: package.json — ganti versi next (BELUM DILAKUKAN sesi lalu)
+CARI:   "next": "^16.2.9"
+GANTI:  "next": "15.3.4"
+
+CARI:   "eslint-config-next": "16.2.9"
+GANTI:  "eslint-config-next": "15.3.4"
+
+### Fix 2: Hapus generateStaticParams dari blog/[slug]/page.tsx
+Cari fungsi `export async function generateStaticParams` di file ini.
+HAPUS SELURUH FUNGSI tersebut beserta import yang hanya dipakai olehnya.
+Biarkan `export const dynamic = 'force-dynamic'` tetap ada.
+JANGAN ubah logika render halaman lainnya.
+
+### Fix 3: Konfirmasi force-dynamic di src/app/layout.tsx
+Pastikan baris ini ada di bagian atas file (setelah imports):
+  export const dynamic = 'force-dynamic';
+Jika sudah ada, lewati. Jika belum, tambahkan.
+
+### Fix 4: Tambah staticPageGenerationTimeout di next.config.ts
+Di dalam objek `nextConfig`, tambahkan satu baris:
+  staticPageGenerationTimeout: 1,
+Letakkan setelah baris `output: "standalone",`
+
+---
+
+## FASE 3 — COMMIT DAN PUSH KE GITHUB
+
+Ini WAJIB. deploy.sh melakukan git reset --hard, jadi semua
+perubahan yang tidak di-push akan hilang.
+
+```bash
+git add src/app/blog/[slug]/page.tsx src/app/layout.tsx \
+        next.config.ts package.json
+git commit -m "fix: eliminate static generation to prevent SIGABRT on cPanel"
+git push origin main
+```
+
+Konfirmasi commit hash setelah push berhasil.
+
+---
+
+## FASE 4 — VERIFIKASI LOKAL SEBELUM DEPLOY
+
+```bash
+# Reinstall dengan versi yang benar
+rm -rf node_modules package-lock.json
+npm install
+
+# Konfirmasi versi
+node -e "console.log(require('./node_modules/next/package.json').version)"
+# HARUS output: 15.3.4
+
+# Test build dengan memory rendah (simulasi cPanel)
+NODE_OPTIONS='--max-old-space-size=768' next build 2>&1 | tail -30
+```
+
+Build HARUS menunjukkan:
+  "Generating static pages (0/0)" atau fase ini tidak muncul sama sekali
+Jika masih ada angka > 0, cari generateStaticParams yang tersisa.
+
+---
+
+## BATASAN KERAS
+
+- JANGAN ubah logika bisnis, komponen UI, atau query database
+- JANGAN install dependency baru
+- JANGAN ubah deploy.sh
+- SEMUA perubahan harus di-commit dan di-push ke GitHub
+- Jika ada generateStaticParams di file lain selain blog/[slug],
+  laporkan dulu sebelum menghapusnya
+
+## FORMAT LAPORAN AKHIR
+
+Setelah semua fase selesai:
+1. Output `git log --oneline -3`
+2. Output `node -e "console.log(require('./node_modules/next/package.json').version)"`
+3. Daftar file yang diubah dengan perubahan spesifik (before/after)
+4. Konfirmasi "Generating static pages (0/0)" dari output build lokal

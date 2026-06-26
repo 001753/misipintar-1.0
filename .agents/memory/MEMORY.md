@@ -5,3 +5,4 @@
 - [Misi Pintar module audit](misi-pintar-replit-dev.md) — ESM-only: @react-pdf/renderer, nanoid v5. Native: @prisma/client, prisma. All in SERVER_EXTERNAL_PACKAGES constant in next.config.ts.
 - [Deploy model SKANSAGIRI](deploy-model.md) — deploy.sh 8-langkah: backup/restore .env+app.js, git reset --hard, npm sistem cPanel, rollback .next, Passenger restart via tmp/restart.txt.
 - [cPanel build SIGSEGV fix](cpanel-sigsegv.md) — instrumentation.ts must guard against NEXT_PHASE=phase-production-build or BullMQ/Firebase signal handlers crash the build worker.
+- [cPanel SIGABRT fix](cpanel-sigabrt.md) — SIGABRT at "Generating static pages (0/N)" is caused by generateStaticParams + ulimit fork limit; fix: remove generateStaticParams, add staticPageGenerationTimeout:1, use --webpack flag for all builds.
