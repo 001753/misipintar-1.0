@@ -1,0 +1,170 @@
+# TUGAS: Perbaikan Build Next.js untuk cPanel Shared Hosting
+# Proyek: MisiPintar (mp.jobenapp.cloud)
+# Stack: Next.js + Prisma + PostgreSQL + Phusion Passenger
+# Target: `npm run build` selesai TANPA error, menghasilkan
+#         .next/standalone/server.js yang valid dan siap dijalankan Passenger.
+
+## KONTEKS ERROR YANG SUDAH DIKETAHUI
+Build berhasil compile (93s) tapi crash dengan sinyal SIGABRT
+di fase "Collecting page data". Ini bukan masalah logika bisnis —
+murni masalah konfigurasi build dan versi paket.
+
+────────────────────────────────────────────────────────────
+
+## FASE 1: AUDIT (JANGAN UBAH APAPUN DULU)
+
+Baca file berikut secara berurutan dan catat temuannya:
+
+1. `package.json` — fokus pada:
+   - Nilai `"next"` di dependencies (cari versi yang tidak valid)
+   - Setiap script yang mengandung `--webpack`
+   - Nilai `NODE_OPTIONS` di dalam string script
+   - Versi `"eslint-config-next"`
+
+2. `next.config.ts` — cek:
+   - Apakah `output: "standalone"` sudah ada
+   - Flag experimental yang berpotensi tidak kompatibel
+
+3. Semua file di folder `scripts/` jika ada
+
+4. Jalankan di terminal Replit:
+   ```
+   node -e "const p=require('./node_modules/next/package.json'); console.log('Next.js terinstall:', p.version)"
+   ```
+   Catat versi AKTUAL yang terinstall vs yang dideklarasikan di package.json.
+
+Setelah audit, tulis laporan singkat:
+"Ditemukan X masalah: [list]. Akan diperbaiki dengan: [list]."
+JANGAN lanjut ke Fase 2 sebelum laporan ini selesai.
+
+────────────────────────────────────────────────────────────
+
+## FASE 2A: PERBAIKAN `package.json`
+
+Lakukan EMPAT perubahan ini, tidak lebih, tidak kurang:
+
+### Perubahan 1 — Perbaiki versi Next.js
+CARI:
+  "next": "^16.2.9"
+GANTI DENGAN:
+  "next": "15.3.4"
+
+ALASAN: Next.js 16 belum dirilis. `^16.2.9` menyebabkan
+npm menginstall versi lain secara diam-diam → mismatch runtime.
+
+### Perubahan 2 — Selaraskan eslint-config-next
+CARI:
+  "eslint-config-next": "16.2.9"
+GANTI DENGAN:
+  "eslint-config-next": "15.3.4"
+
+ALASAN: Versi harus identik dengan versi Next.js yang diinstall.
+
+### Perubahan 3 — Hapus --webpack dari script "build"
+CARI (kurang lebih):
+  "build": "NEXT_BUILD=1 ... next build --webpack"
+GANTI DENGAN:
+  "build": "NEXT_BUILD=1 NEXT_TELEMETRY_DISABLED=1 RAYON_NUM_THREADS=1 TOKIO_WORKER_THREADS=1 UV_THREADPOOL_SIZE=1 next build"
+
+ALASAN: Flag `--webpack` dihapus dari Next.js sejak versi 15.
+Meneruskan flag tidak dikenal ke Rust SWC worker → SIGABRT deterministik.
+
+### Perubahan 4 — Hapus NODE_OPTIONS dari semua script build
+Di script "build", "build:debug", "build:prod", "build:cpanel":
+HAPUS bagian: NODE_OPTIONS='--max-old-space-size=...'
+
+ALASAN: NODE_OPTIONS sudah diset oleh deploy.sh dengan logika
+retry otomatis. Jika keduanya set → dua flag --max-old-space-size
+dalam satu string → undefined behavior di V8 → abort.
+
+Script "start" dan "dev" TIDAK DIUBAH.
+
+────────────────────────────────────────────────────────────
+
+## FASE 2B: `next.config.ts` — TIDAK PERLU DIUBAH
+
+File ini sudah dikonfigurasi dengan benar untuk cPanel:
+- output: "standalone" ✓
+- images.unoptimized: true ✓ (mencegah crash Sharp di shared hosting)
+- experimental.cpus: 1 ✓
+- webpack parallelism: 1 ✓
+- serverExternalPackages sudah tepat ✓
+
+JANGAN sentuh file ini.
+
+────────────────────────────────────────────────────────────
+
+## FASE 3: VERIFIKASI & BUILD TEST
+
+Setelah perubahan package.json, jalankan urutan ini:
+
+### Langkah 1 — Reinstall dependencies bersih
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Langkah 2 — Konfirmasi versi terinstall
+```bash
+node -e "const p=require('./node_modules/next/package.json'); console.log(p.version)"
+```
+Output HARUS: 15.3.4
+Jika bukan 15.3.4, BERHENTI dan laporkan.
+
+### Langkah 3 — Jalankan build test
+```bash
+NEXT_BUILD=1 NEXT_TELEMETRY_DISABLED=1 RAYON_NUM_THREADS=1 \
+TOKIO_WORKER_THREADS=1 UV_THREADPOOL_SIZE=1 \
+NODE_OPTIONS='--max-old-space-size=1024' next build
+```
+
+### Langkah 4 — Verifikasi output standalone
+```bash
+ls -lh .next/standalone/server.js
+```
+File harus ada dan berukuran > 10KB.
+Jika tidak ada, laporkan error build lengkap dari atas.
+
+────────────────────────────────────────────────────────────
+
+## BATASAN KERAS — WAJIB DIPATUHI
+
+- JANGAN ubah next.config.ts
+- JANGAN ubah deploy.sh
+- JANGAN install dependency baru tanpa konfirmasi eksplisit
+- JANGAN ubah komponen React, halaman, atau logika bisnis apapun
+- JANGAN ubah konfigurasi Prisma atau schema database
+- JANGAN ubah file .env
+- JANGAN gunakan output: "export" — itu untuk static site, bukan Passenger
+- Fokus HANYA pada package.json
+
+## FORMAT LAPORAN AKHIR
+
+Setelah build sukses, buat laporan dengan format ini:
+
+---
+STATUS: [SUKSES / GAGAL]
+
+FILE DIUBAH:
+- package.json: [daftar 4 perubahan dengan nilai before/after]
+
+VERSI NEXT.JS TERINSTALL: [versi aktual]
+
+OUTPUT BUILD:
+- .next/standalone/server.js: [ukuran file]
+- .next/static/: [ada/tidak]
+
+PERINTAH UNTUK SSH cPANEL:
+```bash
+rm -rf node_modules package-lock.json
+npm install
+npm run build
+pkill -u smknwon2 node || true
+touch tmp/restart.txt
+```
+---
+
+Jika build GAGAL, sertakan:
+- 50 baris terakhir output error
+- Hipotesis penyebab tambahan
+- Langkah perbaikan selanjutnya
