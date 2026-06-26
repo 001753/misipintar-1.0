@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
 import TentangKamiPage from '@/components/landing/TentangKamiPage'
 import JsonLd from '@/components/JsonLd'

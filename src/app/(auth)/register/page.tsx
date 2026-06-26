@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
 import RegisterForm from './register-form'
 import JsonLd from '@/components/JsonLd'

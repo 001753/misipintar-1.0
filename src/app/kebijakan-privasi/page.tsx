@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
 import KebijanPrivasiPage from '@/components/landing/KebijanPrivasiPage'
 import JsonLd from '@/components/JsonLd'

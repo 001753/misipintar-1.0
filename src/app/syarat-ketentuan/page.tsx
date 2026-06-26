@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import SyaratKetentuanPage from '@/components/landing/SyaratKetentuanPage'
 
 export const metadata = {

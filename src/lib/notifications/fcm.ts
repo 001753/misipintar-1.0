@@ -1,53 +1,48 @@
 /**
  * [5.1] Firebase Admin SDK — FCM Push Notifications
- * Init sekali (singleton via globalThis) dari env variables.
- *
- * PENTING: firebase-admin di-require() secara lazy di dalam fungsi (bukan static
- * import di atas) untuk mencegah gRPC native code dimuat saat build worker
- * Next.js berjalan — penyebab utama SIGSEGV di lingkungan cPanel.
+ * Lazy init, build-safe: firebase-admin tidak di-load saat NEXT_BUILD=1
+ * atau saat env vars Firebase tidak tersedia.
  */
 
 import { prisma } from "@/lib/prisma";
 
-// Type-only import — tidak menghasilkan require() di output JS
-import type * as AdminType from "firebase-admin";
+let _messaging: import('firebase-admin/messaging').Messaging | null = null;
 
-type AdminApp = AdminType.app.App;
+async function getMessaging() {
+  if (process.env.NEXT_BUILD === '1') return null;
+  if (typeof window !== 'undefined') return null;
+  if (_messaging) return _messaging;
 
-const globalForFirebase = globalThis as unknown as {
-  firebaseApp: AdminApp | undefined;
-};
-
-/**
- * Lazy loader — require() hanya dipanggil saat benar-benar dibutuhkan.
- * Saat build phase (tidak ada Firebase env), initFirebase() return early
- * sebelum memanggil fungsi ini, sehingga native gRPC tidak pernah dimuat.
- */
-function getAdmin(): typeof AdminType {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require("firebase-admin") as typeof AdminType;
-}
-
-function initFirebase(): AdminApp | undefined {
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
   if (!projectId || !clientEmail || !privateKey) {
-    console.warn("[FCM] Firebase env tidak lengkap — push notifications dinonaktifkan");
-    return undefined;
+    console.log('[FCM] Firebase env tidak lengkap — push notifications dinonaktifkan');
+    return null;
   }
 
-  const admin = getAdmin();
-  if (admin.apps.length > 0) return admin.apps[0]!;
+  try {
+    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+    const { getMessaging: _getMessaging } = await import('firebase-admin/messaging');
 
-  return admin.initializeApp({
-    credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
-  });
+    const app = getApps().length === 0
+      ? initializeApp({
+          credential: cert({
+            projectId,
+            clientEmail,
+            privateKey: privateKey.replace(/\\n/g, '\n'),
+          }),
+        })
+      : getApps()[0];
+
+    _messaging = _getMessaging(app);
+    return _messaging;
+  } catch (err) {
+    console.error('[FCM] Gagal init firebase-admin:', err);
+    return null;
+  }
 }
-
-export const firebaseApp = globalForFirebase.firebaseApp ?? initFirebase();
-if (process.env.NODE_ENV !== "production") globalForFirebase.firebaseApp = firebaseApp;
 
 /**
  * Kirim push notification ke multiple FCM tokens.
@@ -59,12 +54,10 @@ export async function sendPushNotification(
   body: string,
   data?: Record<string, string>
 ): Promise<{ successCount: number; failureCount: number }> {
-  if (!firebaseApp || tokens.length === 0) {
-    return { successCount: 0, failureCount: 0 };
-  }
+  if (tokens.length === 0) return { successCount: 0, failureCount: 0 };
 
-  const admin = getAdmin();
-  const messaging = admin.messaging(firebaseApp);
+  const messaging = await getMessaging();
+  if (!messaging) return { successCount: 0, failureCount: 0 };
 
   try {
     const response = await messaging.sendEachForMulticast({
@@ -72,8 +65,8 @@ export async function sendPushNotification(
       notification: { title, body },
       data: data ?? {},
       android: {
-        priority: "high",
-        notification: { channelId: "misi-pintar-default" },
+        priority: 'high',
+        notification: { channelId: 'misi-pintar-default' },
       },
     });
 
@@ -82,8 +75,8 @@ export async function sendPushNotification(
       if (!res.success) {
         const code = res.error?.code;
         if (
-          code === "messaging/registration-token-not-registered" ||
-          code === "messaging/invalid-registration-token"
+          code === 'messaging/registration-token-not-registered' ||
+          code === 'messaging/invalid-registration-token'
         ) {
           invalidTokens.push(tokens[idx]);
         }
@@ -102,7 +95,7 @@ export async function sendPushNotification(
       failureCount: response.failureCount,
     };
   } catch (err) {
-    console.error("[FCM] sendEachForMulticast error:", err);
+    console.error('[FCM] sendEachForMulticast error:', err);
     return { successCount: 0, failureCount: tokens.length };
   }
 }

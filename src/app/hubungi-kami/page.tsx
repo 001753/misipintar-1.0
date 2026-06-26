@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import type { Metadata } from 'next'
 import HubungiKamiClient from './hubungi-kami-client'
 import JsonLd from '@/components/JsonLd'

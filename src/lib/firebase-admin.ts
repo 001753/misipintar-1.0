@@ -1,51 +1,59 @@
 /**
  * Firebase Admin — singleton wrapper.
- *
- * PENTING: firebase-admin di-require() secara lazy di dalam fungsi (bukan static
- * import di atas) untuk mencegah gRPC native code dimuat saat build worker
- * Next.js berjalan — penyebab utama SIGSEGV di lingkungan cPanel.
+ * Lazy init, build-safe: tidak di-load saat NEXT_BUILD=1
+ * atau saat env vars Firebase tidak tersedia.
  */
 
-import type * as AdminType from "firebase-admin";
+let _app: any = null;
+let _messaging: any = null;
+let _initialized = false;
 
-type AdminApp = AdminType.app.App;
+async function init() {
+  if (_initialized) return;
+  _initialized = true;
 
-const globalForFirebase = globalThis as unknown as {
-  firebaseAdmin: AdminApp | undefined;
-  firebaseMessaging: AdminType.messaging.Messaging | undefined;
-};
+  if (process.env.NEXT_BUILD === '1') return;
+  if (typeof window !== 'undefined') return;
 
-function getAdmin(): typeof AdminType {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  return require("firebase-admin") as typeof AdminType;
-}
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
-function initFirebaseAdmin(): AdminApp | undefined {
-  if (
-    !process.env.FIREBASE_PROJECT_ID ||
-    !process.env.FIREBASE_CLIENT_EMAIL ||
-    !process.env.FIREBASE_PRIVATE_KEY
-  ) {
-    console.warn("[firebase] Firebase credentials not set — push notifications disabled");
-    return undefined;
+  if (!projectId || !clientEmail || !privateKey) {
+    console.warn('[firebase] Firebase credentials not set — push notifications disabled');
+    return;
   }
 
-  const admin = getAdmin();
-  if (admin.apps.length > 0) return admin.apps[0]!;
+  try {
+    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+    const { getMessaging } = await import('firebase-admin/messaging');
 
-  return admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
-  });
+    _app = getApps().length === 0
+      ? initializeApp({
+          credential: cert({
+            projectId,
+            clientEmail,
+            privateKey: privateKey.replace(/\\n/g, '\n'),
+          }),
+        })
+      : getApps()[0];
+
+    _messaging = getMessaging(_app);
+  } catch (err) {
+    console.error('[firebase] Gagal init firebase-admin:', err);
+  }
 }
 
-export const firebaseAdmin =
-  globalForFirebase.firebaseAdmin ?? initFirebaseAdmin();
+export async function getFirebaseAdmin() {
+  await init();
+  return _app;
+}
 
-if (process.env.NODE_ENV !== "production")
-  globalForFirebase.firebaseAdmin = firebaseAdmin;
+export async function getFirebaseMessaging() {
+  await init();
+  return _messaging;
+}
 
-export const messaging = firebaseAdmin ? getAdmin().messaging() : undefined;
+// Backward compat exports (sync — may be null if not yet initialized)
+export const firebaseAdmin = null;
+export const messaging = null;

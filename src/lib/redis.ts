@@ -5,6 +5,9 @@ const globalForRedis = globalThis as unknown as {
 }
 
 function createRedisClient(): Redis | undefined {
+  // Jangan load ioredis saat build phase
+  if (process.env.NEXT_BUILD === '1') return undefined;
+
   const url = process.env.REDIS_URL
   if (!url) {
     console.warn('[redis] REDIS_URL not set — rate limiting disabled')

@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import SettingsForms from './SettingsForms'
