@@ -49,3 +49,4 @@ APP_URL = "https://8f0a9bc9-ea71-42cd-b831-f2da317277aa-00-252k5u34zr2f4.pike.re
 NEXTAUTH_URL_INTERNAL = "http://localhost:5000"
 NODE_ENV = "development"
 NEXTAUTH_TRUST_HOST = "1"
+RAYON_NUM_THREADS = "1"

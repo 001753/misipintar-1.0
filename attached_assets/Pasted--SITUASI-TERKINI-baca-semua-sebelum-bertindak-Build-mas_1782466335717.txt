@@ -1,0 +1,213 @@
+# SITUASI TERKINI (baca semua sebelum bertindak)
+# Build masih SIGABRT di "Generating static pages (0/15)"
+# Log masih menampilkan: [FCM] Firebase env tidak lengkap
+# Ini berarti firebase-admin MASIH di-load saat build worker berjalan.
+# Target: (0/0) static pages — ZERO worker spawn.
+
+## FAKTA KONFIRMASI DARI LOG
+
+1. "▲ Next.js 16.2.9" masih tampil → versi belum berubah
+   node_modules masih pakai versi lama. Wajib rm -rf node_modules
+   dan npm install ulang setelah ganti package.json.
+
+2. "[FCM] Firebase env tidak lengkap" muncul DI BUILD LOG →
+   firebase-admin masih di-inisialisasi saat generating static pages.
+   Guard yang ada tidak cukup mencegah module load di build worker.
+
+3. Angka halaman: 38→21→15 (turun tapi tidak 0) →
+   Masih ada generateStaticParams atau halaman non-dynamic tersisa.
+
+## FASE 1 — AUDIT CEPAT (jalankan, laporkan hasilnya)
+
+```bash
+# 1. Cek semua file yang masih generateStaticParams
+grep -r "generateStaticParams" src/ --include="*.tsx" --include="*.ts" -l
+
+# 2. Cek semua import firebase-admin di luar folder lib/
+grep -r "firebase-admin\|fcm\|FCM\|firebaseAdmin" src/ --include="*.tsx" --include="*.ts" -l
+
+# 3. Cek file FCM/firebase utama
+cat src/lib/fcm.ts 2>/dev/null || cat src/lib/firebase.ts 2>/dev/null || cat src/lib/firebase-admin.ts 2>/dev/null
+
+# 4. Cek apakah ada import fcm/firebase di instrumentation atau middleware
+cat src/instrumentation.ts 2>/dev/null
+cat src/middleware.ts 2>/dev/null
+```
+
+Laporkan output keempat perintah sebelum lanjut.
+
+---
+
+## FASE 2 — LIMA PERBAIKAN WAJIB
+
+### Fix 1: package.json — GANTI VERSI NEXT (belum dilakukan)
+CARI:   "next": "^16.2.9"
+GANTI:  "next": "15.3.4"
+
+CARI:   "eslint-config-next": "16.2.9"
+GANTI:  "eslint-config-next": "15.3.4"
+
+### Fix 2: Nonaktifkan firebase-admin sepenuhnya dari build path
+
+Buka file src/lib/fcm.ts (atau nama file firebase/FCM yang ada).
+GANTI SELURUH ISI FILE dengan versi lazy + build-safe berikut:
+
+```typescript
+// fcm.ts — lazy init, aman di build worker cPanel
+// firebase-admin tidak boleh di-load saat Next.js build
+
+let _messaging: import('firebase-admin/messaging').Messaging | null = null;
+
+async function getMessaging() {
+  // Jangan load firebase-admin saat build
+  if (process.env.NEXT_BUILD === '1') return null;
+  if (typeof window !== 'undefined') return null;
+
+  if (_messaging) return _messaging;
+
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+
+  if (!projectId || !clientEmail || !privateKey) {
+    console.log('[FCM] Firebase env tidak lengkap — push notifications dinonaktifkan');
+    return null;
+  }
+
+  try {
+    const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+    const { getMessaging: _getMessaging } = await import('firebase-admin/messaging');
+
+    const app = getApps().length === 0
+      ? initializeApp({ credential: cert({ projectId, clientEmail, privateKey: privateKey.replace(/\\n/g, '\n') }) })
+      : getApps()[0];
+
+    _messaging = _getMessaging(app);
+    return _messaging;
+  } catch (err) {
+    console.error('[FCM] Gagal init firebase-admin:', err);
+    return null;
+  }
+}
+
+export async function sendPushNotification(token: string, title: string, body: string) {
+  const messaging = await getMessaging();
+  if (!messaging) return null;
+  try {
+    return await messaging.send({ token, notification: { title, body } });
+  } catch (err) {
+    console.error('[FCM] Gagal kirim notifikasi:', err);
+    return null;
+  }
+}
+
+export async function sendMulticastNotification(tokens: string[], title: string, body: string) {
+  const messaging = await getMessaging();
+  if (!messaging) return null;
+  try {
+    return await messaging.sendEachForMulticast({ tokens, notification: { title, body } });
+  } catch (err) {
+    console.error('[FCM] Gagal kirim multicast:', err);
+    return null;
+  }
+}
+```
+
+### Fix 3: Cek dan perbaiki src/lib/redis.ts
+
+Pastikan tidak ada static import ioredis di baris teratas.
+File HARUS menggunakan lazy require seperti ini:
+
+```typescript
+// redis.ts — lazy init, aman di build worker
+let _redis: any = null;
+
+export function getRedis() {
+  if (process.env.NEXT_BUILD === '1') return null;
+  if (!process.env.REDIS_URL) {
+    console.log('[redis] REDIS_URL not set — rate limiting disabled');
+    return null;
+  }
+  if (_redis) return _redis;
+  const Redis = require('ioredis');
+  _redis = new Redis(process.env.REDIS_URL);
+  return _redis;
+}
+
+// Backward compat jika ada yang import `redis` langsung
+export const redis = new Proxy({} as any, {
+  get(_t, prop) {
+    const r = getRedis();
+    if (!r) return async () => null;
+    return typeof r[prop] === 'function' ? r[prop].bind(r) : r[prop];
+  }
+});
+```
+
+### Fix 4: Pastikan SEMUA halaman yang tersisa adalah dynamic
+
+Jalankan perintah ini untuk cek halaman yang masih statis:
+```bash
+grep -rL "force-dynamic\|generateStaticParams" src/app/**/page.tsx 2>/dev/null | head -20
+```
+
+Untuk SETIAP file page.tsx yang tidak punya force-dynamic,
+tambahkan baris ini di bagian paling atas (setelah 'use client' jika ada,
+atau sebelum import pertama untuk server component):
+```typescript
+export const dynamic = 'force-dynamic';
+```
+
+### Fix 5: next.config.ts — tambah satu baris
+
+Di dalam nextConfig object, setelah `output: "standalone",` tambahkan:
+```typescript
+staticPageGenerationTimeout: 1,
+```
+
+---
+
+## FASE 3 — REINSTALL DAN TEST LOKAL
+
+```bash
+# WAJIB: reinstall dengan versi yang benar
+rm -rf node_modules package-lock.json
+npm install
+
+# Konfirmasi versi
+node -e "console.log('Next.js:', require('./node_modules/next/package.json').version)"
+# HARUS: 15.3.4
+
+# Test build
+NEXT_BUILD=1 NEXT_TELEMETRY_DISABLED=1 RAYON_NUM_THREADS=1 \
+TOKIO_WORKER_THREADS=1 UV_THREADPOOL_SIZE=1 \
+NODE_OPTIONS='--max-old-space-size=768' next build 2>&1 | tail -40
+```
+
+KRITERIA SUKSES:
+- Tidak ada "[FCM] Firebase env" di output build
+- Tidak ada "[redis] REDIS_URL" di output build  
+- "Generating static pages (0/0)" atau fase ini tidak muncul
+- Tidak ada SIGABRT
+
+---
+
+## FASE 4 — COMMIT DAN PUSH (WAJIB sebelum SSH cPanel)
+
+```bash
+git add -A
+git commit -m "fix: lazy load firebase+redis, force-dynamic all pages, fix next version"
+git push origin main
+```
+
+---
+
+## BATASAN KERAS
+- JANGAN ubah logika bisnis atau komponen UI
+- JANGAN hapus fungsi sendPushNotification atau sendMulticastNotification
+  — hanya ubah cara inisialisasinya menjadi lazy
+- JANGAN ubah deploy.sh
+- JANGAN install dependency baru
+- SEMUA perubahan wajib di-commit dan di-push
+- Jika ada error TypeScript setelah perubahan redis.ts,
+  tambahkan // @ts-ignore di baris yang error, JANGAN ubah logika
