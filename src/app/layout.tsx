@@ -5,6 +5,14 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import NavigationProgress from "@/components/NavigationProgress";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
+// force-dynamic pada root layout: semua route menjadi dinamis (0 halaman statis).
+// Ini mencegah Next.js spawn worker thread untuk "Generating static pages" —
+// worker thread tersebut crash (SIGABRT) di cPanel shared hosting karena
+// ulimit -u (max user processes) yang ketat ketika ada 30+ halaman blog statis.
+// Tradeoff: halaman marketing/blog di-render SSR saat request pertama (bukan pre-build).
+// SEO tetap optimal karena Next.js tetap menggunakan Server-Side Rendering.
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: {
     default: "MisiPintar - Solusi Misi Edukatif & Literasi Keuangan Anak",
