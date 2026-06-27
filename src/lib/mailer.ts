@@ -1,12 +1,11 @@
 /**
  * SMTP Mailer — nodemailer over SSL (port 465)
- * Credentials live exclusively in Replit Secrets:
- *   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
  *
- * Never import credentials from code — always from process.env
+ * nodemailer di-require() secara lazy di dalam getTransporter() — BUKAN static import
+ * di atas — karena static import menyebabkan nodemailer termuat saat build worker
+ * mengevaluasi modul ini → SIGABRT saat "Collecting page data".
  */
 
-import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
 
 let _transporter: Transporter | null = null;
@@ -25,8 +24,9 @@ function getTransporter(): Transporter {
     );
   }
 
-  // Port 465 → implicit TLS (secure: true)
-  // Port 587 → STARTTLS (secure: false, requireTLS: true)
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const nodemailer = require("nodemailer") as typeof import("nodemailer");
+
   const secure = port === 465;
 
   _transporter = nodemailer.createTransport({
@@ -34,10 +34,8 @@ function getTransporter(): Transporter {
     port,
     secure,
     auth: { user, pass },
-    // Reasonable timeouts for transactional mail
     connectionTimeout: 10_000,
     socketTimeout: 30_000,
-    // Reject self-signed certs in production
     tls: { rejectUnauthorized: process.env.NODE_ENV === "production" },
   });
 
@@ -76,7 +74,6 @@ export async function sendMail(opts: SendMailOptions): Promise<void> {
   });
 }
 
-/** Verify SMTP connectivity — call on startup diagnostics only */
 export async function verifyMailer(): Promise<boolean> {
   try {
     const transporter = getTransporter();

@@ -1,25 +1,34 @@
 /**
  * [5.2] SSE Endpoint — Real-time events via Redis pub/sub.
  * GET /api/sse
- * JANGAN polling database — hanya Redis SUBSCRIBE.
  *
- * Redis membutuhkan koneksi terpisah untuk mode SUBSCRIBE
- * (koneksi subscribe tidak bisa menjalankan command lain).
+ * ioredis di-require() secara lazy di dalam createSubscriberClient() — BUKAN
+ * static import di atas — karena static import menyebabkan ioredis (beserta
+ * @msgpackr-extract native addon) termuat saat build worker → SIGABRT.
  */
 
 import { auth } from "@/lib/auth/config";
-import Redis from "ioredis";
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 
-function createSubscriberClient(): Redis | null {
+function createSubscriberClient() {
   const url = process.env.REDIS_URL;
   if (!url) return null;
-  return new Redis(url, {
-    maxRetriesPerRequest: null,
-    lazyConnect: false,
-  });
+  if (process.env.NEXT_BUILD === "1") return null;
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const IRedis = (require("ioredis") as { default: typeof import("ioredis").default }).default;
+    return new IRedis(url, {
+      maxRetriesPerRequest: null,
+      lazyConnect: false,
+    });
+  } catch {
+    return null;
+  }
 }
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await auth();
@@ -32,7 +41,6 @@ export async function GET() {
 
   const subscriber = createSubscriberClient();
   if (!subscriber) {
-    // Redis tidak tersedia — kirim koneksi dummy agar client tidak loop reconnect
     return new Response('data: {"type":"no-redis"}\n\n', {
       status: 200,
       headers: {
@@ -58,10 +66,8 @@ export async function GET() {
         }
       }
 
-      // Kirim event "connected" segera
       send(JSON.stringify({ type: "connected", ts: Date.now() }));
 
-      // Heartbeat setiap 30 detik untuk mencegah timeout
       heartbeatTimer = setInterval(() => {
         send(JSON.stringify({ type: "heartbeat", ts: Date.now() }));
       }, HEARTBEAT_INTERVAL_MS);

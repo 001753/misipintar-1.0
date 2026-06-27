@@ -1,103 +1,86 @@
 /**
- * [9.4] BullMQ Cron — Cleanup LoginAttempt lama (> 30 hari)
- * Berjalan setiap hari pukul 02:00 WIB (19:00 UTC).
- * Menggunakan distributed Redis lock agar tidak double-run di multi-instance.
+ * [9.4] Cleanup LoginAttempt lama (> 30 hari)
  *
- * Catatan PRD: AdminAuditLog.adminId is NOT NULL — cron worker tidak bisa menulis
- * ke AdminAuditLog. Cron ini log ke console.error jika gagal (bukan aksi admin).
+ * Strategi:
+ * - Jika Redis tersedia: BullMQ worker via cron (require lazy)
+ * - Jika tidak ada Redis: cron endpoint /api/cron/cleanup-login-attempts
+ *
+ * bullmq dan Queue/Worker di-require() secara lazy di dalam fungsi — BUKAN
+ * static import di atas — karena static import menyebabkan @msgpackr-extract
+ * native addon termuat saat build worker → SIGABRT di cPanel.
  */
 
-import { Queue, Worker } from "bullmq";
 import { prisma } from "@/lib/prisma";
+import { acquireDbLock, releaseDbLock } from "@/lib/db-lock";
+import { getBullConnection } from "@/lib/redis-bull";
 
-const QUEUE_NAME = "cron:cleanup-login-attempts";
-const MUTEX_KEY = "cron:mutex:cleanup-login-attempts";
-const LOCK_TTL_MS = 5 * 60 * 1000; // 5 menit
-
-// BullMQ membutuhkan connection string atau config object — bukan ioredis instance
-// karena BullMQ v5 bundel ioredis sendiri (versi berbeda)
-function getBullConnection() {
-  const url = process.env.REDIS_URL;
-  if (!url) return null;
+/** Logika cleanup — bisa dipanggil langsung (tanpa Redis/BullMQ) */
+export async function runCleanupLoginAttempts(): Promise<{ deleted: number; cutoff: string }> {
+  const locked = await acquireDbLock("cron:cleanup-login-attempts", 300);
+  if (!locked) {
+    console.log("[Cron] cleanup-login-attempts — lock held, skipped");
+    return { deleted: 0, cutoff: "" };
+  }
 
   try {
-    const parsed = new URL(url);
-    return {
-      host: parsed.hostname,
-      port: parseInt(parsed.port || "6379", 10),
-      password: parsed.password || undefined,
-      username: parsed.username || undefined,
-      tls: parsed.protocol === "rediss:" ? {} : undefined,
-    };
-  } catch {
-    return null;
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const result = await prisma.loginAttempt.deleteMany({
+      where: { createdAt: { lt: cutoff } },
+    });
+    console.log(`[Cron] cleanup-login-attempts: deleted=${result.count}`);
+    return { deleted: result.count, cutoff: cutoff.toISOString() };
+  } finally {
+    await releaseDbLock("cron:cleanup-login-attempts");
   }
 }
 
+/** BullMQ worker — hanya aktif jika Redis tersedia */
 export function startCleanupLoginAttemptsWorker() {
   const connection = getBullConnection();
   if (!connection) {
-    console.error("[Cron] REDIS_URL tidak tersedia — cleanup LoginAttempt dilewati");
+    console.error("[Cron] REDIS_URL tidak tersedia — cleanup LoginAttempt dilewati (gunakan /api/cron/cleanup-login-attempts)");
     return null;
   }
 
-  // Buat queue dengan recurring job harian
-  const queue = new Queue(QUEUE_NAME, { connection });
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { Queue, Worker } = require("bullmq") as typeof import("bullmq");
 
-  queue
-    .add(
-      "cleanup",
-      {},
-      {
-        repeat: {
-          pattern: "0 19 * * *", // 02:00 WIB setiap hari
-        },
-        jobId: "cleanup-login-attempts-daily",
-        removeOnComplete: { count: 3 },
-        removeOnFail: { count: 5 },
-      }
-    )
-    .catch((err) =>
-      console.error("[Cron] Gagal mendaftarkan recurring job:", err)
+    const QUEUE_NAME = "cron:cleanup-login-attempts";
+    const queue = new Queue(QUEUE_NAME, { connection });
+
+    queue
+      .add(
+        "cleanup",
+        {},
+        {
+          repeat: { pattern: "0 19 * * *" }, // 02:00 WIB
+          jobId: "cleanup-login-attempts-daily",
+          removeOnComplete: { count: 3 },
+          removeOnFail: { count: 5 },
+        }
+      )
+      .catch((err: unknown) =>
+        console.error("[Cron] Gagal mendaftarkan recurring job:", err)
+      );
+
+    const worker = new Worker(
+      QUEUE_NAME,
+      async () => runCleanupLoginAttempts(),
+      { connection, concurrency: 1 }
     );
 
-  // Worker — proses job
-  const worker = new Worker(
-    QUEUE_NAME,
-    async () => {
-      // Distributed lock — hanya 1 instance yang boleh jalan
-      // Gunakan ioredis dari @/lib/redis untuk lock (bukan BullMQ connection)
-      const { redis } = await import("@/lib/redis");
-      if (!redis) return { skipped: true, reason: "no_redis" };
+    worker.on("completed", (_job: unknown, result: { deleted?: number; skipped?: boolean }) => {
+      if (result?.skipped) return;
+      console.log(`[Cron] cleanup-login-attempts selesai: deleted=${result?.deleted ?? 0}`);
+    });
 
-      const lockAcquired = await redis.set(MUTEX_KEY, "1", "PX", LOCK_TTL_MS, "NX");
-      if (!lockAcquired) {
-        return { skipped: true, reason: "mutex_locked" };
-      }
+    worker.on("failed", (_job: unknown, err: Error) => {
+      console.error("[Cron] cleanup-login-attempts GAGAL:", err?.message);
+    });
 
-      try {
-        const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-        const result = await prisma.loginAttempt.deleteMany({
-          where: { createdAt: { lt: cutoff } },
-        });
-        return { deleted: result.count, cutoff: cutoff.toISOString() };
-      } finally {
-        await redis.del(MUTEX_KEY).catch(() => {});
-      }
-    },
-    { connection, concurrency: 1 }
-  );
-
-  worker.on("completed", (_job, result) => {
-    if (result?.skipped) return;
-    console.error(
-      `[Cron] cleanup-login-attempts selesai: deleted=${result?.deleted ?? 0}`
-    );
-  });
-
-  worker.on("failed", (_job, err) => {
-    console.error("[Cron] cleanup-login-attempts GAGAL:", err?.message);
-  });
-
-  return worker;
+    return worker;
+  } catch {
+    return null;
+  }
 }

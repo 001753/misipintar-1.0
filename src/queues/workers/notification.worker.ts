@@ -2,8 +2,12 @@
  * [5.1] Notification Worker — FCM Push + SSE real-time dispatch.
  * Consumes the "notifications" BullMQ queue.
  * Runs only when REDIS_URL is configured (graceful no-op otherwise).
+ *
+ * bullmq di-require() secara lazy di dalam startNotificationWorker() — BUKAN
+ * static import di atas — karena `import { Worker } from 'bullmq'` menyebabkan
+ * @msgpackr-extract native addon termuat saat build worker → SIGABRT.
  */
-import { Worker, Job } from 'bullmq'
+
 import { getBullConnection } from '@/lib/redis-bull'
 import {
   sendPushNotification,
@@ -32,62 +36,66 @@ export function startNotificationWorker() {
     return null
   }
 
-  const worker = new Worker<NotificationJobData>(
-    'notifications',
-    async (job: Job<NotificationJobData>) => {
-      const {
-        type,
-        familySpaceId,
-        targetUserId,
-        targetChildId,
-        title,
-        body,
-        data,
-      } = job.data
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { Worker } = require('bullmq') as typeof import('bullmq')
 
-      // 1. SSE real-time broadcast to all connected clients in this family
-      await publishToFamily(familySpaceId, {
-        type,
-        payload: { title, body, ...(data ?? {}) },
-      })
+    const worker = new Worker<NotificationJobData>(
+      'notifications',
+      async (job: import('bullmq').Job<NotificationJobData>) => {
+        const {
+          type,
+          familySpaceId,
+          targetUserId,
+          targetChildId,
+          title,
+          body,
+          data,
+        } = job.data
 
-      // 2. FCM push notification to device tokens
-      const tokens: string[] = []
-      if (targetUserId) {
-        tokens.push(...(await getUserFcmTokens(targetUserId)))
-      }
-      if (targetChildId) {
-        tokens.push(...(await getChildFcmTokens(targetChildId)))
-      }
+        await publishToFamily(familySpaceId, {
+          type,
+          payload: { title, body, ...(data ?? {}) },
+        })
 
-      let fcmResult = { successCount: 0, failureCount: 0 }
-      if (tokens.length > 0) {
-        fcmResult = await sendPushNotification(tokens, title, body, data)
-      }
+        const tokens: string[] = []
+        if (targetUserId) {
+          tokens.push(...(await getUserFcmTokens(targetUserId)))
+        }
+        if (targetChildId) {
+          tokens.push(...(await getChildFcmTokens(targetChildId)))
+        }
 
-      // 3. Increment unread badge counter
-      if (targetUserId) {
-        await incrementUnreadBadge(targetUserId)
-      }
+        let fcmResult = { successCount: 0, failureCount: 0 }
+        if (tokens.length > 0) {
+          fcmResult = await sendPushNotification(tokens, title, body, data)
+        }
 
-      return {
-        type,
-        sse: true,
-        fcm: { tokens: tokens.length, ...fcmResult },
-      }
-    },
-    { connection, concurrency: 5 }
-  )
+        if (targetUserId) {
+          await incrementUnreadBadge(targetUserId)
+        }
 
-  worker.on('completed', (job, result) => {
-    console.log(
-      `[NotificationWorker] Job ${job.id} done — sse=${result.sse} fcm_sent=${result.fcm.successCount}`
+        return {
+          type,
+          sse: true,
+          fcm: { tokens: tokens.length, ...fcmResult },
+        }
+      },
+      { connection, concurrency: 5 }
     )
-  })
 
-  worker.on('failed', (job, err) => {
-    console.error(`[NotificationWorker] Job ${job?.id} failed:`, err.message)
-  })
+    worker.on('completed', (job, result) => {
+      console.log(
+        `[NotificationWorker] Job ${job.id} done — sse=${result.sse} fcm_sent=${result.fcm.successCount}`
+      )
+    })
 
-  return worker
+    worker.on('failed', (job, err) => {
+      console.error(`[NotificationWorker] Job ${job?.id} failed:`, err.message)
+    })
+
+    return worker
+  } catch {
+    return null
+  }
 }
