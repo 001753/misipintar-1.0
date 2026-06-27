@@ -1,0 +1,38 @@
+# Dependencies — install locally on server; standalone sudah bundel node_modules-nya
+node_modules/
+
+# Environment / secrets — JANGAN commit ke repo
+.env
+.env.local
+.env.*.local
+
+# Build debug artifacts
+.build-debug.log
+build-debug.log
+
+# .next dev cache — exclude (besar, tidak berguna di server)
+.next/dev/
+.next/cache/
+
+# Next.js — INCLUDE build output (standalone, static, server) untuk deploy ke cPanel
+# .next/standalone/ → entry point server
+# .next/static/     → JS/CSS bundle
+# .next/server/     → RSC/server chunks
+# Baris di bawah ini sengaja TIDAK ada agar .next/ ter-commit seluruhnya.
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Prisma generated (di-generate ulang via prisma generate)
+# Jangan exclude — prisma client perlu ada untuk build & runtime
