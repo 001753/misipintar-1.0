@@ -42,7 +42,7 @@ run = ["bash", "-c", "npm run start"]
 [userenv]
 
 [userenv.shared]
-MIDTRANS_IS_PRODUCTION = "false"
+MIDTRANS_IS_PRODUCTION = "true"
 TRUST_PROXY = "1"
 NODE_ENV = "development"
 NEXTAUTH_TRUST_HOST = "1"
@@ -51,3 +51,8 @@ NEXTAUTH_SECRET = "H0uN5mFUuA4k/G0n28jboFXNxo5L8t9qT/H0rhqe/SM="
 NEXTAUTH_URL = "https://e8731fdc-8e55-420e-a907-8a0e1b91bba3-00-2vsmdkchde21q.pike.replit.dev"
 APP_URL = "https://e8731fdc-8e55-420e-a907-8a0e1b91bba3-00-2vsmdkchde21q.pike.replit.dev"
 NEXTAUTH_URL_INTERNAL = "http://localhost:5000"
+SMTP_HOST = "mail.jobenapp.cloud"
+SMTP_PORT = "465"
+SMTP_USER = "admin@jobenapp.cloud"
+GOOGLE_SITE_VERIFICATION = "google-site-verification=UeqxKkcMuSzc8ZuH1oD-9ihH7A62Rsbf68Zr8CM86sY"
+NEXT_BUILD = "1"

@@ -28,6 +28,7 @@ const SERVER_EXTERNAL_PACKAGES = [
 ] as const;
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   staticPageGenerationTimeout: 60,
   devIndicators: false,
   typescript: {
