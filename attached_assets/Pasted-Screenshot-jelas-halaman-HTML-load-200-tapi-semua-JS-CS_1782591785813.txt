@@ -1,0 +1,56 @@
+Screenshot jelas — halaman HTML load (200) tapi semua JS/CSS 404. Ini masalah klasik Next.js standalone: folder .next/static/ dan public/ harus di-copy manual ke dalam folder standalone/. Saya cek struktur yang ada dulu:
+
+
+2 actions
+Masalah jelas: folder .next/standalone/ hanya berisi server.js — tanpa .next/static/ dan public/. Next.js docs menyatakan keduanya harus di-copy manual setelah build. Saya buat script otomatis sekarang:
+
+
+2 actions
+Sekarang update build:cpanel agar otomatis jalankan script ini setelah build, dan buat file executable:
+
+
+3 actions
+Verifikasi script berjalan dengan benar pada hasil build yang ada:
+
+
+2 actions
+Script berhasil — 127MB standalone siap. Berikut yang harus dilakukan di cPanel sekarang:
+
+Diagnosis: Browser meminta /_next/static/... tapi file tidak ada di server. Ini karena Next.js standalone output tidak otomatis menyertakan static assets.
+
+Solusi yang sudah diterapkan: Script prepare-standalone.sh otomatis copy dua folder yang hilang.
+
+Langkah perbaikan di cPanel (sekarang):
+
+Opsi A — Upload ulang dari Replit (direkomendasikan)
+
+# Di Replit terminal — build ulang sekalian siapkan standalone:
+npm run build && npm run prepare:standalone
+
+Lalu upload ulang seluruh .next/standalone/ ke cPanel.
+
+Opsi B — Copy langsung di cPanel SSH (lebih cepat, tidak perlu upload ulang)
+
+# Di cPanel SSH, dari folder source code (misipintar-1.0):
+cp -r .next/static/ public_html/misipintar/.next/static/
+cp -r public/ public_html/misipintar/public/
+
+Struktur yang WAJIB ada di server cPanel:
+
+~/public_html/misipintar/
+├── server.js              ✅ entry point
+├── package.json           ✅
+├── node_modules/          ✅ (dari standalone — sudah bundled)
+├── .next/
+│   ├── server/            ✅
+│   └── static/            ⚠️  INI YANG HILANG → CSS/JS 404
+└── public/                ⚠️  INI YANG HILANG → favicon/manifest 404
+
+Mulai sekarang, setiap build:
+
+# Satu perintah lengkap (install + migrate + build + copy static):
+npm run build:cpanel
+# Atau jika hanya build ulang (node_modules sudah ada):
+npm run build && npm run prepare:standalone
+
+Coba refresh mp.jobenapp.cloud setelah copy — semua JS/CSS akan load normal.

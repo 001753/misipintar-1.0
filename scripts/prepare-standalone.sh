@@ -1,12 +1,13 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────────────────────
-# prepare-standalone.sh — Copy static assets ke dalam .next/standalone/
+# prepare-standalone.sh — Siapkan .next/standalone/ untuk deploy ke cPanel
 #
 # Next.js standalone output TIDAK menyertakan:
 #   - .next/static/   → file JS/CSS yang diminta browser (_next/static/...)
 #   - public/         → asset publik (gambar, favicon, manifest, dll)
+#   - app.js          → entry point Phusion Passenger (load .env + error handling)
 #
-# Tanpa dua folder ini, semua JS/CSS di browser akan 404.
+# Tanpa ketiga ini, JS/CSS 404 dan app tidak bisa start di cPanel.
 #
 # Jalankan setelah `next build`:
 #   bash scripts/prepare-standalone.sh
@@ -59,6 +60,85 @@ else
   echo "   ⚠️  public/ tidak ditemukan — skip"
 fi
 
+# ── 3. Generate app.js di dalam standalone/ ───────────────────────────────────
+# Phusion Passenger (cPanel) perlu entry point yang:
+#   - Load .env sebelum apapun
+#   - Capture uncaughtException agar app tidak diam-diam crash
+#   - Load server.js (Next.js generated) yang ada di folder yang sama
+echo "   → Generate app.js ..."
+cat > "$STANDALONE/app.js" << 'APPJS'
+"use strict";
+
+/**
+ * Entry point untuk cPanel Node.js App (Phusion Passenger)
+ *
+ * Setup di cPanel:
+ *   Application root        : /home/user/public_html/misipintar
+ *   Application startup file: app.js
+ *   Node.js version         : 20.x / 22.x
+ */
+
+const path = require("path");
+const fs   = require("fs");
+
+// ── Logger dengan rotation ─────────────────────────────────────────────────
+const LOG_DIR  = path.join(__dirname, "logs");
+const LOG_FILE = path.join(LOG_DIR, "app.log");
+const LOG_OLD  = path.join(LOG_DIR, "app.log.1");
+const MAX_BYTES = 512 * 1024;
+
+function writeLog(level, message) {
+  const line = `${new Date().toISOString()} [${level}] ${message}\n`;
+  (level === "ERROR" ? process.stderr : process.stdout).write(line);
+  try {
+    if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
+    if (fs.existsSync(LOG_FILE) && fs.statSync(LOG_FILE).size > MAX_BYTES) {
+      if (fs.existsSync(LOG_OLD)) {
+        try { fs.renameSync(LOG_OLD, path.join(LOG_DIR, "app.log.2")); } catch (_) {}
+      }
+      fs.renameSync(LOG_FILE, LOG_OLD);
+    }
+    fs.appendFileSync(LOG_FILE, line, "utf-8");
+  } catch (e) {
+    process.stderr.write(`[LOG-WRITE-FAIL] ${e.message}\n`);
+  }
+}
+
+// ── Error capture dini ─────────────────────────────────────────────────────
+process.on("uncaughtException", (err) => {
+  writeLog("ERROR", `Uncaught exception: ${err.stack || err.message}`);
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+  writeLog("ERROR", `Unhandled rejection: ${reason instanceof Error ? reason.stack : String(reason)}`);
+  process.exit(1);
+});
+
+// ── Load .env ──────────────────────────────────────────────────────────────
+require("dotenv").config({ path: path.join(__dirname, ".env") });
+
+writeLog("INFO", `Starting — NODE_ENV=${process.env.NODE_ENV || "production"}  Node=${process.version}  PID=${process.pid}`);
+
+// ── Load Next.js standalone server ────────────────────────────────────────
+// server.js ada di folder yang SAMA dengan app.js (keduanya di dalam standalone/)
+const standaloneServer = path.join(__dirname, "server.js");
+
+if (!fs.existsSync(standaloneServer)) {
+  writeLog("ERROR", "server.js tidak ditemukan. Build ulang dengan: npm run build:cpanel");
+  writeLog("ERROR", `Path: ${standaloneServer}`);
+  process.exit(1);
+}
+
+try {
+  require(standaloneServer);
+  writeLog("INFO", "server.js loaded — Next.js server starting");
+} catch (err) {
+  writeLog("ERROR", `Gagal load server.js:\n${err.stack || err.message}`);
+  process.exit(1);
+}
+APPJS
+echo "   ✓ app.js berhasil di-generate"
+
 # ── Ringkasan ukuran ──────────────────────────────────────────────────────────
 echo ""
 echo "✅ Standalone siap di: .next/standalone/"
@@ -73,13 +153,17 @@ echo "   ~/public_html/misipintar/  (atau direktori app Anda)"
 echo ""
 echo "   Struktur yang harus ada di server:"
 echo "   public_html/misipintar/"
-echo "   ├── server.js          ← entry point Node.js"
+echo "   ├── app.js             ← startup file (WAJIB — entry point Passenger)"
+echo "   ├── server.js          ← Next.js generated server"
 echo "   ├── package.json"
 echo "   ├── node_modules/      ← sudah di-copy oleh standalone"
 echo "   ├── .next/"
+echo "   │   ├── server/        ← server-side code"
 echo "   │   └── static/        ← JS/CSS (WAJIB ada)"
 echo "   └── public/            ← asset publik (WAJIB ada)"
 echo ""
-echo "   Lalu set entry point di cPanel Node.js App:"
-echo "   Application startup file: server.js"
+echo "   Set di cPanel Node.js App:"
+echo "   Application startup file: app.js   ← (bukan server.js)"
+echo ""
+echo "   Jangan lupa upload/buat file .env di root server."
 echo "─────────────────────────────────────────────────────────"
