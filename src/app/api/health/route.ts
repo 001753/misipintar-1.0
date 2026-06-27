@@ -48,15 +48,11 @@ export async function GET() {
   }
 
   // ── Env vars critical check ────────────────────────────────────────────────
-  // NEXTAUTH_SECRET atau SESSION_SECRET — salah satu cukup (auth config pakai fallback)
-  const hasAuthSecret = !!(process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET)
-  const hasDatabaseUrl = !!process.env.DATABASE_URL
-  const missingList: string[] = []
-  if (!hasDatabaseUrl) missingList.push('DATABASE_URL')
-  if (!hasAuthSecret) missingList.push('NEXTAUTH_SECRET (atau SESSION_SECRET)')
-  checks.envVars = missingList.length === 0
+  const requiredEnvs = ['DATABASE_URL', 'NEXTAUTH_SECRET', 'SESSION_SECRET']
+  const missingEnvs = requiredEnvs.filter((k) => !process.env[k])
+  checks.envVars = missingEnvs.length === 0
     ? { status: 'ok', detail: 'Semua env var kritis tersedia' }
-    : { status: 'error', detail: `Missing: ${missingList.join(', ')}` }
+    : { status: 'error', detail: `Missing: ${missingEnvs.join(', ')}` }
 
   // ── Redis check (opsional — tidak gagal jika tidak ada) ────────────────────
   try {

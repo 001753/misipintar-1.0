@@ -1,13 +1,5 @@
 {
-  "/(auth)/register/page": "app/(auth)/register/page.js",
-  "/api/health/route": "app/api/health/route.js",
   "/api/notifications/recent/route": "app/api/notifications/recent/route.js",
-  "/apple-icon/route": "app/apple-icon/route.js",
-  "/dashboard/onboarding/page": "app/dashboard/onboarding/page.js",
-  "/hubungi-kami/page": "app/hubungi-kami/page.js",
-  "/kebijakan-privasi/page": "app/kebijakan-privasi/page.js",
-  "/manifest.webmanifest/route": "app/manifest.webmanifest/route.js",
-  "/offline/page": "app/offline/page.js",
-  "/page": "app/page.js",
-  "/tentang-kami/page": "app/tentang-kami/page.js"
+  "/dashboard/page": "app/dashboard/page.js",
+  "/page": "app/page.js"
 }
