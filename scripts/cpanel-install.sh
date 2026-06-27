@@ -132,10 +132,20 @@ if [ -n "$MISSING" ]; then
   exit 1
 fi
 
-# ── Prisma generate ──────────────────────────────────────────────────────────
+# ── Prisma generate + migrate deploy ─────────────────────────────────────────
+# PENTING: Selalu gunakan ./node_modules/.bin/prisma (v6 lokal).
+# Jangan pakai `npx prisma` — npx di cPanel bisa download Prisma v7 terbaru
+# yang sudah tidak mendukung `url = env(...)` di schema.prisma.
 if [ -f "node_modules/.bin/prisma" ]; then
-  echo "[prebuild] Prisma generate..."
+  echo "[prebuild] Prisma generate (v6 lokal)..."
   ./node_modules/.bin/prisma generate 2>/dev/null || true
+
+  echo "[prebuild] Prisma migrate deploy (v6 lokal)..."
+  ./node_modules/.bin/prisma migrate deploy || {
+    echo "[prebuild] ⚠️  migrate deploy gagal — lanjut build (mungkin belum ada migrasi baru)"
+  }
+else
+  echo "[prebuild] ⚠️  ./node_modules/.bin/prisma tidak ditemukan — skip prisma steps"
 fi
 
 echo "[prebuild] ✅ node_modules lokal siap — lanjut ke next build"
