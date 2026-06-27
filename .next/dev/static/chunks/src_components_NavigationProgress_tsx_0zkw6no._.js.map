@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///home/runner/workspace/src/components/NavigationProgress.tsx"],"sourcesContent":["'use client'\n\nimport { AppProgressBar } from 'next-nprogress-bar'\n\nexport default function NavigationProgress() {\n  return (\n    <AppProgressBar\n      height=\"3px\"\n      color=\"#059669\"\n      options={{ showSpinner: false, trickleSpeed: 200 }}\n      shallowRouting\n    />\n  )\n}\n"],"names":["NavigationProgress","height","color","options","showSpinner","trickleSpeed","shallowRouting"],"mappings":";;;;;AAEA;AAFA;;;AAIe,SAASA;IACtB,qBACE,6LAAC,8KAAc;QACbC,QAAO;QACPC,OAAM;QACNC,SAAS;YAAEC,aAAa;YAAOC,cAAc;QAAI;QACjDC,cAAc;;;;;;AAGpB;KATwBN"}}]
+}
