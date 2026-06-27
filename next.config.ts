@@ -29,7 +29,6 @@ const SERVER_EXTERNAL_PACKAGES = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  turbopack: {},
   staticPageGenerationTimeout: 1,
   devIndicators: false,
   typescript: {
