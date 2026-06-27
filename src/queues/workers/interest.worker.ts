@@ -1,29 +1,19 @@
-import { Worker, Job } from "bullmq";
 import { prisma } from "@/lib/prisma";
-import { redis } from "@/lib/redis";
+import { acquireDbLock, releaseDbLock } from "@/lib/db-lock";
 import { getBullConnection } from "@/lib/redis-bull";
 
-const LOCK_KEY = "cron:mutex:interest";
 const LOCK_TTL_SECONDS = 300; // 5 menit
 const BATCH_SIZE = 500;
 
-async function acquireLock(): Promise<boolean> {
-  if (!redis) return false;
-  const result = await redis.set(LOCK_KEY, "1", "EX", LOCK_TTL_SECONDS, "NX");
-  return result === "OK";
-}
-
-async function releaseLock(): Promise<void> {
-  if (!redis) return;
-  await redis.del(LOCK_KEY);
-}
-
-async function runInterestEngine(): Promise<{
+// ─────────────────────────────────────────────────────────
+// [3.2] Interest Engine (PRO+ hasInterest = true)
+// ─────────────────────────────────────────────────────────
+export async function runInterestEngine(): Promise<{
   processed: number;
   credited: number;
   totalInterest: number;
 }> {
-  const locked = await acquireLock();
+  const locked = await acquireDbLock("cron:interest", LOCK_TTL_SECONDS);
   if (!locked) {
     console.log("[InterestWorker] Skipped — lock held by another instance");
     return { processed: 0, credited: 0, totalInterest: 0 };
@@ -35,10 +25,9 @@ async function runInterestEngine(): Promise<{
   let totalInterest = 0;
 
   try {
-    // Ambil AppConfig untuk interestRate
     const appConfig = await prisma.appConfig.findUnique({ where: { id: "global-config" } });
     const configData = (appConfig?.data ?? {}) as Record<string, unknown>;
-    const interestRate = typeof configData.interestRate === "number" ? configData.interestRate : 2; // default 2%
+    const interestRate = typeof configData.interestRate === "number" ? configData.interestRate : 2;
 
     while (true) {
       const children = await prisma.child.findMany({
@@ -47,12 +36,8 @@ async function runInterestEngine(): Promise<{
           savingsBalance: { gt: 0 },
           familySpace: {
             subscription: {
-              // Hanya proses bunga untuk langganan yang masih aktif
               status: { in: ["TRIAL", "PRO", "EDUCATOR", "SCHOOL"] },
-              plan: {
-                // hasInterest is stored in plan.limits JSON
-                NOT: { limits: {} },
-              },
+              plan: { NOT: { limits: {} } },
             },
           },
         },
@@ -123,12 +108,11 @@ async function runInterestEngine(): Promise<{
       if (children.length < BATCH_SIZE) break;
     }
 
-    // Log summary (AdminAuditLog requires adminId — cron has no actor, use console only)
     console.log(
       `[InterestWorker] Done — processed=${processed}, credited=${credited}, totalInterest=${totalInterest}`
     );
   } finally {
-    await releaseLock();
+    await releaseDbLock("cron:interest");
   }
 
   return { processed, credited, totalInterest };
@@ -137,20 +121,13 @@ async function runInterestEngine(): Promise<{
 // ─────────────────────────────────────────────────────────
 // [3.3] Tax Engine (PRO+ hasTax = true)
 // ─────────────────────────────────────────────────────────
-const TAX_LOCK_KEY = "cron:mutex:tax";
-
-async function runTaxEngine(): Promise<{
+export async function runTaxEngine(): Promise<{
   processed: number;
   taxed: number;
   totalTax: number;
 }> {
-  if (!redis) return { processed: 0, taxed: 0, totalTax: 0 };
-
-  const taxLocked = await (async () => {
-    const r = await redis!.set(TAX_LOCK_KEY, "1", "EX", LOCK_TTL_SECONDS, "NX");
-    return r === "OK";
-  })();
-  if (!taxLocked) {
+  const locked = await acquireDbLock("cron:tax", LOCK_TTL_SECONDS);
+  if (!locked) {
     console.log("[TaxWorker] Skipped — lock held by another instance");
     return { processed: 0, taxed: 0, totalTax: 0 };
   }
@@ -171,7 +148,6 @@ async function runTaxEngine(): Promise<{
           deletedAt: null,
           familySpace: {
             subscription: {
-              // Hanya kenakan pajak untuk langganan yang masih aktif
               status: { in: ["TRIAL", "PRO", "EDUCATOR", "SCHOOL"] },
               plan: { NOT: { limits: {} } },
             },
@@ -198,7 +174,6 @@ async function runTaxEngine(): Promise<{
 
         const taxRate = typeof limits.taxRate === "number" ? limits.taxRate : 5;
 
-        // Hitung total reward bulan lalu
         const lastMonthRewards = await prisma.transactionLedger.aggregate({
           where: {
             childId: child.id,
@@ -222,7 +197,7 @@ async function runTaxEngine(): Promise<{
               select: { balance: true },
             });
 
-            if (current.balance < taxAmount) return; // skip jika saldo tidak cukup
+            if (current.balance < taxAmount) return;
 
             const updated = await tx.child.update({
               where: { id: child.id },
@@ -259,39 +234,41 @@ async function runTaxEngine(): Promise<{
 
     console.log(`[TaxWorker] Done — processed=${processed}, taxed=${taxed}, totalTax=${totalTax}`);
   } finally {
-    if (redis) await redis.del(TAX_LOCK_KEY);
+    await releaseDbLock("cron:tax");
   }
 
   return { processed, taxed, totalTax };
 }
 
 // ─────────────────────────────────────────────────────────
-// Worker registrations
+// Legacy BullMQ worker (hanya aktif jika Redis tersedia)
 // ─────────────────────────────────────────────────────────
 export function startInterestWorker() {
   const connection = getBullConnection();
-  if (!redis || !connection) {
-    console.warn("[InterestWorker] Redis not available — interest cron disabled");
+  if (!connection) {
+    console.warn("[InterestWorker] Redis not available — using cron endpoints instead (/api/cron/interest, /api/cron/tax)");
     return null;
   }
 
-  const worker = new Worker(
-    "interest",
-    async (job: Job) => {
-      console.log(`[InterestWorker] Job ${job.id} started`);
-      if (job.data?.type === "TAX") {
-        return runTaxEngine();
-      }
-      return runInterestEngine();
-    },
-    { connection }
-  );
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { Worker } = require("bullmq") as typeof import("bullmq");
+    const worker = new Worker(
+      "interest",
+      async (job: import("bullmq").Job) => {
+        console.log(`[InterestWorker] Job ${job.id} started`);
+        if (job.data?.type === "TAX") return runTaxEngine();
+        return runInterestEngine();
+      },
+      { connection }
+    );
 
-  worker.on("failed", (job, err) => {
-    console.error(`[InterestWorker] Job ${job?.id} failed:`, err);
-  });
+    worker.on("failed", (job, err) => {
+      console.error(`[InterestWorker] Job ${job?.id} failed:`, err);
+    });
 
-  return worker;
+    return worker;
+  } catch {
+    return null;
+  }
 }
-
-export { runInterestEngine, runTaxEngine };

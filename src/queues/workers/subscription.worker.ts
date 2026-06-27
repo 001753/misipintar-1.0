@@ -3,35 +3,25 @@
  *
  * Cron setiap jam: cari Subscription dengan currentPeriodEnd < now()
  * dan status bukan EXPIRED/CANCELLED → update ke EXPIRED
- * Gunakan Redis distributed lock: "cron:mutex:expire-subs"
+ *
+ * Menggunakan DB-based distributed lock (pengganti Redis mutex).
+ * Tanpa Redis: dipanggil via /api/cron/expire-subscriptions
+ * Dengan Redis: BullMQ worker jalan otomatis (backward compatible)
  */
 
-import { Worker, Job } from "bullmq";
 import { prisma } from "@/lib/prisma";
-import { redis } from "@/lib/redis";
+import { acquireDbLock, releaseDbLock } from "@/lib/db-lock";
 import { getBullConnection } from "@/lib/redis-bull";
 
-const LOCK_KEY = "cron:mutex:expire-subs";
-const LOCK_TTL_SECONDS = 300; // 5 menit
+const LOCK_TTL_SECONDS = 300;
 const BATCH_SIZE = 200;
-
-async function acquireLock(): Promise<boolean> {
-  if (!redis) return false;
-  const result = await redis.set(LOCK_KEY, "1", "EX", LOCK_TTL_SECONDS, "NX");
-  return result === "OK";
-}
-
-async function releaseLock(): Promise<void> {
-  if (!redis) return;
-  await redis.del(LOCK_KEY);
-}
 
 export async function runExpireSubscriptions(): Promise<{
   checked: number;
   expired: number;
   errors: number;
 }> {
-  const locked = await acquireLock();
+  const locked = await acquireDbLock("cron:expire-subs", LOCK_TTL_SECONDS);
   if (!locked) {
     console.log("[SubExpiry] Skipped — lock held by another instance");
     return { checked: 0, expired: 0, errors: 0 };
@@ -45,7 +35,6 @@ export async function runExpireSubscriptions(): Promise<{
 
   try {
     while (true) {
-      // Cari subscription yang melewati currentPeriodEnd tapi belum EXPIRED/CANCELLED
       const subscriptions = await prisma.subscription.findMany({
         where: {
           currentPeriodEnd: { lt: now },
@@ -73,13 +62,11 @@ export async function runExpireSubscriptions(): Promise<{
       for (const sub of subscriptions) {
         try {
           await prisma.$transaction(async (tx) => {
-            // Update status ke EXPIRED
             await tx.subscription.update({
               where: { id: sub.id },
               data: { status: "EXPIRED" },
             });
 
-            // Kirim notifikasi in-app ke parent
             await tx.notification.create({
               data: {
                 familySpaceId: sub.familySpace.id,
@@ -107,22 +94,18 @@ export async function runExpireSubscriptions(): Promise<{
       if (subscriptions.length < BATCH_SIZE) break;
     }
 
-    // Juga handle cancelAtPeriodEnd yang sudah lewat — ubah ke CANCELLED
     const cancelledCount = await expireCancelledSubscriptions(now);
 
     console.log(
       `[SubExpiry] Done — checked=${checked}, expired=${expired}, cancelled=${cancelledCount}, errors=${errors}`
     );
   } finally {
-    await releaseLock();
+    await releaseDbLock("cron:expire-subs");
   }
 
   return { checked, expired, errors };
 }
 
-/**
- * Handle cancelAtPeriodEnd: jika sudah lewat periodEnd, ubah ke CANCELLED
- */
 async function expireCancelledSubscriptions(now: Date): Promise<number> {
   const toCancel = await prisma.subscription.findMany({
     where: {
@@ -165,27 +148,36 @@ async function expireCancelledSubscriptions(now: Date): Promise<number> {
   return cancelled;
 }
 
+// ─────────────────────────────────────────────────────────
+// Legacy BullMQ worker (hanya aktif jika Redis tersedia)
+// ─────────────────────────────────────────────────────────
 export function startSubscriptionWorker() {
   const connection = getBullConnection();
-  if (!redis || !connection) {
+  if (!connection) {
     console.warn(
-      "[SubExpiry] Redis not available — subscription expiry cron disabled"
+      "[SubExpiry] Redis not available — using cron endpoint instead (/api/cron/expire-subscriptions)"
     );
     return null;
   }
 
-  const worker = new Worker(
-    "subscriptions",
-    async (job: Job) => {
-      console.log(`[SubExpiry] Job ${job.id} started`);
-      return runExpireSubscriptions();
-    },
-    { connection }
-  );
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { Worker } = require("bullmq") as typeof import("bullmq");
+    const worker = new Worker(
+      "subscriptions",
+      async (job: import("bullmq").Job) => {
+        console.log(`[SubExpiry] Job ${job.id} started`);
+        return runExpireSubscriptions();
+      },
+      { connection }
+    );
 
-  worker.on("failed", (job, err) => {
-    console.error(`[SubExpiry] Job ${job?.id} failed:`, err);
-  });
+    worker.on("failed", (job, err) => {
+      console.error(`[SubExpiry] Job ${job?.id} failed:`, err);
+    });
 
-  return worker;
+    return worker;
+  } catch {
+    return null;
+  }
 }

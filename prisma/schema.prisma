@@ -332,3 +332,27 @@ model AppConfig {
   data      Json
   updatedAt DateTime  @updatedAt
 }
+
+// ─── CRON LOCK (pengganti Redis mutex untuk cron job) ──────
+model CronLock {
+  id        String   @id
+  lockedAt  DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+// ─── FILE UPLOAD (pengganti Cloudflare R2) ─────────────────
+model FileUpload {
+  id            String   @id @default(uuid())
+  filename      String
+  contentType   String
+  size          Int
+  data          Bytes
+  childId       String
+  familySpaceId String
+  createdAt     DateTime @default(now())
+
+  @@index([childId])
+  @@index([familySpaceId])
+}

@@ -7,3 +7,4 @@
 - [cPanel build SIGSEGV fix](cpanel-sigsegv.md) — instrumentation.ts must guard against NEXT_PHASE=phase-production-build or BullMQ/Firebase signal handlers crash the build worker.
 - [cPanel SIGABRT & Turbopack symlink fix](cpanel-sigabrt.md) — cPanel symlinks node_modules → Turbopack panics; must use --webpack. SIGABRT fixed by lazy FCM/Redis + force-dynamic + workerThreads:false + NEXT_BUILD=1.
 - [Replit blocks Next.js version downgrade](replit-next-version.md) — Next.js 15.3.4 is blocked by Replit security policy; must stay on ^16.2.9. FCM/Redis lazy-init + force-dynamic are the correct build fixes, not the version downgrade.
+- [cPanel Redis & R2 alternatives](cpanel-no-redis-r2.md) — cPanel has no Redis/R2; replaced with DB-based cron lock (CronLock table) + PostgreSQL file storage (FileUpload bytea). Cron endpoints at /api/cron/*.

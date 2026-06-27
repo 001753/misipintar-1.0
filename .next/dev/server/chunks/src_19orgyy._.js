@@ -35,7 +35,7 @@ __turbopack_context__.v((parentImport) => {
 
 __turbopack_context__.v((parentImport) => {
     return Promise.all([
-  "server/chunks/[root-of-the-server]__0tfu6ae._.js"
+  "server/chunks/[root-of-the-server]__0w2ol0-._.js"
 ].map((chunk) => __turbopack_context__.l(chunk))).then(() => {
         return parentImport("[project]/src/queues/workers/interest.worker.ts [instrumentation] (ecmascript)");
     });
@@ -45,7 +45,7 @@ __turbopack_context__.v((parentImport) => {
 
 __turbopack_context__.v((parentImport) => {
     return Promise.all([
-  "server/chunks/[root-of-the-server]__0w68jlh._.js"
+  "server/chunks/[root-of-the-server]__0xeo80p._.js"
 ].map((chunk) => __turbopack_context__.l(chunk))).then(() => {
         return parentImport("[project]/src/queues/workers/subscription.worker.ts [instrumentation] (ecmascript)");
     });
