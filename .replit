@@ -44,7 +44,7 @@ run = ["bash", "-c", "npm run start"]
 [userenv.shared]
 MIDTRANS_IS_PRODUCTION = "true"
 TRUST_PROXY = "1"
-NODE_ENV = "development"
+NODE_ENV = "production"
 NEXTAUTH_TRUST_HOST = "1"
 RAYON_NUM_THREADS = "1"
 NEXTAUTH_SECRET = "H0uN5mFUuA4k/G0n28jboFXNxo5L8t9qT/H0rhqe/SM="
