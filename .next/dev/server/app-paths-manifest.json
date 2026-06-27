@@ -1,5 +1,8 @@
 {
   "/api/notifications/recent/route": "app/api/notifications/recent/route.js",
+  "/apple-icon/route": "app/apple-icon/route.js",
+  "/dashboard/onboarding/page": "app/dashboard/onboarding/page.js",
   "/dashboard/page": "app/dashboard/page.js",
+  "/manifest.webmanifest/route": "app/manifest.webmanifest/route.js",
   "/page": "app/page.js"
 }
