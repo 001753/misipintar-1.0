@@ -59,22 +59,25 @@ export async function registerFamilySpace(
     return { success: false, error: err?.errors?.[0]?.message ?? err?.message ?? 'Password tidak memenuhi syarat.' }
   }
 
-  const existing = await prisma.user.findUnique({ where: { phone: normalizedPhone } })
-  if (existing) {
-    return { success: false, error: 'Nomor WhatsApp sudah terdaftar.' }
-  }
-
-  const [passwordHash, spaceCode, starterPlan] = await Promise.all([
-    bcrypt.hash(password, 12),
-    generateUniqueSpaceCode(),
-    prisma.plan.findFirst({ where: { type: 'STARTER' } }),
-  ])
-
-  if (!starterPlan) {
-    return { success: false, error: 'Konfigurasi plan belum siap. Hubungi admin.' }
-  }
-
   try {
+    const existing = await prisma.user.findUnique({ where: { phone: normalizedPhone } })
+    if (existing) {
+      return { success: false, error: 'Nomor WhatsApp sudah terdaftar.' }
+    }
+
+    const results = await Promise.all([
+      bcrypt.hash(password, 12),
+      generateUniqueSpaceCode(),
+      prisma.plan.findFirst({ where: { type: 'STARTER' } }),
+    ])
+    const passwordHash = results[0] as string
+    const spaceCode = results[1] as string
+    const starterPlan = results[2] as { id: string } | null
+
+    if (!starterPlan) {
+      return { success: false, error: 'Konfigurasi plan belum siap. Hubungi admin.' }
+    }
+
     await prisma.$transaction(async (tx) => {
       const owner = await tx.user.create({
         data: {
@@ -216,7 +219,13 @@ export async function sendForgotPasswordOtp(
   const phone = normalizePhone(rawPhone)
 
   // Pastikan nomor terdaftar
-  const user = await prisma.user.findUnique({ where: { phone } })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let user: any = null
+  try {
+    user = await prisma.user.findUnique({ where: { phone } })
+  } catch (_e) {
+    return { success: false, error: 'Tidak dapat terhubung ke database. Coba beberapa saat lagi.' }
+  }
   if (!user) {
     // Kembalikan pesan generik — jangan bocorkan apakah nomor ada atau tidak
     return {
@@ -319,13 +328,23 @@ export async function sendChangePhoneOtp(
   const newPhone = normalizePhone(rawPhone)
 
   // Pastikan nomor belum dipakai akun lain
-  const conflict = await prisma.user.findUnique({ where: { phone: newPhone } })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let conflict: any = null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let me: any = null
+  try {
+    const checks = await Promise.all([
+      prisma.user.findUnique({ where: { phone: newPhone } }),
+      prisma.user.findUnique({ where: { id: userId }, select: { phone: true } }),
+    ])
+    conflict = checks[0]
+    me = checks[1]
+  } catch (_e) {
+    return { success: false, error: 'Tidak dapat terhubung ke database. Coba beberapa saat lagi.' }
+  }
   if (conflict && conflict.id !== userId) {
     return { success: false, error: 'Nomor WhatsApp ini sudah digunakan akun lain.' }
   }
-
-  // Pastikan bukan nomor yang sama
-  const me = await prisma.user.findUnique({ where: { id: userId }, select: { phone: true } })
   if (me?.phone === newPhone) {
     return { success: false, error: 'Nomor baru sama dengan nomor saat ini.' }
   }
@@ -359,7 +378,13 @@ export async function verifyAndChangePhone(
   const normalizedPhone = normalizePhone(newPhone)
 
   // Periksa sekali lagi apakah ada konflik (bisa saja ada race condition)
-  const conflict = await prisma.user.findUnique({ where: { phone: normalizedPhone } })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let conflict: any = null
+  try {
+    conflict = await prisma.user.findUnique({ where: { phone: normalizedPhone } })
+  } catch (_e) {
+    return { success: false, error: 'Tidak dapat terhubung ke database. Coba beberapa saat lagi.' }
+  }
   if (conflict && conflict.id !== userId) {
     return { success: false, error: 'Nomor ini sudah dipakai akun lain.' }
   }
@@ -396,40 +421,45 @@ export async function changePassword(
     return { success: false, error: 'Semua field wajib diisi.' }
   }
 
-  // Ambil hash password lama
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { passwordHash: true },
-  })
-  if (!user) return { success: false, error: 'Akun tidak ditemukan.' }
-
-  // Verifikasi password lama
-  const isMatch = await bcrypt.compare(currentPassword, user.passwordHash)
-  if (!isMatch) {
-    return { success: false, error: 'Password saat ini tidak sesuai.' }
-  }
-
-  // Pastikan password baru tidak sama dengan lama
-  const isSame = await bcrypt.compare(newPassword, user.passwordHash)
-  if (isSame) {
-    return { success: false, error: 'Password baru tidak boleh sama dengan password saat ini.' }
-  }
-
-  // Validasi kekuatan password baru
   try {
-    validateParentPassword(newPassword)
-  } catch (err: any) {
-    return { success: false, error: err?.errors?.[0]?.message ?? err?.message ?? 'Password tidak memenuhi syarat.' }
+    // Ambil hash password lama
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    })
+    if (!user) return { success: false, error: 'Akun tidak ditemukan.' }
+
+    // Verifikasi password lama
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash)
+    if (!isMatch) {
+      return { success: false, error: 'Password saat ini tidak sesuai.' }
+    }
+
+    // Pastikan password baru tidak sama dengan lama
+    const isSame = await bcrypt.compare(newPassword, user.passwordHash)
+    if (isSame) {
+      return { success: false, error: 'Password baru tidak boleh sama dengan password saat ini.' }
+    }
+
+    // Validasi kekuatan password baru
+    try {
+      validateParentPassword(newPassword)
+    } catch (err: any) {
+      return { success: false, error: err?.errors?.[0]?.message ?? err?.message ?? 'Password tidak memenuhi syarat.' }
+    }
+
+    // Simpan hash baru
+    const newHash = await bcrypt.hash(newPassword, 12)
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: newHash },
+    })
+
+    return { success: true, data: null }
+  } catch (err) {
+    console.error('[changePassword]', err)
+    return { success: false, error: 'Tidak dapat terhubung ke database. Coba beberapa saat lagi.' }
   }
-
-  // Simpan hash baru
-  const newHash = await bcrypt.hash(newPassword, 12)
-  await prisma.user.update({
-    where: { id: userId },
-    data: { passwordHash: newHash },
-  })
-
-  return { success: true, data: null }
 }
 
 // ─── Update Email dari Dashboard ─────────────────────────

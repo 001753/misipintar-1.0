@@ -32,6 +32,28 @@ export async function GET() {
     }
   }
 
+  // ── Plan seeding check — STARTER plan harus ada ───────────────────────────
+  if (checks.database?.status === 'ok') {
+    try {
+      const starterPlan = await prisma.plan.findFirst({ where: { type: 'STARTER' } })
+      checks.starterPlan = starterPlan
+        ? { status: 'ok', detail: `id: ${starterPlan.id}` }
+        : { status: 'error', detail: 'Plan STARTER tidak ditemukan — jalankan: npm run db:seed' }
+    } catch (err) {
+      checks.starterPlan = {
+        status: 'error',
+        detail: err instanceof Error ? err.message : String(err),
+      }
+    }
+  }
+
+  // ── Env vars critical check ────────────────────────────────────────────────
+  const requiredEnvs = ['DATABASE_URL', 'NEXTAUTH_SECRET', 'SESSION_SECRET']
+  const missingEnvs = requiredEnvs.filter((k) => !process.env[k])
+  checks.envVars = missingEnvs.length === 0
+    ? { status: 'ok', detail: 'Semua env var kritis tersedia' }
+    : { status: 'error', detail: `Missing: ${missingEnvs.join(', ')}` }
+
   // ── Redis check (opsional — tidak gagal jika tidak ada) ────────────────────
   try {
     const { redis } = await import('@/lib/redis')
