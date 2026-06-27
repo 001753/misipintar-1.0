@@ -1,0 +1,54 @@
+[public_html/misipintar/misipintar-1.0 (22)] [smknwon2@tirtonirmolo misipintar-1.0]$ npx prisma generate
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+node:events:497
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: spawn /opt/alt/alt-nodejs22/root/usr/bin/node EAGAIN
+    at ChildProcess._handle.onexit (node:internal/child_process:285:19)
+    at onErrorNT (node:internal/child_process:483:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
+Emitted 'error' event on ChildProcess instance at:
+    at ChildProcess._handle.onexit (node:internal/child_process:291:12)
+    at onErrorNT (node:internal/child_process:483:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  errno: -11,
+  code: 'EAGAIN',
+  syscall: 'spawn /opt/alt/alt-nodejs22/root/usr/bin/node',
+  path: '/opt/alt/alt-nodejs22/root/usr/bin/node',
+  spawnargs: [
+    '/home/smknwon2/nodevenv/public_html/misipintar/misipintar-1.0/22/lib/node_modules/prisma/build/child',
+    '{"product":"prisma","version":"6.19.3","cli_install_type":"local","information":"","local_timestamp":"2026-06-27T23:14:51+07:00","project_hash":"d4b29571","cli_path":"/home/smknwon2/public_html/misipintar/misipintar-1.0/node_modules/.bin/prisma","cli_path_hash":"6da9a6b9","endpoint":"https://checkpoint.prisma.io","disable":false,"arch":"x64","os":"linux","node_version":"v22.22.3","ci":false,"ci_name":"","command":"generate","schema_providers":["postgresql"],"schema_preview_features":[],"schema_generators_providers":["prisma-client-js"],"cache_file":"/home/smknwon2/.cache/checkpoint-nodejs/prisma-6da9a6b9","cache_duration":43200000,"remind_duration":172800000,"force":false,"timeout":5000,"unref":true,"child_path":"/home/smknwon2/nodevenv/public_html/misipintar/misipintar-1.0/22/lib/node_modules/prisma/build/child","client_event_id":"","previous_client_event_id":"","check_if_update_available":false}'
+  ]
+}
+
+Node.js v22.22.3
+[public_html/misipintar/misipintar-1.0 (22)] [smknwon2@tirtonirmolo misipintar-1.0]$ npx prisma@6 migrate deploywarn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+node:events:497
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: spawn /opt/alt/alt-nodejs22/root/usr/bin/node EAGAIN
+    at ChildProcess._handle.onexit (node:internal/child_process:285:19)
+    at onErrorNT (node:internal/child_process:483:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
+Emitted 'error' event on ChildProcess instance at:
+    at ChildProcess._handle.onexit (node:internal/child_process:291:12)
+    at onErrorNT (node:internal/child_process:483:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  errno: -11,
+  code: 'EAGAIN',
+  syscall: 'spawn /opt/alt/alt-nodejs22/root/usr/bin/node',
+  path: '/opt/alt/alt-nodejs22/root/usr/bin/node',
+  spawnargs: [
+    '/home/smknwon2/nodevenv/public_html/misipintar/misipintar-1.0/22/lib/node_modules/prisma/build/child',
+    '{"product":"prisma","version":"6.19.3","cli_install_type":"local","information":"","local_timestamp":"2026-06-27T23:15:34+07:00","project_hash":"d4b29571","cli_path":"/home/smknwon2/public_html/misipintar/misipintar-1.0/node_modules/.bin/prisma","cli_path_hash":"6da9a6b9","endpoint":"https://checkpoint.prisma.io","disable":false,"arch":"x64","os":"linux","node_version":"v22.22.3","ci":false,"ci_name":"","command":"migrate deploy","schema_providers":["postgresql"],"schema_preview_features":[],"schema_generators_providers":["prisma-client-js"],"cache_file":"/home/smknwon2/.cache/checkpoint-nodejs/prisma-6da9a6b9","cache_duration":43200000,"remind_duration":172800000,"force":false,"timeout":5000,"unref":true,"child_path":"/home/smknwon2/nodevenv/public_html/misipintar/misipintar-1.0/22/lib/node_modules/prisma/build/child","client_event_id":"","previous_client_event_id":"","check_if_update_available":false}'
+  ]
+}
+
+Node.js v22.22.3
+[public_html/misipintar/misipintar-1.0 (22)] [smknwon2@tirtonirmolo misipintar-1.0]$
