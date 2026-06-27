@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///home/runner/workspace/src/components/ReloadButton.tsx"],"sourcesContent":["'use client'\n\nexport default function ReloadButton() {\n  return (\n    <button\n      onClick={() => window.location.reload()}\n      className=\"rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold px-8 py-3 transition-colors\"\n    >\n      Coba Lagi\n    </button>\n  )\n}\n"],"names":["ReloadButton","onClick","window","location","reload","className"],"mappings":";;;;;AAAA;;AAEe,SAASA;IACtB,qBACE,8OAAC;QACCC,SAAS,IAAMC,OAAOC,QAAQ,CAACC,MAAM;QACrCC,WAAU;kBACX;;;;;;AAIL"}}]
-}
