@@ -9,8 +9,8 @@
           "filename": "src/actions/auth.ts"
         }
       },
-      "filename": "src/actions/auth.ts",
-      "exportedName": "loginParent"
+      "exportedName": "loginParent",
+      "filename": "src/actions/auth.ts"
     },
     "407407f8ea86b0c91be4c03bfc5a0eefe789a459bc": {
       "workers": {
@@ -21,10 +21,9 @@
           "filename": "src/actions/auth.ts"
         }
       },
-      "filename": "src/actions/auth.ts",
-      "exportedName": "loginChild"
+      "exportedName": "loginChild",
+      "filename": "src/actions/auth.ts"
     }
   },
-  "edge": {},
-  "encryptionKey": "qkV+AJniQ9juO2ZH+Goz7FanO4y1rphrN21fCe9hdDo="
+  "edge": {}
 }
