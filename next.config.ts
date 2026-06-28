@@ -20,6 +20,8 @@ const SERVER_EXTERNAL_PACKAGES = [
   "nodemailer",
   "bullmq",
   "@prisma/client",
+  "@prisma/adapter-pg",
+  "@prisma/engines",
   "prisma",
   "@react-pdf/renderer",
   "nanoid",
@@ -59,12 +61,40 @@ const nextConfig: NextConfig = {
   webpack: (config, { isServer }) => {
     // Batasi parallelism — cPanel shared hosting punya ulimit -u rendah
     config.parallelism = 1;
+
+    // Native .node binaries (Prisma engine, grpc, etc.) — jangan di-bundle,
+    // cukup skip; mereka di-load via require() di runtime oleh package-nya sendiri.
+    // Tanpa ini webpack memanggil WasmHash.update(undefined) → crash build.
+    config.module.rules.push({
+      test: /\.node$/,
+      loader: "node-loader",
+    });
+
+    // Externals resolver: tangkap semua import yang berakhiran .node
+    // dan semua sub-path dari package yang sudah diexternalize.
+    const nativeExternalFn = (
+      { request }: { request?: string },
+      callback: (err?: Error | null, result?: string) => void
+    ) => {
+      if (request && request.endsWith(".node")) {
+        return callback(null, `commonjs ${request}`);
+      }
+      callback();
+    };
+
     if (isServer) {
       const existing = config.externals || [];
       config.externals = Array.isArray(existing)
-        ? [...existing, ...SERVER_EXTERNAL_PACKAGES]
-        : [existing, ...SERVER_EXTERNAL_PACKAGES];
+        ? [...existing, ...SERVER_EXTERNAL_PACKAGES, nativeExternalFn]
+        : [existing, ...SERVER_EXTERNAL_PACKAGES, nativeExternalFn];
+    } else {
+      // Client build: hanya perlu mencegah .node files masuk bundle
+      const existing = config.externals || [];
+      config.externals = Array.isArray(existing)
+        ? [...existing, nativeExternalFn]
+        : [existing, nativeExternalFn];
     }
+
     return config;
   },
   experimental: {

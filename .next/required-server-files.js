@@ -334,6 +334,8 @@ self.__SERVER_FILES_MANIFEST={
       "nodemailer",
       "bullmq",
       "@prisma/client",
+      "@prisma/adapter-pg",
+      "@prisma/engines",
       "prisma",
       "@react-pdf/renderer",
       "nanoid",

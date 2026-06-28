@@ -43,6 +43,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "dotenv": "^17.4.2",
+    "firebase": "^12.15.0",
     "firebase-admin": "^13.10.0",
     "framer-motion": "^12.42.0",
     "ioredis": "^5.11.1",
@@ -78,6 +79,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "jsdom": "^29.1.1",
+    "node-loader": "^2.1.0",
     "vitest": "^4.1.9"
   }
 }
