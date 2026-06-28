@@ -7,10 +7,11 @@
 #   bash deploy.sh
 #
 # Yang dilakukan script ini:
-#   1. Ambil perubahan terbaru dari GitHub (force reset — hapus file lama)
-#   2. Install dependencies Node.js ke local node_modules/
+#   1. Ambil perubahan terbaru dari GitHub (force reset)
+#   2. Install dependencies (SKIP jika package.json tidak berubah)
 #   3. Generate Prisma client (binary engine)
 #   4. Jalankan migrasi database terbaru
+#   5. Restart aplikasi via Phusion Passenger
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -e
@@ -27,10 +28,8 @@ echo "════════════════════════�
 echo ""
 
 # ── 1. Git: reset & pull ──────────────────────────────────────────────────────
-echo "▶ [1/4] Git pull origin main ..."
+echo "▶ [1/5] Git pull origin main ..."
 
-# Hapus perubahan lokal di .next/ (hasil build lama di server)
-# agar git pull tidak gagal dengan "would be overwritten"
 git fetch origin
 git reset --hard origin/main
 
@@ -38,57 +37,87 @@ echo "  ✓ Kode berhasil diperbarui"
 echo ""
 
 # ── 2. Install dependencies ───────────────────────────────────────────────────
-echo "▶ [2/4] Install Node.js dependencies ..."
+echo "▶ [2/5] Install Node.js dependencies ..."
 
-# Batasi thread agar tidak crash di cPanel shared hosting (ulimit -u rendah).
-# UV_THREADPOOL_SIZE  : Node.js libuv thread pool
-# RAYON_NUM_THREADS   : Rust/SWC compiler threads
-# npm_config_maxsockets / --prefer-offline : kurangi koneksi & sub-proses npm
+# Batasi semua sumber thread — harus di-export sebelum node/npm apapun dijalankan
 export UV_THREADPOOL_SIZE=1
 export RAYON_NUM_THREADS=1
 export TOKIO_WORKER_THREADS=1
 export npm_config_maxsockets=1
+export NODE_OPTIONS="--max-old-space-size=256"
 
-# Cari npm asli (cPanel wrapper npm bisa redirect ke nodevenv yang salah)
-find_real_npm() {
-  local wrapper
-  wrapper=$(command -v npm 2>/dev/null)
-  if [ -f "$wrapper" ]; then
-    local real
-    real=$(grep -oE '[/]opt[/][^ "'"'"']+/npm' "$wrapper" 2>/dev/null | grep -v nodevenv | head -1)
-    if [ -n "$real" ] && [ -x "$real" ]; then echo "$real"; return; fi
+# ── Deteksi perubahan package.json ──────────────────────────────────────────
+# Root penyebab crash: node sendiri gagal buat thread saat server sedang penuh proses.
+# Solusi utama: SKIP npm install sepenuhnya jika package.json tidak berubah.
+# (99% deploy hanya ubah kode, bukan dependency — install tidak perlu diulang.)
+PKG_HASH_FILE="$APP_DIR/.pkg_hash"
+PKG_HASH=$(md5sum "$APP_DIR/package.json" | awk '{print $1}')
+MODULES_OK=0
+
+if [ -d "$APP_DIR/node_modules" ] && [ -f "$PKG_HASH_FILE" ]; then
+  SAVED_HASH=$(cat "$PKG_HASH_FILE" 2>/dev/null || echo "")
+  if [ "$PKG_HASH" = "$SAVED_HASH" ]; then
+    echo "  → package.json tidak berubah — skip install (node_modules sudah up-to-date)"
+    MODULES_OK=1
+  else
+    echo "  → package.json berubah — install diperlukan"
   fi
-  local ver
-  ver=$(node --version 2>/dev/null | tr -d 'v' | cut -d. -f1)
-  for v in "$ver" 22 20 18; do
-    local p="/opt/cpanel/ea-nodejs${v}/bin/npm"
-    if [ -x "$p" ]; then echo "$p"; return; fi
-  done
-  echo ""
-}
-
-REAL_NPM=$(find_real_npm)
-
-# --ignore-scripts: cegah lifecycle hooks (postinstall, prepare, dll) spawn proses baru.
-# Prisma generate sudah ditangani eksplisit di step 3.
-# --no-fund --no-audit: skip network request tambahan yg spawn child process.
-INSTALL_FLAGS="--omit=dev --ignore-scripts --no-fund --no-audit"
-
-if [ -n "$REAL_NPM" ]; then
-  echo "  → Menggunakan: $REAL_NPM"
-  "$REAL_NPM" install $INSTALL_FLAGS
 else
-  echo "  → Menggunakan npm default (wrapper)"
-  CURDIR="$(pwd)"
-  npm_config_prefix="$CURDIR" NPM_CONFIG_PREFIX="$CURDIR" \
-    npm install $INSTALL_FLAGS --prefix "$CURDIR"
+  echo "  → node_modules belum ada atau hash hilang — install diperlukan"
 fi
 
-echo "  ✓ Dependencies terinstall"
+if [ "$MODULES_OK" -eq 0 ]; then
+  # Cari npm-cli.js langsung, hindari wrapper cPanel yang bisa crash lebih awal
+  find_npm_cli() {
+    # Cari di path ea-nodejs khas cPanel
+    local ver
+    ver=$(node --version 2>/dev/null | tr -d 'v' | cut -d. -f1)
+    for v in "$ver" 22 20 18; do
+      for base in \
+        "/opt/cpanel/ea-nodejs${v}/root/usr/lib/node_modules/npm/bin" \
+        "/opt/cpanel/ea-nodejs${v}/lib/node_modules/npm/bin" \
+        "/opt/cpanel/ea-nodejs${v}/bin"; do
+        if [ -f "$base/npm-cli.js" ]; then echo "$base/npm-cli.js"; return; fi
+      done
+    done
+    echo ""
+  }
+
+  NPM_CLI=$(find_npm_cli)
+  INSTALL_FLAGS="--omit=dev --ignore-scripts --no-fund --no-audit"
+  MAX_TRIES=3
+  SUCCESS=0
+
+  for try in $(seq 1 $MAX_TRIES); do
+    echo "  → Install percobaan $try/$MAX_TRIES ..."
+    if [ -n "$NPM_CLI" ]; then
+      # Jalankan npm-cli.js langsung via node — bypass wrapper cPanel
+      node "$NPM_CLI" install $INSTALL_FLAGS && SUCCESS=1 && break
+    else
+      npm install $INSTALL_FLAGS && SUCCESS=1 && break
+    fi
+    echo "  ⚠️  Gagal — tunggu 15 detik agar server lowongkan proses ..."
+    sleep 15
+  done
+
+  if [ "$SUCCESS" -eq 0 ]; then
+    echo ""
+    echo "  ✗ npm install gagal setelah $MAX_TRIES percobaan."
+    echo "    Kemungkinan server sedang penuh proses (RLIMIT_NPROC)."
+    echo "    Coba lagi beberapa menit kemudian, atau install manual:"
+    echo "    UV_THREADPOOL_SIZE=1 npm install --omit=dev --ignore-scripts"
+    exit 1
+  fi
+
+  # Simpan hash agar deploy berikutnya bisa skip install
+  echo "$PKG_HASH" > "$PKG_HASH_FILE"
+fi
+
+echo "  ✓ Dependencies siap"
 echo ""
 
 # ── 3. Prisma generate ────────────────────────────────────────────────────────
-echo "▶ [3/4] Prisma generate ..."
+echo "▶ [3/5] Prisma generate ..."
 
 if [ -f "./node_modules/.bin/prisma" ]; then
   ./node_modules/.bin/prisma generate 2>/dev/null
@@ -120,12 +149,12 @@ if command -v passenger-config &>/dev/null; then
   passenger-config restart-app "$APP_DIR" && RESTARTED=1 && echo "  ✓ Restart via passenger-config"
 fi
 
-# Cara 2: touch tmp/restart.txt — Passenger akan reload otomatis pada request berikutnya
+# Cara 2: touch tmp/restart.txt — Passenger reload otomatis pada request berikutnya
 if [ "$RESTARTED" -eq 0 ]; then
   mkdir -p "$APP_DIR/tmp"
   touch "$APP_DIR/tmp/restart.txt"
   RESTARTED=1
-  echo "  ✓ Restart via tmp/restart.txt (Passenger akan reload saat request berikutnya)"
+  echo "  ✓ Restart via tmp/restart.txt (Passenger reload saat request berikutnya)"
 fi
 
 echo ""
