@@ -5,6 +5,9 @@ node_modules/
 # deploy.sh membuat symlink .next/standalone/node_modules → ../../node_modules
 .next/standalone/node_modules/
 
+# Backup file dari patch-standalone.js (hanya untuk debug lokal)
+.next/standalone/server.js.orig
+
 # Environment / secrets — JANGAN commit ke repo
 .env
 .env.local

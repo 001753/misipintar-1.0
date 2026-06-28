@@ -1,0 +1,26 @@
+Act as an expert Full-stack DevOps and Next.js Architecture Specialist. 
+
+I am deploying this Next.js application to a cPanel shared hosting environment using Phusion Passenger (Node.js Selector). The entire deployment pipeline is automated via Git: the production code is pushed from Replit to GitHub, and the cPanel server pulls the changes directly via a custom deployment script (`deploy.sh`). 
+
+In cPanel, Passenger uses a root-level startup file (`app.js`) which triggers the standalone Next.js server. However, because cPanel shared hosting lacks an external reverse proxy (like Nginx/Apache proxy pass rules) to intercept and route static files directly, all production requests to `/_next/static/*` and the `public/` directory return a '404 Not Found' error.
+
+To solve this systematically via Git and automated pipeline configurations (without hardcoding volatile files inside `.next/standalone` manually), please implement the following dynamic architecture:
+
+1. AUTOMATED POST-BUILD / INTEGRATION SCRIPT
+- Create a non-hardcoded, automated script (e.g., `scripts/patch-standalone.js`) or configure a lifecycle script in `package.json`.
+- This script must run automatically during or right after the build sequence. It should dynamically scan and modify the generated `.next/standalone/server.js` file.
+- It MUST dynamically extract the existing JSON configuration block (`nextConfig` or `process.env.__NEXT_PRIVATE_STANDALONE_CONFIG`) injected by Next.js during compilation so that downstream configurations (like Midtrans allowedOrigins, Prisma server settings, and Turbopack options) remain 100% intact.
+- It must inject a generic, robust HTTP request interceptor BEFORE the native Next.js `getRequestHandler()` takes over.
+
+2. DYNAMIC STATIC ASSET INTERCEPTOR (The Wrapper Logic)
+- Inside the modified standalone `server.js`, if an incoming request's `pathname` starts with `/_next/static/`, resolve it dynamically using a relative path path lookup (e.g., `path.join(__dirname, '..', 'static', relativePath)`). Stream the file with the correct MIME types and apply standard production caching headers (`public, max-age=31536000, immutable`).
+- If a request points to a static asset inside the `public/` folder, resolve it dynamically via `path.join(__dirname, '..', '..', 'public', pathname)` and stream it directly.
+- Fallback all other custom page and API routing seamlessly to the native Next.js router handler.
+- Ensure the server safely listens to the dynamic `process.env.PORT` assigned by cPanel Phusion Passenger.
+
+3. REPOSITORAL INTEGRATION & ENTRY POINT (app.js)
+- Ensure there is a clean, version-controlled `app.js` at the project root serving as the Phusion Passenger Startup File. 
+- It must safely load `dotenv`, explicitly enforce `process.env.NODE_ENV = 'production'`, fix the execution directory context via `process.chdir(__dirname)`, and require the newly patched standalone server file.
+- Ensure all custom automation scripts, templates, and config files are fully tracked in Git (not ignored by `.gitignore`) so that executing a `git pull` on the cPanel side immediately delivers a fully operational, zero-manual-intervention codebase.
+
+Please write the robust automation logic, modify the necessary repository script files, and adjust the package.json scripts to make this build pipeline completely automated.
