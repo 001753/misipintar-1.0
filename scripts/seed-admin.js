@@ -2,12 +2,11 @@
 /**
  * scripts/seed-admin.js
  * ---------------------
- * Masukkan / update akun SUPER_ADMIN ke database.
+ * Masukkan akun SUPER_ADMIN pertama kali ke database.
+ * Kalau email sudah ada → SKIP (tidak ubah data yang ada).
+ *
  * Jalankan di server manapun yang punya DATABASE_URL:
- *
  *   node scripts/seed-admin.js
- *
- * Aman dijalankan berulang kali (upsert by email).
  */
 
 require('dotenv').config();
@@ -25,21 +24,31 @@ async function main() {
   const prisma = new PrismaClient();
 
   try {
+    // ── Cek apakah admin sudah ada ──────────────────────────────────────────
+    const existing = await prisma.user.findUnique({ where: { email: EMAIL } });
+
+    if (existing) {
+      console.log('⏭   Admin sudah ada — skip (tidak ada perubahan).');
+      console.log('    ID   :', existing.id);
+      console.log('    Email:', existing.email);
+      console.log('    Role :', existing.role);
+      return;
+    }
+
+    // ── Baru create kalau belum ada ─────────────────────────────────────────
     const passwordHash = await bcrypt.hash(PASSWORD, 12);
 
-    const user = await prisma.user.upsert({
-      where:  { email: EMAIL },
-      update: { passwordHash, name: NAME, role: ROLE },
-      create: {
-        id:           randomUUID(),
-        email:        EMAIL,
+    const user = await prisma.user.create({
+      data: {
+        id:    randomUUID(),
+        email: EMAIL,
         passwordHash,
-        name:         NAME,
-        role:         ROLE,
+        name:  NAME,
+        role:  ROLE,
       },
     });
 
-    console.log('✅  Admin seeded successfully:');
+    console.log('✅  Admin berhasil dibuat:');
     console.log('    ID   :', user.id);
     console.log('    Email:', user.email);
     console.log('    Role :', user.role);
@@ -50,6 +59,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('❌  seed-admin failed:', err.message);
+  console.error('❌  seed-admin gagal:', err.message);
   process.exit(1);
 });

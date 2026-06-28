@@ -11,7 +11,8 @@
 #   2. Install dependencies (SKIP jika package.json tidak berubah)
 #   3. Generate Prisma client (binary engine)
 #   4. Jalankan migrasi database terbaru
-#   5. Restart aplikasi via Phusion Passenger
+#   5. Seed akun admin pertama (SKIP otomatis kalau sudah ada)
+#   6. Restart aplikasi via Phusion Passenger
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -e
@@ -148,8 +149,18 @@ else
 fi
 echo ""
 
-# ── 5. Restart app (Phusion Passenger) ───────────────────────────────────────
-echo "▶ [5/5] Restart aplikasi ..."
+# ── 5. Seed admin pertama (skip kalau sudah ada) ──────────────────────────────
+echo "▶ [5/6] Seed admin ..."
+
+if [ -f "./scripts/seed-admin.js" ]; then
+  node scripts/seed-admin.js || echo "  ⚠️  seed-admin gagal — lanjut"
+else
+  echo "  ⚠️  scripts/seed-admin.js tidak ditemukan — skip"
+fi
+echo ""
+
+# ── 6. Restart app (Phusion Passenger) ───────────────────────────────────────
+echo "▶ [6/6] Restart aplikasi ..."
 
 RESTARTED=0
 
