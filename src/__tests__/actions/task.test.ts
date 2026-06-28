@@ -192,7 +192,7 @@ describe('[8.2] approveTask', () => {
     // Coba approve dari familySpaceId yang berbeda
     const result = await approveTask(foreignTask.id)
     expect(result.success).toBe(false)
-    expect(result.error).toMatch(/tidak ditemukan/i)
+    if (!result.success) expect(result.error).toMatch(/tidak ditemukan/i)
 
     // Pastikan saldo tidak berubah
     const oc = await prisma.child.findUnique({ where: { id: otherChild.id } })

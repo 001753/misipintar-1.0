@@ -26,7 +26,7 @@ const SERVER_EXTERNAL_PACKAGES = [
   "nanoid",
   "firebase-admin",
   "ioredis",
-] as const;
+] satisfies string[];
 
 const nextConfig: NextConfig = {
   output: "standalone",

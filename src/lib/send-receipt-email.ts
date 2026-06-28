@@ -74,9 +74,9 @@ export async function sendReceiptEmail(params: SendReceiptEmailParams): Promise<
     periodEnd: params.periodEnd.toISOString(),
   };
 
-  const pdfBuffer = await renderToBuffer(
-    React.default.createElement(InvoiceReceiptPDF, { data: pdfData })
-  );
+  const pdfElement = React.default.createElement(InvoiceReceiptPDF, { data: pdfData })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfBuffer = await renderToBuffer(pdfElement as any);
 
   const pdfFilename = `Kuitansi-${params.invoiceNumber}.pdf`;
 

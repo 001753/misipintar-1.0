@@ -21,13 +21,13 @@ export async function GET(
     return NextResponse.json({ error: 'File ID tidak valid.' }, { status: 400 })
   }
 
-  let file: { data: Buffer; contentType: string; filename: string } | null = null
+  let file: { data: Uint8Array; contentType: string; filename: string } | null = null
 
   try {
     file = await prisma.fileUpload.findUnique({
       where: { id },
       select: { data: true, contentType: true, filename: true },
-    })
+    }) as { data: Uint8Array; contentType: string; filename: string } | null
   } catch (err) {
     console.error('[files/serve] DB error:', err)
     return NextResponse.json({ error: 'Terjadi kesalahan server.' }, { status: 500 })
@@ -37,11 +37,13 @@ export async function GET(
     return NextResponse.json({ error: 'File tidak ditemukan.' }, { status: 404 })
   }
 
-  return new NextResponse(file.data, {
+  const body = new Uint8Array(file.data.buffer, file.data.byteOffset, file.data.byteLength)
+
+  return new NextResponse(body as unknown as BodyInit, {
     status: 200,
     headers: {
       'Content-Type': file.contentType,
-      'Content-Length': String(file.data.length),
+      'Content-Length': String(body.byteLength),
       'Content-Disposition': `inline; filename="${file.filename}"`,
       'Cache-Control': 'public, max-age=31536000, immutable',
     },

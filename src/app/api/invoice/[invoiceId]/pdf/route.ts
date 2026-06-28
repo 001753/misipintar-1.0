@@ -96,13 +96,13 @@ export async function GET(
       periodEnd: invoice.subscription.currentPeriodEnd?.toISOString() ?? null,
     };
 
-    const buffer = await renderToBuffer(
-      React.default.createElement(InvoiceReceiptPDF, { data })
-    );
+    const element = React.default.createElement(InvoiceReceiptPDF, { data })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buffer = await renderToBuffer(element as any);
 
     const filename = `Kuitansi-${data.invoiceNumber}.pdf`;
 
-    return new NextResponse(buffer, {
+    return new NextResponse(buffer as unknown as BodyInit, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
