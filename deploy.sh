@@ -58,21 +58,37 @@ if [ -f "$BUILD_COMMIT_FILE" ]; then
   if [ "$CURRENT_HEAD" = "$BUILT_AT" ]; then
     echo "  ✓ Standalone sinkron dengan commit HEAD (${CURRENT_HEAD:0:12})"
   else
-    echo ""
-    echo "  ⚠️  ══════════════════════════════════════════════════════════"
-    echo "  ⚠️  PERINGATAN: Standalone TIDAK sinkron dengan commit terbaru!"
-    echo "  ⚠️  HEAD saat ini : ${CURRENT_HEAD:0:12}"
-    echo "  ⚠️  Dibangun dari : ${BUILT_AT:0:12}"
-    echo "  ⚠️"
-    echo "  ⚠️  Artinya: ada perubahan kode yang belum di-build."
-    echo "  ⚠️  Halaman produksi akan menampilkan versi LAMA."
-    echo "  ⚠️"
-    echo "  ⚠️  Solusi — jalankan di Replit:"
-    echo "  ⚠️    npm run build   (atau 2 step manual jika timeout)"
-    echo "  ⚠️    → commit & push ke GitHub"
-    echo "  ⚠️    → bash deploy.sh"
-    echo "  ⚠️  ══════════════════════════════════════════════════════════"
-    echo ""
+    # Cek apakah perbedaan antara BUILT_AT dan HEAD hanya file .next/
+    # Replit kadang auto-commit hasil build → HEAD 1 commit lebih baru, tapi kode sama
+    # Hanya hitung perubahan di file kode sumber (src/, prisma/, scripts/, package.json, dll)
+    # Abaikan: .next/ (build output), public/ (generated assets: sitemap, manifest)
+    NON_NEXT_CHANGES=$(git diff --name-only "$BUILT_AT" "$CURRENT_HEAD" 2>/dev/null \
+      | grep -v '^\.next/' \
+      | grep -v '^public/' \
+      | grep -v '^\.' \
+      | grep -c . 2>/dev/null || echo "0")
+
+    if [ "$NON_NEXT_CHANGES" = "0" ]; then
+      echo "  ✓ Standalone sinkron — commit HEAD hanya berisi perubahan build artifacts"
+      echo "    (built: ${BUILT_AT:0:12} → HEAD: ${CURRENT_HEAD:0:12})"
+    else
+      echo ""
+      echo "  ⚠️  ══════════════════════════════════════════════════════════"
+      echo "  ⚠️  PERINGATAN: Standalone TIDAK sinkron dengan commit terbaru!"
+      echo "  ⚠️  HEAD saat ini : ${CURRENT_HEAD:0:12}"
+      echo "  ⚠️  Dibangun dari : ${BUILT_AT:0:12}"
+      echo "  ⚠️  File kode yang belum di-build: $NON_NEXT_CHANGES file"
+      echo "  ⚠️"
+      echo "  ⚠️  Artinya: ada perubahan kode yang belum di-build."
+      echo "  ⚠️  Halaman produksi akan menampilkan versi LAMA."
+      echo "  ⚠️"
+      echo "  ⚠️  Solusi — jalankan di Replit:"
+      echo "  ⚠️    npm run build   (atau 2 step manual jika timeout)"
+      echo "  ⚠️    → commit & push ke GitHub"
+      echo "  ⚠️    → bash deploy.sh"
+      echo "  ⚠️  ══════════════════════════════════════════════════════════"
+      echo ""
+    fi
   fi
 else
   echo "  ⚠️  .build_commit belum ada — pengecekan sinkronisasi tidak aktif"
