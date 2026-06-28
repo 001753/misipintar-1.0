@@ -36,6 +36,15 @@ git reset --hard origin/main
 echo "  ✓ Kode berhasil diperbarui"
 echo ""
 
+# ── 1b. Symlink standalone/node_modules → root node_modules ──────────────────
+# .next/standalone/node_modules/ tidak di-commit ke git (terlalu besar ~140MB).
+# Next.js standalone server.js butuh node_modules di sampingnya — symlink cukup.
+if [ -d "$APP_DIR/.next/standalone" ]; then
+  ln -sfn "$APP_DIR/node_modules" "$APP_DIR/.next/standalone/node_modules"
+  echo "  ✓ Symlink standalone/node_modules → root node_modules"
+fi
+echo ""
+
 # ── 2. Install dependencies ───────────────────────────────────────────────────
 echo "▶ [2/5] Install Node.js dependencies ..."
 

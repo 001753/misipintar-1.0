@@ -1,5 +1,9 @@
-# Dependencies — install locally on server; standalone sudah bundel node_modules-nya
+# Dependencies — install locally on server
 node_modules/
+
+# Standalone node_modules — 140MB, jangan commit ke git.
+# deploy.sh membuat symlink .next/standalone/node_modules → ../../node_modules
+.next/standalone/node_modules/
 
 # Environment / secrets — JANGAN commit ke repo
 .env
