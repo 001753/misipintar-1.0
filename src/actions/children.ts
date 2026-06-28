@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import { validateChildPassword } from '@/lib/auth/passwordPolicy'
 import type { ActionResult } from '@/types'
+import { getPlanLimits } from '@/lib/plan-limits'
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -16,22 +17,6 @@ async function getParentSession() {
     redirect('/login')
   }
   return { familySpaceId: session.user.familySpaceId! }
-}
-
-// Status yang dianggap aktif (berhak menikmati limit premium)
-const ACTIVE_SUB_STATUSES = new Set(["TRIAL", "FREE", "PRO", "EDUCATOR", "SCHOOL"])
-
-// Fallback ke limit FREE jika langganan EXPIRED/CANCELLED
-const FREE_LIMITS: Record<string, number> = { maxChildren: 2, maxTasksPerMonth: 10 }
-
-async function getPlanLimits(familySpaceId: string) {
-  const sub = await prisma.subscription.findUnique({
-    where: { familySpaceId },
-    include: { plan: true },
-  })
-  // Jika langganan expired atau dibatalkan, downgrade ke limit gratis
-  if (!sub || !ACTIVE_SUB_STATUSES.has(sub.status)) return FREE_LIMITS
-  return (sub.plan.limits ?? FREE_LIMITS) as Record<string, number>
 }
 
 
@@ -74,17 +59,11 @@ export async function createChild(
     return { success: false, error: err?.message ?? 'Password tidak valid.' }
   }
 
-  const limits = await getPlanLimits(familySpaceId)
-  const maxChildren = limits.maxChildren ?? 2
   const currentCount = await prisma.child.count({
     where: { familySpaceId, deletedAt: null },
   })
-  if (currentCount >= maxChildren) {
-    return {
-      success: false,
-      error: `Paket Anda hanya mendukung ${maxChildren} anak. Upgrade plan untuk menambah lebih banyak.`,
-    }
-  }
+  const { allowed, reason } = await (await import('@/lib/plan-limits')).canAddChild(familySpaceId, currentCount)
+  if (!allowed) return { success: false, error: reason! }
 
   const existing = await prisma.child.findUnique({
     where: { familySpaceId_username: { familySpaceId, username } },
@@ -208,4 +187,4 @@ export async function restoreChild(childId: string): Promise<ActionResult<null>>
   return { success: true, data: null }
 }
 
-export { getPlanLimits }
+export { getPlanLimits } from '@/lib/plan-limits'

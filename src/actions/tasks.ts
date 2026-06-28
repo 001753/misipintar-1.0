@@ -8,6 +8,7 @@ import { startOfMonth, endOfMonth } from 'date-fns'
 import type { ActionResult } from '@/types'
 import { sendPushNotification, getUserFcmTokens, getChildFcmTokens } from '@/lib/notifications/fcm'
 import { publishToFamily, incrementUnreadBadge } from '@/lib/notifications/sse'
+import { canCreateTask } from '@/lib/plan-limits'
 
 // ─── Helpers ─────────────────────────────────────────────
 
@@ -25,20 +26,6 @@ async function getChildSession() {
     redirect('/login')
   }
   return { childId: session.user.childId!, familySpaceId: session.user.familySpaceId! }
-}
-
-// Status yang dianggap aktif (berhak menikmati limit premium)
-const ACTIVE_SUB_STATUSES = new Set(["TRIAL", "FREE", "PRO", "EDUCATOR", "SCHOOL"])
-
-async function getMaxTasksPerMonth(familySpaceId: string): Promise<number> {
-  const sub = await prisma.subscription.findUnique({
-    where: { familySpaceId },
-    include: { plan: true },
-  })
-  // Jika langganan expired atau dibatalkan, kembali ke default gratis
-  if (!sub || !ACTIVE_SUB_STATUSES.has(sub.status)) return 10
-  const limits = (sub.plan.limits ?? { maxTasksPerMonth: 10 }) as Record<string, number>
-  return limits.maxTasksPerMonth ?? 10
 }
 
 // ─── [2.2a] createTask ───────────────────────────────────
@@ -73,23 +60,16 @@ export async function createTask(
     return { success: false, error: 'Anak tidak ditemukan.' }
   }
 
-  // Cek limit tugas bulan ini (real-time dari DB, bukan cache)
-  const maxTasksPerMonth = await getMaxTasksPerMonth(familySpaceId)
-  if (maxTasksPerMonth !== -1) {
-    const now = new Date()
-    const taskCount = await prisma.task.count({
-      where: {
-        familySpaceId,
-        createdAt: { gte: startOfMonth(now), lte: endOfMonth(now) },
-      },
-    })
-    if (taskCount >= maxTasksPerMonth) {
-      return {
-        success: false,
-        error: `Batas ${maxTasksPerMonth} tugas per bulan telah tercapai. Upgrade plan untuk membuat lebih banyak tugas.`,
-      }
-    }
-  }
+  // Cek limit tugas bulan ini — respects phaseMode dari AppConfig
+  const now = new Date()
+  const taskCount = await prisma.task.count({
+    where: {
+      familySpaceId,
+      createdAt: { gte: startOfMonth(now), lte: endOfMonth(now) },
+    },
+  })
+  const { allowed: taskAllowed, reason: taskReason } = await canCreateTask(familySpaceId, taskCount)
+  if (!taskAllowed) return { success: false, error: taskReason! }
 
   const task = await prisma.task.create({
     data: { familySpaceId, childId, title, description, rewardAmount, status: 'PENDING' },

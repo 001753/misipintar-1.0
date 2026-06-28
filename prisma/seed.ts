@@ -4,7 +4,7 @@
  *
  * Yang dibuat:
  * - 4 Plan (STARTER, PRO, EDUCATOR, SCHOOL)
- * - AppConfig global (phaseMode: FULL_FREE)
+ * - AppConfig global (phaseMode: FREEMIUM)
  * - SuperAdmin user awal (email dari env SEED_ADMIN_EMAIL)
  */
 
@@ -82,7 +82,7 @@ const PLANS = [
 ];
 
 const APP_CONFIG_DEFAULT = {
-  phaseMode: "FULL_FREE" as const,
+  phaseMode: "FREEMIUM" as const,
   data: {
     interestRate: 2,
     taxRate: 5,
