@@ -121,7 +121,7 @@ bash deploy.sh
 `deploy.sh` melakukan langkah-langkah berikut:
 1. `git fetch && git reset --hard origin/main`
 2. Symlink `standalone/node_modules` → root `node_modules`
-3. **Cek sinkronisasi build** — bandingkan HEAD commit dengan `.next/standalone/.build_commit` (lihat §11)
+3. **Cek sinkronisasi build** — bandingkan HEAD commit dengan `.next/standalone/.build_commit`. Cerdas: jika perbedaan hanya di `.next/` atau `public/` (Replit auto-checkpoint), dianggap sinkron. Peringatan hanya muncul jika ada perubahan di `src/`, `prisma/`, dll.
 4. `npm install` (SKIP jika `package.json` tidak berubah via `.pkg_hash`)
 5. `prisma generate` + `prisma migrate deploy`
 6. `node scripts/seed-plans.js` (seed Plans + AppConfig — skip jika sudah ada)
@@ -141,6 +141,7 @@ bash deploy.sh
 | `0001_init` | Semua tabel awal |
 | `0002_cron_lock_and_file_upload` | Tambah CronLock + FileUpload |
 | `0003_add_user_phone` | Tambah kolom `phone` ke User (terlewat di 0001) |
+| `20260628092551_fix_user_email_nullable` | Email User jadi nullable, tambah tabel OtpCode + enum OtpPurpose, tambah kolom qrisQrString + qrisQrUrl ke Invoice |
 
 ### Aturan Migration
 - **SELALU** buat migration baru dengan `npx prisma migrate dev --name <nama>`
@@ -236,6 +237,8 @@ SMTP_PASS=...
 | Error "Konfigurasi plan belum siap" | Plan belum di-seed | `node scripts/seed-plans.js` di server |
 | `patch-standalone: not valid JSON` | Duplikat deklarasi variabel | Sudah diperbaiki — pastikan pakai versi terbaru |
 | Build timeout > 120s di Replit | Build terlalu lama | Jalankan 2 step manual (lihat §5) |
+| Build error `TypeError: Cannot read properties of undefined` | Cache `.next/cache` korup | `rm -rf .next/cache` lalu build ulang |
+| `deploy.sh` peringatan TIDAK sinkron padahal sudah build | Replit auto-checkpoint setelah build | Normal — `deploy.sh` sudah cerdas, hanya peringatan jika ada perubahan di `src/` |
 
 ---
 
