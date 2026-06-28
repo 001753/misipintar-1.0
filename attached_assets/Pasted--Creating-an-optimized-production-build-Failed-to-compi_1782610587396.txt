@@ -1,0 +1,70 @@
+ Creating an optimized production build ...
+Failed to compile.
+
+./node_modules/recharts/es6/util/ReactUtils.js
+Module not found: Can't resolve 'react-is'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./node_modules/recharts/es6/cartesian/Area.js
+__barrel_optimize__?names=Area,AreaChart,CartesianGrid,ResponsiveContainer,Tooltip,XAxis,YAxis!=!./node_modules/recharts/es6/index.js
+./src/app/dashboard/spending-chart.tsx
+
+./src/actions/children.ts
+Error:   × Only async functions are allowed to be exported in a "use server" file.
+
+     ╭─[/home/runner/workspace/src/actions/children.ts:190:1]
+ 187 │   return { success: true, data: null }
+ 188 │ }
+ 189 │ 
+ 190 │ export { getPlanLimits } from '@/lib/plan-limits'
+     · ─────────────────────────────────────────────────
+     ╰────
+
+Import trace for requested module:
+./src/actions/children.ts
+./src/app/dashboard/children/children-client.tsx
+
+
+> Build failed because of webpack errors
+~/workspace$ npm run build
+
+> misi-pintar@0.1.0 build
+> NODE_ENV=production NEXT_BUILD=1 NEXT_TELEMETRY_DISABLED=1 RAYON_NUM_THREADS=1 TOKIO_WORKER_THREADS=1 UV_THREADPOOL_SIZE=1 next build --webpack
+
+▲ Next.js 16.2.9 (webpack)
+- Experiments (use with caution):
+  · serverActions
+
+  Creating an optimized production build ...
+Failed to compile.
+
+./node_modules/recharts/es6/util/ReactUtils.js
+Module not found: Can't resolve 'react-is'
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./node_modules/recharts/es6/cartesian/Area.js
+__barrel_optimize__?names=Area,AreaChart,CartesianGrid,ResponsiveContainer,Tooltip,XAxis,YAxis!=!./node_modules/recharts/es6/index.js
+./src/app/dashboard/spending-chart.tsx
+
+./src/actions/children.ts
+Error:   × Only async functions are allowed to be exported in a "use server" file.
+
+     ╭─[/home/runner/workspace/src/actions/children.ts:190:1]
+ 187 │   return { success: true, data: null }
+ 188 │ }
+ 189 │ 
+ 190 │ export { getPlanLimits } from '@/lib/plan-limits'
+     · ─────────────────────────────────────────────────
+     ╰────
+
+Import trace for requested module:
+./src/actions/children.ts
+./src/app/dashboard/children/children-client.tsx
+
+
+> Build failed because of webpack errors
+~/workspace$ 
