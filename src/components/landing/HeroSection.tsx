@@ -35,21 +35,9 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className="font-display font-bold text-5xl sm:text-6xl lg:text-7xl xl:text-8xl leading-[1.05] text-slate-900 dark:text-white mb-6"
+            className="font-display font-bold text-4xl sm:text-5xl lg:text-6xl xl:text-7xl leading-[1.1] text-slate-900 dark:text-white mb-6"
           >
-            Ubah Kuota{' '}
-            <span
-              className="inline-block text-transparent bg-clip-text"
-              style={{
-                backgroundImage: 'linear-gradient(90deg, #f87171, #fb923c, #fbbf24)',
-                backgroundSize: '200% auto',
-                animation: 'gradientX 4s ease infinite',
-              }}
-            >
-              Marah-Marah
-            </span>
-            <br />
-            Jadi Kuota{' '}
+            Tanamkan Karakter Anak{' '}
             <span
               className="inline-block text-transparent bg-clip-text"
               style={{
@@ -58,20 +46,54 @@ export default function HeroSection() {
                 animation: 'gradientX 4s ease infinite',
               }}
             >
-              Senyuman
-            </span>{' '}
-            ✨
+              Mandiri
+            </span>
+            {', '}
+            <span
+              className="inline-block text-transparent bg-clip-text"
+              style={{
+                backgroundImage: 'linear-gradient(90deg, #60a5fa, #3b82f6, #2563eb)',
+                backgroundSize: '200% auto',
+                animation: 'gradientX 4s ease infinite',
+              }}
+            >
+              Bertanggung Jawab
+            </span>
+            {' & '}
+            <span
+              className="inline-block text-transparent bg-clip-text"
+              style={{
+                backgroundImage: 'linear-gradient(90deg, #f59e0b, #f97316, #ef4444)',
+                backgroundSize: '200% auto',
+                animation: 'gradientX 4s ease infinite',
+              }}
+            >
+              Berprestasi
+            </span>
           </motion.h1>
+
+          {/* Eyebrow label */}
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="text-xs sm:text-sm font-semibold tracking-widest uppercase text-emerald-600 dark:text-emerald-400 mb-3"
+          >
+            melalui MISI PINTAR
+          </motion.p>
 
           {/* Sub */}
           <motion.p
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-slate-600 dark:text-slate-300 text-lg sm:text-xl leading-relaxed mb-8 max-w-2xl mx-auto"
+            className="text-slate-500 dark:text-slate-400 text-base sm:text-lg leading-relaxed mb-8 max-w-xl mx-auto"
           >
-            <strong className="text-slate-900 dark:text-white">Misi Pintar</strong> mengubah PR sekolah, baca buku, dan tugas rumah jadi{' '}
-            <em className="text-emerald-600 dark:text-emerald-400">misi seru berhadiah saldo saku virtual</em>. Anak belajar mandiri. Orang tua tenang.
+            Berhenti membiasakan anak asal meminta uang jajan. Bersama{' '}
+            <strong className="text-slate-800 dark:text-slate-200 font-semibold">MisiPintar</strong>
+            , biarkan mereka berusaha menyelesaikan kewajibannya untuk menabung dan mendapatkan{' '}
+            <span className="text-emerald-600 dark:text-emerald-400 font-medium">saldo saku virtual</span>{' '}
+            sendiri.
           </motion.p>
 
           {/* CTAs */}

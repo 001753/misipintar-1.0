@@ -1,1 +1,0 @@
-"use strict";exports.id=120,exports.ids=[120],exports.modules={90120:(a,b,c)=>{let d;c.d(b,{prisma:()=>f});let e=globalThis,f=new Proxy({},{get:(a,b)=>(d||(d=e.prisma??function(){if(!process.env.DATABASE_URL)throw Error("DATABASE_URL environment variable is not set");let{PrismaClient:a}=c(96330);return new a({log:["error"]})}(),e.prisma=d),Reflect.get(d,b,d))})}};

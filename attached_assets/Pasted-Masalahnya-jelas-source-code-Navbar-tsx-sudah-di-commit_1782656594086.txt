@@ -1,0 +1,68 @@
+Masalahnya jelas: source code Navbar.tsx sudah di-commit dan di-pull ke server, tapi belum di-build. Production pakai file .next/standalone/ lama yang belum ada perubahan Navbar. Harus build ulang di Replit dulu, baru push ke GitHub, baru deploy.
+
+Jalankan build sekarang:
+
+
+2 actions
+Build timeout. Jalankan 2 langkah manual seperti di replit.md:
+
+
+2 actions
+Build berjalan di background. Mari pantau progresnya:
+
+
+2 actions
+Build selesai. Jalankan post-build scripts:
+
+
+4 actions
+Build gagal — standalone tidak terbentuk. Cek konfigurasi dulu:
+
+
+3 actions
+output: standalone sudah benar. Masalahnya: build gagal karena dev server aktif dan timeout. Cek apakah standalone sudah pernah di-commit sebelumnya:
+
+
+2 actions
+Situasinya jelas: .next/standalone/ yang di-commit di git adalah versi LAMA (dari commit awal). Setiap perubahan kode butuh rebuild di Replit dulu agar standalone ter-update. Build sebelumnya gagal silently. Coba build dengan output ke file log:
+
+
+2 actions
+Build berhasil! Jalankan post-build scripts dan cek standalone:
+
+
+2 actions
+Standalone berhasil dibangun. Verifikasi bahwa Navbar baru (dengan "Harga") sudah masuk ke dalam build:
+
+
+4 actions
+"Harga" sudah ada di dalam bundle hasil build. Cek git status untuk konfirmasi file yang perlu di-commit:
+
+
+2 actions
+Build berhasil. Root masalahnya sudah teridentifikasi dengan presisi:
+
+Akar masalah: Saat commit sebelumnya, hanya source code Navbar.tsx yang ter-commit — tapi .next/standalone/ (file yang dijalankan Passenger) tidak di-rebuild. cPanel menarik kode baru tapi tetap menjalankan bundle lama.
+
+Status sekarang:
+
+✅ Build ulang selesai
+✅ Link "Harga" sudah ada di dalam bundle (chunks/1074-...js)
+✅ .next/standalone/ sudah di-update
+Yang perlu dilakukan sekarang:
+
+Replit akan auto-commit semua file build yang berubah (.next/standalone/, .next/server/, dll). Setelah checkpoint muncul, Anda perlu:
+
+# 1. Push ke GitHub dari Replit (atau via tombol Replit)
+git push origin main
+# 2. Di cPanel, pull + restart
+cd ~/public_html/misipintar/misipintar-1.0
+bash deploy.sh
+
+Untuk menghindari masalah ini di masa depan, perlu dipastikan deploy.sh dipanggil SETELAH build ter-commit ke GitHub. Proses yang benar:
+
+npm run build di Replit → auto-checkpoint → push ke GitHub → bash deploy.sh
+
+Apakah Anda ingin saya tambahkan reminder/warning di deploy.sh yang mengecek apakah BUILD_ID di server sudah sesuai dengan yang ada di git, agar deploy tidak jalan jika build belum di-push?
+
+Next, I can menambahkan pengecekan BUILD_ID di deploy.sh yang memverifikasi bahwa standalone yang akan dijalankan sudah sinkron dengan commit terbaru — mencegah deploy dengan bundle lama. Would you like me to do that?

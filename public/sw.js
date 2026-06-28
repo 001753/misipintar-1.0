@@ -6,17 +6,12 @@
  *   - /api/* /dashboard/* /admin/* /superadmin/* → Network-Only (never cache)
  */
 
-const CACHE_NAME = 'misi-pintar-v1';
-const STATIC_CACHE = 'misi-pintar-static-v1';
+const CACHE_NAME = 'misi-pintar-v2';
+const STATIC_CACHE = 'misi-pintar-static-v2';
 const OFFLINE_URL = '/offline';
 
 const PRECACHE_URLS = [
-  '/',
   '/offline',
-  '/tentang-kami',
-  '/hubungi-kami',
-  '/kebijakan-privasi',
-  '/register',
 ];
 
 const NEVER_CACHE = [

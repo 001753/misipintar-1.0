@@ -9,10 +9,10 @@ import type { PricingData } from '@/components/landing/PricingBanner'
 
 export const metadata: Metadata = {
   title: {
-    absolute: 'MisiPintar - Ubah Kuota Marah-Marah Jadi Kuota Senyuman',
+    absolute: 'MisiPintar - Tanamkan Karakter Anak Mandiri, Bertanggung Jawab & Berprestasi',
   },
   description:
-    'Ubah PR sekolah, baca buku, dan tugas rumah jadi misi seru berhadiah saldo saku virtual. Anak belajar mandiri, orang tua tenang. Gratis selamanya.',
+    'Berhenti membiasakan anak asal meminta uang jajan. Bersama MisiPintar, biarkan mereka menyelesaikan kewajiban untuk mendapatkan saldo saku virtual sendiri. Gratis selamanya.',
   keywords: [
     'aplikasi uang saku anak',
     'literasi keuangan anak',
@@ -26,9 +26,9 @@ export const metadata: Metadata = {
     canonical: 'https://mp.jobenapp.cloud',
   },
   openGraph: {
-    title: 'MisiPintar - Ubah Kuota Marah-Marah Jadi Kuota Senyuman',
+    title: 'MisiPintar - Tanamkan Karakter Anak Mandiri, Bertanggung Jawab & Berprestasi',
     description:
-      'Misi seru berhadiah saldo virtual. Anak belajar nilai kerja keras, orang tua tenang. 100% gratis selamanya.',
+      'Biarkan anak berusaha menyelesaikan kewajibannya untuk mendapatkan saldo saku virtual sendiri. 100% gratis selamanya.',
     url: 'https://mp.jobenapp.cloud',
     siteName: 'MisiPintar',
     locale: 'id_ID',
