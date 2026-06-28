@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import NavigationProgressWrapper from "@/components/NavigationProgressWrapper";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import InstallPrompt from "@/components/InstallPrompt";
 
 // force-dynamic pada root layout: semua route menjadi dinamis (0 halaman statis).
 // Ini mencegah Next.js spawn worker thread untuk "Generating static pages" —
@@ -75,6 +76,7 @@ export default function RootLayout({
         <ThemeProvider>
           <NavigationProgressWrapper />
           {children}
+          <InstallPrompt />
         </ThemeProvider>
         <ServiceWorkerRegistration />
       </body>

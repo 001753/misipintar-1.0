@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { logoutAction } from '@/actions/auth'
 import ThemeToggle from '@/components/ThemeToggle'
+import ChildBottomNav from '@/components/ChildBottomNav'
 
 export const dynamic = 'force-dynamic';
 
@@ -81,28 +82,7 @@ export default async function ChildLayout({ children }: { children: React.ReactN
       </div>
 
       {/* ── Mobile Bottom Nav (glassy) ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 pb-safe">
-        <div className="mx-3 mb-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 dark:border-gray-700/50">
-          <div className="flex items-center justify-around px-2 py-3">
-            {navLinks.map(({ href, icon, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className="flex flex-col items-center gap-0.5 px-2 rounded-2xl transition-all active:scale-90"
-              >
-                <span className="text-xl leading-none">{icon}</span>
-                <span className="text-[10px] text-gray-600 dark:text-gray-400 font-semibold leading-none mt-0.5">{label}</span>
-              </Link>
-            ))}
-            <form action={logoutAction} className="flex flex-col items-center">
-              <button type="submit" className="flex flex-col items-center gap-0.5 px-2 rounded-2xl transition-all active:scale-90">
-                <span className="text-xl leading-none">🚪</span>
-                <span className="text-[10px] text-gray-600 dark:text-gray-400 font-semibold leading-none mt-0.5">Keluar</span>
-              </button>
-            </form>
-          </div>
-        </div>
-      </nav>
+      <ChildBottomNav />
     </div>
   )
 }

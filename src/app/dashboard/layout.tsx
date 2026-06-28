@@ -5,6 +5,7 @@ import { logoutAction } from '@/actions/auth'
 import { getUnreadCount } from '@/lib/notifications/sse'
 import NotificationBell from '@/components/notification-bell'
 import ThemeToggle from '@/components/ThemeToggle'
+import DashboardBottomNav from '@/components/DashboardBottomNav'
 
 export const dynamic = 'force-dynamic';
 
@@ -96,33 +97,7 @@ export default async function DashboardLayout({
       </main>
 
       {/* ── Mobile Bottom Nav ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.4)] pb-safe transition-colors duration-200">
-        <div className="flex items-center justify-around px-2 pt-2 pb-2">
-          {navLinks.map(({ href, icon, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-2xl transition-all active:scale-90 min-w-0"
-            >
-              <span className="text-xl leading-none">{icon}</span>
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium leading-none mt-0.5 truncate">
-                {label}
-              </span>
-            </Link>
-          ))}
-          <form action={logoutAction} className="flex flex-col items-center">
-            <button
-              type="submit"
-              className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-2xl transition-all active:scale-90"
-            >
-              <span className="text-xl leading-none">🚪</span>
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium leading-none mt-0.5">
-                Keluar
-              </span>
-            </button>
-          </form>
-        </div>
-      </nav>
+      <DashboardBottomNav />
     </div>
   )
 }
