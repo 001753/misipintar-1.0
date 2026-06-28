@@ -1,0 +1,79 @@
+public_html/misipintar/misipintar-1.0 (22)] [smknwon2@tirtonirmolo misipintar-1.0]$ git pull origin main
+From https://github.com/001753/misipintar-1.0
+ * branch            main       -> FETCH_HEAD
+Updating 5a3c57b..62769e5
+error: Your local changes to the following files would be overwritten by merge:
+        .next/server/app/(auth)/login/page.js
+        .next/server/app/(auth)/login/page.js.nft.json        .next/server/app/(auth)/register/page.js
+        .next/server/app/(auth)/register/page.js.nft.json
+        .next/server/app/(superadmin)/superadmin/analytics/page.js
+        .next/server/app/(superadmin)/superadmin/analytics/page.js.nft.json
+        .next/server/app/(superadmin)/superadmin/audit/page.js
+        .next/server/app/(superadmin)/superadmin/audit/page.js.nft.json
+        .next/server/app/(superadmin)/superadmin/families/[id]/page.js
+        .next/server/app/(superadmin)/superadmin/families/[id]/page.js.nft.json
+        .next/server/app/(superadmin)/superadmin/families/page.js        .next/server/app/(superadmin)/superadmin/families/page.js.nft.json
+        .next/server/app/(superadmin)/superadmin/page.js
+        .next/server/app/(superadmin)/superadmin/page.js.nft.json        .next/server/app/(superadmin)/superadmin/payments/page.js
+        .next/server/app/(superadmin)/superadmin/payments/page.js.nft.json
+        .next/server/app/(superadmin)/superadmin/plans/page.js
+        .next/server/app/(superadmin)/superadmin/plans/page.js.nft.json
+        .next/server/app/(superadmin)/superadmin/security/login-attempts/page.js
+        .next/server/app/(superadmin)/superadmin/security/login-attempts/page.js.nft.json
+        .next/server/app/(superadmin)/superadmin/settings/page.js
+        .next/server/app/(superadmin)/superadmin/settings/page.js.nft.json
+        .next/server/app/adm-panel/page.js
+        .next/server/app/adm-panel/page.js.nft.json
+        .next/server/app/api/auth/[...nextauth]/route.js.nft.json
+        .next/server/app/api/cron/cleanup-login-attempts/route.js.nft.json
+        .next/server/app/api/cron/expire-subscriptions/route.js.nft.json
+        .next/server/app/api/cron/interest/route.js.nft.json
+        .next/server/app/api/cron/tax/route.js.nft.json
+        .next/server/app/api/fcm/register/route.js.nft.json
+        .next/server/app/api/health/route.js
+        .next/server/app/api/health/route.js.nft.json
+        .next/server/app/api/invoice/[invoiceId]/pdf/route.js.nft.json
+        .next/server/app/api/notifications/recent/route.js.nft.json
+        .next/server/app/api/queue/worker/route.js.nft.json
+        .next/server/app/api/sse/route.js.nft.json
+        .next/server/app/api/upload/proof/route.js.nft.json
+        .next/server/app/api/webhooks/midtrans/route.js
+        .next/server/app/api/webhooks/midtrans/route.js.nft.json
+        .next/server/app/child/dashboard/page.js
+        .next/server/app/child/dashboard/page.js.nft.json
+        .next/server/app/child/history/page.js
+        .next/server/app/child/history/page.js.nft.json
+        .next/server/app/child/settings/page.js
+        .next/server/app/child/settings/page.js.nft.json
+        .next/server/app/child/tasks/[taskId]/claim/page.js
+        .next/server/app/child/tasks/[taskId]/claim/page.js.nft.json
+        .next/server/app/child/tasks/page.js
+        .next/server/app/child/tasks/page.js.nft.json
+        .next/server/app/child/transfer/page.js
+        .next/server/app/child/transfer/page.js.nft.json
+        .next/server/app/dashboard/billing/invoice/[invoiceId]/page.js
+        .next/server/app/dashboard/billing/invoice/[invoiceId]/page.js.nft.json
+        .next/server/app/dashboard/billing/page.js
+        .next/server/app/dashboard/billing/page.js.nft.json
+        .next/server/app/dashboard/children/page.js
+        .next/server/app/dashboard/children/page.js.nft.json
+        .next/server/app/dashboard/history/[childId]/page.js
+        .next/server/app/dashboard/history/[childId]/page.js.nft.json
+        .next/server/app/dashboard/ledger/page.js
+        .next/server/app/dashboard/ledger/page.js.nft.json
+        .next/server/app/dashboard/notifications/page.js
+        .next/server/app/dashboard/notifications/page.js.nft.json
+        .next/server/app/dashboard/onboarding/page.js
+        .next/server/app/dashboard/onboarding/page.js.nft.json
+        .next/server/app/dashboard/page.js
+        .next/server/app/dashboard/page.js.nft.json
+        .next/server/app/dashboard/settings/page.js
+        .next/server/app/dashboard/settings/page.js.nft.json
+        .next/server/app/dashboard/tasks/page.js
+        .next/server/app/dashboard/tasks/page.js.nft.json
+        .next/server/app/dashboard/tasks/pending/page.js
+        .next/server/app/dashboard/tasks/pending/page.js.nft.json
+        .next/server/app/forgot-password/page.js
+        .next/server/app/forgot-password/page
+Aborting
+[public_html/misipintar/misipintar-1.0 (22)] [smknwon2@tirtonirmolo misipintar-1.0]$
