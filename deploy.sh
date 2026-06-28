@@ -40,6 +40,15 @@ echo ""
 # ── 2. Install dependencies ───────────────────────────────────────────────────
 echo "▶ [2/4] Install Node.js dependencies ..."
 
+# Batasi thread agar tidak crash di cPanel shared hosting (ulimit -u rendah).
+# UV_THREADPOOL_SIZE  : Node.js libuv thread pool
+# RAYON_NUM_THREADS   : Rust/SWC compiler threads
+# npm_config_maxsockets / --prefer-offline : kurangi koneksi & sub-proses npm
+export UV_THREADPOOL_SIZE=1
+export RAYON_NUM_THREADS=1
+export TOKIO_WORKER_THREADS=1
+export npm_config_maxsockets=1
+
 # Cari npm asli (cPanel wrapper npm bisa redirect ke nodevenv yang salah)
 find_real_npm() {
   local wrapper
@@ -62,11 +71,12 @@ REAL_NPM=$(find_real_npm)
 
 if [ -n "$REAL_NPM" ]; then
   echo "  → Menggunakan: $REAL_NPM"
-  "$REAL_NPM" install --omit=dev
+  "$REAL_NPM" install --omit=dev --foreground-scripts=false
 else
   echo "  → Menggunakan npm default (wrapper)"
   CURDIR="$(pwd)"
-  npm_config_prefix="$CURDIR" NPM_CONFIG_PREFIX="$CURDIR" npm install --omit=dev --prefix "$CURDIR"
+  npm_config_prefix="$CURDIR" NPM_CONFIG_PREFIX="$CURDIR" \
+    npm install --omit=dev --foreground-scripts=false --prefix "$CURDIR"
 fi
 
 echo "  ✓ Dependencies terinstall"
