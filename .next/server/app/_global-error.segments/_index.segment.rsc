@@ -3,4 +3,4 @@
 3:I[17267,["8039","static/chunks/app/error-dfd80328592d0a4f.js"],"default"]
 4:I[74581,[],""]
 5:[]
-0:{"rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","error":"$3","errorStyles":[],"errorScripts":[],"template":["$","$L4",null,{}]}]]}],"isPartial":false,"staleTime":300,"varyParams":"$W5","buildId":"9S-SHA5hJDZHbVNutlOhB"}
+0:{"rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","error":"$3","errorStyles":[],"errorScripts":[],"template":["$","$L4",null,{}]}]]}],"isPartial":false,"staleTime":300,"varyParams":"$W5","buildId":"chzeI0KZ6wQ_Aab8oXCJH"}
