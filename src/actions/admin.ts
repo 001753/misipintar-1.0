@@ -162,9 +162,19 @@ export async function updatePhaseMode(
     where: { id: "global-config" },
   });
 
-  await prisma.appConfig.update({
-    where: { id: "global-config" },
-    data: { phaseMode: mode },
+  // upsert: buat record jika belum ada (cPanel fresh DB belum di-seed)
+  await prisma.appConfig.upsert({
+    where:  { id: "global-config" },
+    update: { phaseMode: mode },
+    create: {
+      id:        "global-config",
+      phaseMode: mode,
+      data: {
+        interestRate: 2, taxRate: 5, maxTrialDays: 14,
+        maintenanceMode: false,
+        featureFlags: { pushNotifications: false, pdfReports: true, interestEngine: true, taxEngine: true },
+      },
+    },
   });
 
   await writeAuditLog({

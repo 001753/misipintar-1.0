@@ -11,8 +11,9 @@
 #   2. Install dependencies (SKIP jika package.json tidak berubah)
 #   3. Generate Prisma client (binary engine)
 #   4. Jalankan migrasi database terbaru
-#   5. Seed akun admin pertama (SKIP otomatis kalau sudah ada)
-#   6. Restart aplikasi via Phusion Passenger
+#   5. Seed Plans & AppConfig (SKIP otomatis kalau sudah ada)
+#   6. Seed akun admin pertama (SKIP otomatis kalau sudah ada)
+#   7. Restart aplikasi via Phusion Passenger
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -e
@@ -149,8 +150,18 @@ else
 fi
 echo ""
 
-# ── 5. Seed admin pertama (skip kalau sudah ada) ──────────────────────────────
-echo "▶ [5/6] Seed admin ..."
+# ── 5. Seed Plans + AppConfig (skip kalau sudah ada) ──────────────────────────
+echo "▶ [5/7] Seed plans & AppConfig ..."
+
+if [ -f "./scripts/seed-plans.js" ]; then
+  node scripts/seed-plans.js || echo "  ⚠️  seed-plans gagal — lanjut"
+else
+  echo "  ⚠️  scripts/seed-plans.js tidak ditemukan — skip"
+fi
+echo ""
+
+# ── 6. Seed admin pertama (skip kalau sudah ada) ──────────────────────────────
+echo "▶ [6/7] Seed admin ..."
 
 if [ -f "./scripts/seed-admin.js" ]; then
   node scripts/seed-admin.js || echo "  ⚠️  seed-admin gagal — lanjut"
@@ -159,8 +170,8 @@ else
 fi
 echo ""
 
-# ── 6. Restart app (Phusion Passenger) ───────────────────────────────────────
-echo "▶ [6/6] Restart aplikasi ..."
+# ── 7. Restart app (Phusion Passenger) ───────────────────────────────────────
+echo "▶ [7/7] Restart aplikasi ..."
 
 RESTARTED=0
 
