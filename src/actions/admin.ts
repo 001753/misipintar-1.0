@@ -15,6 +15,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { redis } from "@/lib/redis";
+import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/types";
 
 // ─── Helper: pastikan SUPER_ADMIN ────────────────────────
@@ -95,6 +96,7 @@ export async function updatePlanPrice(
   });
 
   await invalidatePlanCache(planId);
+  revalidatePath('/');
   return { success: true, data: null };
 }
 
@@ -123,6 +125,7 @@ export async function updatePlanLimits(
   });
 
   await invalidatePlanCache(planId);
+  revalidatePath('/');
   return { success: true, data: null };
 }
 
@@ -148,6 +151,7 @@ export async function togglePlanActive(
   });
 
   await invalidatePlanCache(planId);
+  revalidatePath('/');
   return { success: true, data: null };
 }
 
@@ -192,6 +196,94 @@ export async function updatePhaseMode(
     await redis.del("appconfig:global").catch(() => {});
   }
 
+  revalidatePath('/');
+  return { success: true, data: null };
+}
+
+// ─── [6.3b] Visibilitas Section Harga di Landing Page ────
+
+/**
+ * Toggle tampil/sembunyikan SELURUH section harga di landing page.
+ * Tersimpan di AppConfig.data.showPricingSection (boolean).
+ */
+export async function updateShowPricingSection(
+  show: boolean
+): Promise<ActionResult<null>> {
+  const { adminId, ip } = await requireSuperAdmin();
+
+  const before = await prisma.appConfig.findUnique({
+    where: { id: "global-config" },
+  });
+
+  const currentData = (before?.data as Record<string, unknown>) ?? {};
+  const newData = { ...currentData, showPricingSection: show };
+
+  await prisma.appConfig.upsert({
+    where:  { id: "global-config" },
+    update: { data: newData as import("@prisma/client").Prisma.InputJsonValue },
+    create: {
+      id:        "global-config",
+      phaseMode: "FULL_FREE",
+      data: {
+        interestRate: 2, taxRate: 5, maxTrialDays: 14,
+        maintenanceMode: false,
+        showPricingSection: show,
+        featureFlags: { pushNotifications: false, pdfReports: true, interestEngine: true, taxEngine: true },
+      },
+    },
+  });
+
+  await writeAuditLog({
+    adminId,
+    ip,
+    action: "UPDATE_PRICING_VISIBILITY",
+    targetType: "AppConfig",
+    targetId: "global-config",
+    before: { showPricingSection: currentData.showPricingSection ?? true },
+    after:  { showPricingSection: show },
+  });
+
+  if (redis) {
+    await redis.del("appconfig:global").catch(() => {});
+  }
+
+  revalidatePath('/');
+  return { success: true, data: null };
+}
+
+/**
+ * Toggle tampil/sembunyikan SATU plan di landing page.
+ * Tersimpan di Plan.limits.showOnLanding (boolean).
+ */
+export async function togglePlanShowOnLanding(
+  planId: string,
+  show: boolean
+): Promise<ActionResult<null>> {
+  const { adminId, ip } = await requireSuperAdmin();
+
+  const before = await prisma.plan.findUnique({ where: { id: planId } });
+  if (!before) return { success: false, error: "Plan tidak ditemukan." };
+
+  const currentLimits = (before.limits as Record<string, unknown>) ?? {};
+  const newLimits = { ...currentLimits, showOnLanding: show };
+
+  await prisma.plan.update({
+    where: { id: planId },
+    data: { limits: newLimits as import("@prisma/client").Prisma.InputJsonValue },
+  });
+
+  await writeAuditLog({
+    adminId,
+    ip,
+    action: "TOGGLE_PLAN_SHOW_ON_LANDING",
+    targetType: "Plan",
+    targetId: planId,
+    before: { showOnLanding: currentLimits.showOnLanding ?? true },
+    after:  { showOnLanding: show },
+  });
+
+  await invalidatePlanCache(planId);
+  revalidatePath('/');
   return { success: true, data: null };
 }
 

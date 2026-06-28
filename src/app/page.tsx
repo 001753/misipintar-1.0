@@ -4,6 +4,8 @@ import { auth } from '@/lib/auth/config'
 import { redirect } from 'next/navigation'
 import LandingPage from '@/components/landing/LandingPage'
 import JsonLd from '@/components/JsonLd'
+import { prisma } from '@/lib/prisma'
+import type { PricingData } from '@/components/landing/PricingBanner'
 
 export const metadata: Metadata = {
   title: {
@@ -191,12 +193,48 @@ export default async function HomePage() {
     if (role === 'SUPER_ADMIN') redirect('/superadmin')
   }
 
+  // Ambil data harga dari DB — realtime sesuai pengaturan superadmin
+  let pricingData: PricingData | undefined
+  try {
+    const [plans, appConfig] = await Promise.all([
+      prisma.plan.findMany({ where: { isActive: true }, orderBy: { price: 'asc' } }),
+      prisma.appConfig.findUnique({ where: { id: 'global-config' } }),
+    ])
+
+    const configData = (appConfig?.data as Record<string, unknown>) ?? {}
+    const showPricingSection = configData.showPricingSection !== false
+
+    const visiblePlans = plans
+      .filter((p) => {
+        const lim = p.limits as Record<string, unknown>
+        return lim.showOnLanding !== false
+      })
+      .map((p) => ({
+        id: p.id,
+        type: p.type,
+        name: p.name,
+        price: p.price,
+        yearlyPrice: p.yearlyPrice,
+        isActive: p.isActive,
+        limits: p.limits as Record<string, unknown>,
+      }))
+
+    pricingData = {
+      showPricingSection,
+      phaseMode: (appConfig?.phaseMode ?? 'FULL_FREE') as PricingData['phaseMode'],
+      plans: visiblePlans,
+    }
+  } catch {
+    // Jika DB tidak tersedia saat build/SSG, fallback ke static
+    pricingData = undefined
+  }
+
   return (
     <>
       <JsonLd schema={organizationSchema} />
       <JsonLd schema={webSiteSchema} />
       <JsonLd schema={faqSchema} />
-      <LandingPage />
+      <LandingPage pricingData={pricingData} />
     </>
   )
 }

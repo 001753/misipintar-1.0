@@ -1,0 +1,1 @@
+- [Pricing Visibility Architecture](pricing-visibility.md) — showPricingSection in AppConfig.data, showOnLanding in Plan.limits JSON (no migration needed)

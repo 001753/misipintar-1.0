@@ -8,11 +8,15 @@ export default async function PlansPage() {
     prisma.appConfig.findUnique({ where: { id: "global-config" } }),
   ]);
 
+  // Baca showPricingSection dari AppConfig.data (default: true)
+  const configData = (appConfig?.data as Record<string, unknown>) ?? {};
+  const showPricingSection = configData.showPricingSection !== false;
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-white">Kelola Plan</h1>
-        <p className="text-gray-400 mt-1">Update harga, limit, dan phase mode</p>
+        <p className="text-gray-400 mt-1">Update harga, limit, visibilitas, dan phase mode</p>
       </div>
       <PlanManagerClient
         plans={plans.map((p) => ({
@@ -20,6 +24,7 @@ export default async function PlansPage() {
           limits: p.limits as Record<string, unknown>,
         }))}
         currentPhaseMode={appConfig?.phaseMode ?? "FULL_FREE"}
+        showPricingSection={showPricingSection}
       />
     </div>
   );

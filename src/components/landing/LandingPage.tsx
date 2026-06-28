@@ -10,11 +10,16 @@ import HowItWorks from './HowItWorks'
 import TestimoniSection from './TestimoniSection'
 import FaqSection from './FaqSection'
 import PricingBanner from './PricingBanner'
+import type { PricingData } from './PricingBanner'
 import Footer from './Footer'
 import CoinTrail from './CoinTrail'
 import LiterasisSection from './LiterasisSection'
 
-export default function LandingPage() {
+interface LandingPageProps {
+  pricingData?: PricingData
+}
+
+export default function LandingPage({ pricingData }: LandingPageProps) {
   return (
     <>
       <CoinTrail />
@@ -29,7 +34,7 @@ export default function LandingPage() {
       <HowItWorks />
       <TestimoniSection />
       <FaqSection />
-      <PricingBanner />
+      <PricingBanner pricingData={pricingData} />
       <Footer />
     </>
   )

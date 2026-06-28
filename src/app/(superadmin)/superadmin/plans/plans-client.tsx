@@ -7,6 +7,8 @@ import {
   updatePlanLimits,
   togglePlanActive,
   updatePhaseMode,
+  updateShowPricingSection,
+  togglePlanShowOnLanding,
 } from "@/actions/admin";
 
 type PlanLimits = {
@@ -33,6 +35,7 @@ type Plan = {
 interface Props {
   plans: Plan[];
   currentPhaseMode: string;
+  showPricingSection: boolean;
 }
 
 const PHASE_OPTIONS = [
@@ -430,13 +433,14 @@ function PriceEditor({
   );
 }
 
-export default function PlanManagerClient({ plans, currentPhaseMode }: Props) {
+export default function PlanManagerClient({ plans, currentPhaseMode, showPricingSection }: Props) {
   const router = useRouter();
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [editingLimitId, setEditingLimitId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [errorToast, setErrorToast] = useState<string | null>(null);
   const [phase, setPhase] = useState(currentPhaseMode);
+  const [sectionVisible, setSectionVisible] = useState(showPricingSection);
   const [isPending, startTransition] = useTransition();
 
   function ok(msg: string) {
@@ -501,6 +505,31 @@ export default function PlanManagerClient({ plans, currentPhaseMode }: Props) {
     });
   }
 
+  function handleSectionVisible(show: boolean) {
+    startTransition(async () => {
+      const res = await updateShowPricingSection(show);
+      if (res.success) {
+        setSectionVisible(show);
+        ok(show ? "Section harga ditampilkan di landing page" : "Section harga disembunyikan dari landing page");
+        router.refresh();
+      } else {
+        err("Gagal: " + res.error);
+      }
+    });
+  }
+
+  function handleToggleShowOnLanding(planId: string, currentlyVisible: boolean) {
+    startTransition(async () => {
+      const res = await togglePlanShowOnLanding(planId, !currentlyVisible);
+      if (res.success) {
+        ok(`Plan berhasil ${!currentlyVisible ? "ditampilkan" : "disembunyikan"} di landing page`);
+        router.refresh();
+      } else {
+        err("Gagal: " + res.error);
+      }
+    });
+  }
+
   return (
     <div className="space-y-8">
       <Toast msg={toast} />
@@ -541,6 +570,34 @@ export default function PlanManagerClient({ plans, currentPhaseMode }: Props) {
               </button>
             );
           })}
+        </div>
+
+        {/* Toggle visibilitas section harga di landing page */}
+        <div className="mt-5 pt-5 border-t border-gray-700 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-white flex items-center gap-2">
+              🌐 Tampilkan Section Harga di Landing Page
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {sectionVisible
+                ? "Section harga sedang tampil di halaman utama"
+                : "Section harga disembunyikan — pengunjung tidak melihat harga"}
+            </p>
+          </div>
+          <button
+            onClick={() => handleSectionVisible(!sectionVisible)}
+            disabled={isPending}
+            aria-label="Toggle visibilitas section harga"
+            className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+              sectionVisible ? "bg-emerald-500" : "bg-gray-600"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                sectionVisible ? "translate-x-6" : ""
+              }`}
+            />
+          </button>
         </div>
       </div>
 
@@ -592,7 +649,25 @@ export default function PlanManagerClient({ plans, currentPhaseMode }: Props) {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+                  {/* Toggle tampilkan di landing page (per-plan) */}
+                  {(() => {
+                    const onLanding = plan.limits.showOnLanding !== false;
+                    return (
+                      <button
+                        onClick={() => handleToggleShowOnLanding(plan.id, onLanding)}
+                        disabled={isPending}
+                        title={onLanding ? "Sembunyikan dari landing page" : "Tampilkan di landing page"}
+                        className={`text-xs px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors border ${
+                          onLanding
+                            ? "bg-blue-900/30 hover:bg-blue-900/60 text-blue-400 border-blue-800/50"
+                            : "bg-gray-700/50 hover:bg-gray-600 text-gray-500 border-gray-600"
+                        }`}
+                      >
+                        {onLanding ? "👁 Landing" : "🙈 Hidden"}
+                      </button>
+                    );
+                  })()}
                   <button
                     onClick={() => {
                       if (editingPriceId === plan.id) {
