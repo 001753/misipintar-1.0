@@ -335,7 +335,6 @@ self.__SERVER_FILES_MANIFEST={
       "bullmq",
       "@prisma/client",
       "@prisma/adapter-pg",
-      "@prisma/engines",
       "prisma",
       "@react-pdf/renderer",
       "nanoid",

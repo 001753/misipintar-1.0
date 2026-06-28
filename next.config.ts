@@ -21,7 +21,6 @@ const SERVER_EXTERNAL_PACKAGES = [
   "bullmq",
   "@prisma/client",
   "@prisma/adapter-pg",
-  "@prisma/engines",
   "prisma",
   "@react-pdf/renderer",
   "nanoid",
