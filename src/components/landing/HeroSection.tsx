@@ -12,7 +12,7 @@ const floatingStats = [
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800 dark:from-gray-950 dark:via-gray-900 dark:to-gray-900 pt-20">
+    <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-b from-emerald-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 pt-20">
       <MeshBackground />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 w-full">
@@ -35,7 +35,7 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className="font-display font-bold text-5xl sm:text-6xl lg:text-7xl xl:text-8xl leading-[1.05] text-white mb-6"
+            className="font-display font-bold text-5xl sm:text-6xl lg:text-7xl xl:text-8xl leading-[1.05] text-slate-900 dark:text-white mb-6"
           >
             Ubah Kuota{' '}
             <span
@@ -68,10 +68,10 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-slate-300 text-lg sm:text-xl leading-relaxed mb-8 max-w-2xl mx-auto"
+            className="text-slate-600 dark:text-slate-300 text-lg sm:text-xl leading-relaxed mb-8 max-w-2xl mx-auto"
           >
-            <strong className="text-white">Misi Pintar</strong> mengubah PR sekolah, baca buku, dan tugas rumah jadi{' '}
-            <em className="text-emerald-400">misi seru berhadiah saldo saku virtual</em>. Anak belajar mandiri. Orang tua tenang.
+            <strong className="text-slate-900 dark:text-white">Misi Pintar</strong> mengubah PR sekolah, baca buku, dan tugas rumah jadi{' '}
+            <em className="text-emerald-600 dark:text-emerald-400">misi seru berhadiah saldo saku virtual</em>. Anak belajar mandiri. Orang tua tenang.
           </motion.p>
 
           {/* CTAs */}
@@ -89,7 +89,7 @@ export default function HeroSection() {
               <Rocket className="w-5 h-5" />
               Ambil Gratis Sekarang
             </Link>
-            <button className="inline-flex items-center justify-center gap-2 bg-white/10 border border-white/20 text-white font-semibold text-base px-8 py-4 rounded-2xl hover:bg-white/20 transition-all duration-200 backdrop-blur-sm">
+            <button className="inline-flex items-center justify-center gap-2 bg-slate-100 border border-slate-200 text-slate-800 dark:bg-white/10 dark:border-white/20 dark:text-white font-semibold text-base px-8 py-4 rounded-2xl hover:bg-slate-200 dark:hover:bg-white/20 transition-all duration-200 backdrop-blur-sm">
               <Play className="w-5 h-5 fill-white" />
               Lihat Demo
             </button>
@@ -103,8 +103,8 @@ export default function HeroSection() {
             className="flex flex-wrap items-center gap-5 justify-center mb-16"
           >
             {['100% Gratis', 'Tanpa Kartu Kredit', '1 Menit Setup'].map((item) => (
-              <div key={item} className="flex items-center gap-1.5 text-sm text-slate-400">
-                <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+              <div key={item} className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+                <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                 <span>{item}</span>
               </div>
             ))}
@@ -121,8 +121,8 @@ export default function HeroSection() {
                 className={`bg-gradient-to-br ${s.color} border backdrop-blur-sm rounded-2xl px-5 py-4 text-center`}
               >
                 <div className="text-2xl mb-1">{s.emoji}</div>
-                <div className="text-white font-bold text-xl">{s.value}</div>
-                <div className="text-slate-400 text-xs mt-0.5">{s.label}</div>
+                <div className="text-slate-900 dark:text-white font-bold text-xl">{s.value}</div>
+                <div className="text-slate-500 dark:text-slate-400 text-xs mt-0.5">{s.label}</div>
               </motion.div>
             ))}
           </div>

@@ -57,7 +57,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-const themeScript = `(function(){try{var s=localStorage.getItem('mp-theme');var p=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';if((s||p)==='dark')document.documentElement.classList.add('dark');}catch(e){}})();`;
+const themeScript = `(function(){try{var s=localStorage.getItem('mp-theme');if(s==='dark')document.documentElement.classList.add('dark');}catch(e){}})();`;
 
 export default function RootLayout({
   children,

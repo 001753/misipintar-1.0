@@ -37,7 +37,7 @@ export default function PainSection() {
   const { ref, inView } = useScrollReveal()
 
   return (
-    <section className="py-20 md:py-28 bg-slate-950 dark:bg-gray-950 relative overflow-hidden transition-colors duration-200">
+    <section className="py-20 md:py-28 bg-slate-100 dark:bg-slate-950 relative overflow-hidden transition-colors duration-200">
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-0 left-0 w-full h-full" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, #ef4444 0%, transparent 50%), radial-gradient(circle at 80% 50%, #f59e0b 0%, transparent 50%)' }} />
       </div>
@@ -53,13 +53,13 @@ export default function PainSection() {
           <div className="inline-flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-full px-4 py-2 mb-6">
             <span className="text-red-400 text-sm font-semibold">😤 Masalah Nyata</span>
           </div>
-          <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl text-white mb-6">
+          <h2 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white mb-6">
             Mengapa Pola Lama{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400">
               Tidak Lagi Bekerja?
             </span>
           </h2>
-          <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
+          <p className="text-slate-600 dark:text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
             Generasi Alpha tumbuh di dunia digital. Pendekatan lama — uang saku cash, PR tanpa imbalan, ceramah soal hemat — sudah tidak relevan.
           </p>
         </motion.div>
@@ -74,8 +74,8 @@ export default function PainSection() {
               className={`relative bg-gradient-to-br ${pain.color} border ${pain.border} rounded-3xl p-8 hover:-translate-y-2 transition-transform duration-300`}
             >
               <div className="text-5xl mb-4">{pain.emoji}</div>
-              <h3 className="font-display font-bold text-xl text-white mb-3">{pain.title}</h3>
-              <p className="text-slate-400 leading-relaxed">{pain.desc}</p>
+              <h3 className="font-display font-bold text-xl text-slate-900 dark:text-white mb-3">{pain.title}</h3>
+              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{pain.desc}</p>
               <div className="absolute top-6 right-6 opacity-10">
                 <pain.icon className={`w-16 h-16 ${pain.iconColor}`} />
               </div>
@@ -91,7 +91,7 @@ export default function PainSection() {
         >
           <div className="inline-flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl px-8 py-4">
             <span className="text-2xl">💡</span>
-            <p className="text-emerald-400 font-semibold text-lg">
+            <p className="text-emerald-600 dark:text-emerald-400 font-semibold text-lg">
               Ada cara yang lebih baik — dan anak-anak menyukainya.
             </p>
           </div>

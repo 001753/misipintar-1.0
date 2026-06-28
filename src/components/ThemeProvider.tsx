@@ -19,10 +19,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const saved = localStorage.getItem('mp-theme') as Theme | null
-    const preferred: Theme = window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light'
-    const initial = saved ?? preferred
+    const initial = saved ?? 'light'
     setTheme(initial)
     applyTheme(initial)
   }, [])
