@@ -139,6 +139,12 @@ try {
 APPJS
 echo "   ✓ app.js berhasil di-generate"
 
+# ── 4. Tulis commit hash untuk verifikasi sinkronisasi di deploy.sh ──────────
+# deploy.sh membaca file ini untuk mendeteksi kalau ada commit yang belum di-build.
+COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+echo "$COMMIT_HASH" > "$STANDALONE/.build_commit"
+echo "   ✓ .build_commit: ${COMMIT_HASH:0:12} (dipakai deploy.sh untuk cek sinkronisasi)"
+
 # ── Ringkasan ukuran ──────────────────────────────────────────────────────────
 echo ""
 echo "✅ Standalone siap di: .next/standalone/"

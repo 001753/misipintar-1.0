@@ -47,6 +47,39 @@ if [ -d "$APP_DIR/.next/standalone" ]; then
 fi
 echo ""
 
+# ── 1c. Verifikasi sinkronisasi build vs commit ───────────────────────────────
+# Mendeteksi kalau ada commit baru yang belum di-build di Replit.
+# File .build_commit ditulis oleh scripts/prepare-standalone.sh saat build selesai.
+BUILD_COMMIT_FILE="$APP_DIR/.next/standalone/.build_commit"
+CURRENT_HEAD=$(git rev-parse HEAD 2>/dev/null || echo "unknown")
+
+if [ -f "$BUILD_COMMIT_FILE" ]; then
+  BUILT_AT=$(cat "$BUILD_COMMIT_FILE" 2>/dev/null | tr -d '[:space:]')
+  if [ "$CURRENT_HEAD" = "$BUILT_AT" ]; then
+    echo "  ✓ Standalone sinkron dengan commit HEAD (${CURRENT_HEAD:0:12})"
+  else
+    echo ""
+    echo "  ⚠️  ══════════════════════════════════════════════════════════"
+    echo "  ⚠️  PERINGATAN: Standalone TIDAK sinkron dengan commit terbaru!"
+    echo "  ⚠️  HEAD saat ini : ${CURRENT_HEAD:0:12}"
+    echo "  ⚠️  Dibangun dari : ${BUILT_AT:0:12}"
+    echo "  ⚠️"
+    echo "  ⚠️  Artinya: ada perubahan kode yang belum di-build."
+    echo "  ⚠️  Halaman produksi akan menampilkan versi LAMA."
+    echo "  ⚠️"
+    echo "  ⚠️  Solusi — jalankan di Replit:"
+    echo "  ⚠️    npm run build   (atau 2 step manual jika timeout)"
+    echo "  ⚠️    → commit & push ke GitHub"
+    echo "  ⚠️    → bash deploy.sh"
+    echo "  ⚠️  ══════════════════════════════════════════════════════════"
+    echo ""
+  fi
+else
+  echo "  ⚠️  .build_commit belum ada — pengecekan sinkronisasi tidak aktif"
+  echo "      (jalankan npm run build di Replit untuk mengaktifkan fitur ini)"
+fi
+echo ""
+
 # ── 2. Install dependencies ───────────────────────────────────────────────────
 echo "▶ [2/5] Install Node.js dependencies ..."
 

@@ -39,8 +39,12 @@
 
 ### Pipeline
 ```
-Edit kode di Replit → git push ke GitHub → bash deploy.sh di cPanel SSH
+Edit kode di Replit → npm run build di Replit → commit & push ke GitHub → bash deploy.sh di cPanel SSH
 ```
+
+> ⚠️ **WAJIB**: Setiap perubahan kode HARUS melalui `npm run build` di Replit sebelum push ke GitHub.
+> `deploy.sh` di cPanel TIDAK melakukan build — ia hanya git pull + restart.
+> Kalau lupa build, produksi akan menampilkan versi lama meskipun git pull sudah berhasil.
 
 ### Build HARUS di Replit (bukan cPanel)
 cPanel tidak bisa build Next.js (batas thread). Build dilakukan di Replit:
@@ -114,12 +118,13 @@ Ini menjalankan secara berurutan:
 cd ~/public_html/misipintar/misipintar-1.0
 bash deploy.sh
 ```
-`deploy.sh` melakukan 7 langkah:
+`deploy.sh` melakukan langkah-langkah berikut:
 1. `git fetch && git reset --hard origin/main`
 2. Symlink `standalone/node_modules` → root `node_modules`
-3. `npm install` (SKIP jika `package.json` tidak berubah via `.pkg_hash`)
-4. `prisma generate` + `prisma migrate deploy`
-5. `node scripts/seed-plans.js` (seed Plans + AppConfig — skip jika sudah ada)
+3. **Cek sinkronisasi build** — bandingkan HEAD commit dengan `.next/standalone/.build_commit` (lihat §11)
+4. `npm install` (SKIP jika `package.json` tidak berubah via `.pkg_hash`)
+5. `prisma generate` + `prisma migrate deploy`
+6. `node scripts/seed-plans.js` (seed Plans + AppConfig — skip jika sudah ada)
 6. `node scripts/seed-admin.js` (seed admin — skip jika sudah ada)
 7. Restart Passenger
 
