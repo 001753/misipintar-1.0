@@ -69,14 +69,19 @@ find_real_npm() {
 
 REAL_NPM=$(find_real_npm)
 
+# --ignore-scripts: cegah lifecycle hooks (postinstall, prepare, dll) spawn proses baru.
+# Prisma generate sudah ditangani eksplisit di step 3.
+# --no-fund --no-audit: skip network request tambahan yg spawn child process.
+INSTALL_FLAGS="--omit=dev --ignore-scripts --no-fund --no-audit"
+
 if [ -n "$REAL_NPM" ]; then
   echo "  → Menggunakan: $REAL_NPM"
-  "$REAL_NPM" install --omit=dev --foreground-scripts=false
+  "$REAL_NPM" install $INSTALL_FLAGS
 else
   echo "  → Menggunakan npm default (wrapper)"
   CURDIR="$(pwd)"
   npm_config_prefix="$CURDIR" NPM_CONFIG_PREFIX="$CURDIR" \
-    npm install --omit=dev --foreground-scripts=false --prefix "$CURDIR"
+    npm install $INSTALL_FLAGS --prefix "$CURDIR"
 fi
 
 echo "  ✓ Dependencies terinstall"
