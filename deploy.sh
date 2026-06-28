@@ -94,7 +94,7 @@ fi
 echo ""
 
 # ── 4. Prisma migrate deploy ──────────────────────────────────────────────────
-echo "▶ [4/4] Prisma migrate deploy ..."
+echo "▶ [4/5] Prisma migrate deploy ..."
 
 if [ -f "./node_modules/.bin/prisma" ]; then
   ./node_modules/.bin/prisma migrate deploy && echo "  ✓ Migrasi database selesai" || {
@@ -105,11 +105,28 @@ else
 fi
 echo ""
 
+# ── 5. Restart app (Phusion Passenger) ───────────────────────────────────────
+echo "▶ [5/5] Restart aplikasi ..."
+
+RESTARTED=0
+
+# Cara 1: passenger-config restart-app (tersedia jika Passenger di PATH)
+if command -v passenger-config &>/dev/null; then
+  passenger-config restart-app "$APP_DIR" && RESTARTED=1 && echo "  ✓ Restart via passenger-config"
+fi
+
+# Cara 2: touch tmp/restart.txt — Passenger akan reload otomatis pada request berikutnya
+if [ "$RESTARTED" -eq 0 ]; then
+  mkdir -p "$APP_DIR/tmp"
+  touch "$APP_DIR/tmp/restart.txt"
+  RESTARTED=1
+  echo "  ✓ Restart via tmp/restart.txt (Passenger akan reload saat request berikutnya)"
+fi
+
+echo ""
+
 # ── Selesai ───────────────────────────────────────────────────────────────────
 echo "════════════════════════════════════════════════════════"
-echo "  ✅ Deploy selesai!"
-echo ""
-echo "  Langkah terakhir: RESTART app di cPanel Node.js App"
-echo "  (atau gunakan tombol RESTART di panel cPanel)"
+echo "  ✅ Deploy selesai! Aplikasi sudah di-restart otomatis."
 echo "════════════════════════════════════════════════════════"
 echo ""
