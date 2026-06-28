@@ -55,6 +55,14 @@ export default function OnboardingWizard({ familyName, spaceCode, parentName }: 
   const [selectedTemplate, setSelectedTemplate] = useState<number | null>(null)
   const [customTitle, setCustomTitle] = useState('')
   const [customReward, setCustomReward] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  function handleCopy() {
+    navigator.clipboard.writeText(spaceCode).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   const firstName = parentName.split(' ')[0]
 
@@ -424,8 +432,47 @@ export default function OnboardingWizard({ familyName, spaceCode, parentName }: 
                     initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.35 }}
                     className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/30 border border-emerald-200/60 dark:border-emerald-900/50 rounded-2xl p-5 mb-8"
                   >
-                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-2">🏠 Kode Keluarga</p>
-                    <p className="text-4xl font-black tracking-[0.4em] text-emerald-700 dark:text-emerald-400 font-mono">{spaceCode}</p>
+                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest mb-3">🏠 Kode Keluarga</p>
+                    <div className="flex items-center justify-center gap-3">
+                      <p className="text-4xl font-black tracking-[0.4em] text-emerald-700 dark:text-emerald-400 font-mono">{spaceCode}</p>
+                      <button
+                        onClick={handleCopy}
+                        className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all duration-200 ${
+                          copied
+                            ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200 dark:shadow-emerald-900/40 scale-105'
+                            : 'bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-md hover:shadow-emerald-100 dark:hover:shadow-emerald-900/30'
+                        }`}
+                      >
+                        <AnimatePresence mode="wait">
+                          {copied ? (
+                            <motion.span
+                              key="check"
+                              initial={{ scale: 0.5, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              exit={{ scale: 0.5, opacity: 0 }}
+                              transition={{ duration: 0.15 }}
+                              className="flex items-center gap-1"
+                            >
+                              ✓ Tersalin!
+                            </motion.span>
+                          ) : (
+                            <motion.span
+                              key="copy"
+                              initial={{ scale: 0.5, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              exit={{ scale: 0.5, opacity: 0 }}
+                              transition={{ duration: 0.15 }}
+                              className="flex items-center gap-1"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                              Salin
+                            </motion.span>
+                          )}
+                        </AnimatePresence>
+                      </button>
+                    </div>
                     <p className="text-xs text-emerald-600/70 dark:text-emerald-500/70 mt-2">Masuk di app → Login Anak → pakai kode ini</p>
                   </motion.div>
 
