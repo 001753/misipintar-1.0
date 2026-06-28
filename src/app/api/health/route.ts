@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { execSync } from 'child_process'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,15 +17,26 @@ function formatUptime(seconds: number): string {
   return parts.join(' ')
 }
 
+function getGitCommit(): { hash: string; short: string; date: string } | null {
+  try {
+    const hash  = execSync('git rev-parse HEAD',            { timeout: 2000 }).toString().trim()
+    const date  = execSync('git log -1 --format=%ci HEAD',  { timeout: 2000 }).toString().trim()
+    return { hash, short: hash.slice(0, 7), date }
+  } catch {
+    return null
+  }
+}
+
 export async function GET() {
   const start = Date.now()
 
-  const checks: Record<string, { status: 'ok' | 'error'; latencyMs?: number; detail?: string }> = {}
+  const checks: Record<string, { status: 'ok' | 'warn' | 'error'; latencyMs?: number; detail?: string }> = {}
 
-  // ── Database check ──────────────────────────────────────────────────────────
+  // ── Database ────────────────────────────────────────────────────────────────
   try {
+    const dbStart = Date.now()
     await prisma.$queryRaw`SELECT 1`
-    checks.database = { status: 'ok', latencyMs: Date.now() - start }
+    checks.database = { status: 'ok', latencyMs: Date.now() - dbStart }
   } catch (err) {
     checks.database = {
       status: 'error',
@@ -32,13 +44,13 @@ export async function GET() {
     }
   }
 
-  // ── Plan seeding check — STARTER plan harus ada ───────────────────────────
+  // ── Seeding: STARTER plan ───────────────────────────────────────────────────
   if (checks.database?.status === 'ok') {
     try {
       const starterPlan = await prisma.plan.findFirst({ where: { type: 'STARTER' } })
       checks.starterPlan = starterPlan
         ? { status: 'ok', detail: `id: ${starterPlan.id}` }
-        : { status: 'error', detail: 'Plan STARTER tidak ditemukan — jalankan: npm run db:seed' }
+        : { status: 'error', detail: 'Plan STARTER tidak ditemukan — jalankan: /api/seed/plans' }
     } catch (err) {
       checks.starterPlan = {
         status: 'error',
@@ -47,14 +59,35 @@ export async function GET() {
     }
   }
 
-  // ── Env vars critical check ────────────────────────────────────────────────
-  const requiredEnvs = ['DATABASE_URL', 'NEXTAUTH_SECRET', 'SESSION_SECRET']
-  const missingEnvs = requiredEnvs.filter((k) => !process.env[k])
-  checks.envVars = missingEnvs.length === 0
-    ? { status: 'ok', detail: 'Semua env var kritis tersedia' }
-    : { status: 'error', detail: `Missing: ${missingEnvs.join(', ')}` }
+  // ── Env vars ────────────────────────────────────────────────────────────────
+  const envChecks: Record<string, { required: boolean; present: boolean }> = {
+    DATABASE_URL:     { required: true,  present: !!process.env.DATABASE_URL },
+    NEXTAUTH_SECRET:  { required: true,  present: !!(process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET) },
+    APP_URL:          { required: true,  present: !!process.env.APP_URL },
+    NEXTAUTH_URL:     { required: true,  present: !!process.env.NEXTAUTH_URL },
+    MIDTRANS_SERVER_KEY: { required: true,  present: !!process.env.MIDTRANS_SERVER_KEY },
+    MIDTRANS_CLIENT_KEY: { required: true,  present: !!process.env.MIDTRANS_CLIENT_KEY },
+    SMTP_HOST:        { required: false, present: !!process.env.SMTP_HOST },
+    SMTP_USER:        { required: false, present: !!process.env.SMTP_USER },
+    SMTP_PASS:        { required: false, present: !!process.env.SMTP_PASS },
+    FONNTE_TOKEN:     { required: false, present: !!process.env.FONNTE_TOKEN },
+    REDIS_URL:        { required: false, present: !!process.env.REDIS_URL },
+    FIREBASE_PROJECT_ID: { required: false, present: !!process.env.FIREBASE_PROJECT_ID },
+    CRON_SECRET:      { required: false, present: !!process.env.CRON_SECRET },
+  }
 
-  // ── Redis check (opsional — tidak gagal jika tidak ada) ────────────────────
+  const missingRequired = Object.entries(envChecks).filter(([, v]) => v.required && !v.present).map(([k]) => k)
+  const missingOptional = Object.entries(envChecks).filter(([, v]) => !v.required && !v.present).map(([k]) => k)
+
+  checks.envVars = {
+    status: missingRequired.length > 0 ? 'error' : missingOptional.length > 0 ? 'warn' : 'ok',
+    detail: [
+      missingRequired.length > 0 ? `❌ Wajib belum diset: ${missingRequired.join(', ')}` : '',
+      missingOptional.length > 0 ? `⚠️  Opsional belum diset: ${missingOptional.join(', ')}` : '',
+    ].filter(Boolean).join(' | ') || 'Semua env var tersedia',
+  }
+
+  // ── Redis (opsional) ────────────────────────────────────────────────────────
   try {
     const { redis } = await import('@/lib/redis')
     if (redis) {
@@ -62,7 +95,7 @@ export async function GET() {
       await redis.ping()
       checks.redis = { status: 'ok', latencyMs: Date.now() - redisStart }
     } else {
-      checks.redis = { status: 'ok', detail: 'disabled (REDIS_URL not set)' }
+      checks.redis = { status: 'warn', detail: 'Disabled — REDIS_URL tidak diset (BullMQ workers nonaktif)' }
     }
   } catch (err) {
     checks.redis = {
@@ -71,51 +104,63 @@ export async function GET() {
     }
   }
 
-  // ── Memory usage ────────────────────────────────────────────────────────────
+  // ── SMTP config (opsional) ──────────────────────────────────────────────────
+  const smtpConfigured = !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
+  checks.smtp = smtpConfigured
+    ? { status: 'ok', detail: `${process.env.SMTP_USER} via ${process.env.SMTP_HOST}:${process.env.SMTP_PORT ?? '587'}` }
+    : { status: 'warn', detail: 'SMTP belum dikonfigurasi — email receipts nonaktif' }
+
+  // ── Midtrans config ─────────────────────────────────────────────────────────
+  const midtransConfigured = !!(process.env.MIDTRANS_SERVER_KEY && process.env.MIDTRANS_CLIENT_KEY)
+  const midtransMode = process.env.MIDTRANS_IS_PRODUCTION === 'true' ? 'production' : 'sandbox'
+  checks.midtrans = midtransConfigured
+    ? { status: 'ok', detail: `mode: ${midtransMode}` }
+    : { status: 'error', detail: 'MIDTRANS_SERVER_KEY atau MIDTRANS_CLIENT_KEY tidak diset' }
+
+  // ── Memory ──────────────────────────────────────────────────────────────────
   const mem = process.memoryUsage()
   const memory = {
     rss:       `${Math.round(mem.rss       / 1024 / 1024)} MB`,
     heapUsed:  `${Math.round(mem.heapUsed  / 1024 / 1024)} MB`,
     heapTotal: `${Math.round(mem.heapTotal / 1024 / 1024)} MB`,
-    external:  `${Math.round(mem.external  / 1024 / 1024)} MB`,
   }
 
-  // ── App version dari package.json ──────────────────────────────────────────
+  // ── App version & git ───────────────────────────────────────────────────────
   let appVersion = 'unknown'
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const pkg = require('../../../../package.json') as { version?: string }
     appVersion = pkg.version ?? 'unknown'
-  } catch {
-    // tidak kritis
-  }
+  } catch { /* tidak kritis */ }
 
-  const allOk = Object.values(checks).every((c) => c.status === 'ok')
-  const totalMs = Date.now() - start
+  const git = getGitCommit()
 
-  const body = {
-    status: allOk ? 'ok' : 'degraded',
+  // ── Status final ────────────────────────────────────────────────────────────
+  const hasError = Object.values(checks).some((c) => c.status === 'error')
+  const hasWarn  = Object.values(checks).some((c) => c.status === 'warn')
+  const overallStatus = hasError ? 'degraded' : hasWarn ? 'ok (with warnings)' : 'ok'
+
+  return NextResponse.json({
+    status:    overallStatus,
     timestamp: new Date().toISOString(),
+    totalMs:   Date.now() - start,
     uptime: {
       seconds: Math.floor(process.uptime()),
       human:   formatUptime(process.uptime()),
     },
-    totalMs,
     checks,
     system: {
-      node:   process.version,
-      pid:    process.pid,
+      node:    process.version,
+      pid:     process.pid,
+      env:     process.env.NODE_ENV ?? 'unknown',
       memory,
-      env:    process.env.NODE_ENV ?? 'unknown',
     },
     app: {
       name:    'misi-pintar',
       version: appVersion,
+      ...(git ? { commit: git.short, commitDate: git.date } : {}),
     },
-  }
-
-  return NextResponse.json(body, {
-    status: allOk ? 200 : 503,
+  }, {
+    status:  hasError ? 503 : 200,
     headers: { 'Cache-Control': 'no-store' },
   })
 }
