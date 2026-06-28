@@ -170,22 +170,63 @@ else
 fi
 echo ""
 
+# ── 7a. Verifikasi NODE_ENV dan cek resource sebelum restart ─────────────────
+echo "▶ [7/7] Pre-restart check & restart aplikasi ..."
+
+# Pastikan NODE_ENV production tersetting di .env (peringatan dini)
+if [ -f "$APP_DIR/.env" ]; then
+  if ! grep -q "^NODE_ENV=production" "$APP_DIR/.env" 2>/dev/null; then
+    echo "  ⚠️  PERINGATAN: NODE_ENV=production tidak ditemukan di .env!"
+    echo "      Aplikasi akan berjalan dalam mode development → RAM 2-3x lebih besar."
+    echo "      Tambahkan: echo 'NODE_ENV=production' >> .env"
+  else
+    echo "  ✓ NODE_ENV=production terverifikasi di .env"
+  fi
+fi
+
+# Info proses Node.js aktif saat ini (bantu deteksi ghost process)
+NODE_PROCS=$(pgrep -c node 2>/dev/null || echo "0")
+echo "  ℹ️  Proses Node.js aktif sebelum restart: ${NODE_PROCS}"
+echo ""
+
 # ── 7. Restart app (Phusion Passenger) ───────────────────────────────────────
-echo "▶ [7/7] Restart aplikasi ..."
 
 RESTARTED=0
 
-# Cara 1: passenger-config restart-app (tersedia jika Passenger di PATH)
+# Cara 1: passenger-config restart-app (tersedia jika Passenger di PATH cPanel)
+# Ini cara paling andal — langsung kill proses lama dan spawn proses baru.
+# Mencegah "proses hantu" (ghost process) dari BullMQ workers versi lama.
 if command -v passenger-config &>/dev/null; then
-  passenger-config restart-app "$APP_DIR" && RESTARTED=1 && echo "  ✓ Restart via passenger-config"
+  echo "  → Mencoba passenger-config restart-app ..."
+  passenger-config restart-app "$APP_DIR" 2>/dev/null && RESTARTED=1 && \
+    echo "  ✓ Restart via passenger-config (proses lama diterminasi)" || \
+    echo "  ⚠️  passenger-config gagal — mencoba cara lain ..."
 fi
 
-# Cara 2: touch tmp/restart.txt — Passenger reload otomatis pada request berikutnya
+# Cara 2: Cari passenger-config di path standar cPanel (jika tidak ada di PATH)
+if [ "$RESTARTED" -eq 0 ]; then
+  for PC in \
+    "/usr/local/bin/passenger-config" \
+    "/opt/cpanel/ea-ruby*/root/usr/bin/passenger-config" \
+    "/usr/local/lib/ruby/gems/*/gems/passenger-*/bin/passenger-config"; do
+    # shellcheck disable=SC2086
+    PC_FOUND=$(ls $PC 2>/dev/null | head -1)
+    if [ -n "$PC_FOUND" ] && [ -x "$PC_FOUND" ]; then
+      "$PC_FOUND" restart-app "$APP_DIR" 2>/dev/null && RESTARTED=1 && \
+        echo "  ✓ Restart via $PC_FOUND" && break
+    fi
+  done
+fi
+
+# Cara 3: touch tmp/restart.txt — Passenger reload otomatis pada request berikutnya.
+# CATATAN: proses lama masih hidup sampai request pertama masuk setelah ini.
+# Jika perlu immediate restart, lakukan via cPanel UI → Node.js Selector → Restart.
 if [ "$RESTARTED" -eq 0 ]; then
   mkdir -p "$APP_DIR/tmp"
   touch "$APP_DIR/tmp/restart.txt"
   RESTARTED=1
-  echo "  ✓ Restart via tmp/restart.txt (Passenger reload saat request berikutnya)"
+  echo "  ✓ Restart via tmp/restart.txt (Passenger reload pada request berikutnya)"
+  echo "  ℹ️  Untuk immediate restart: cPanel → Node.js Selector → Restart App"
 fi
 
 echo ""

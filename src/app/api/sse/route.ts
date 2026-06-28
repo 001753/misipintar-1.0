@@ -10,6 +10,9 @@
 import { auth } from "@/lib/auth/config";
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
+// Batas durasi koneksi SSE per client — cegah akumulasi Entry Process di cPanel.
+// EventSource browser akan otomatis reconnect setelah koneksi ditutup server.
+const MAX_CONNECTION_MS = 5 * 60 * 1000; // 5 menit
 
 function createSubscriberClient() {
   const url = process.env.REDIS_URL;
@@ -53,6 +56,7 @@ export async function GET() {
 
   const encoder = new TextEncoder();
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  let maxLifetimeTimer: ReturnType<typeof setTimeout> | null = null;
   let closed = false;
 
   const stream = new ReadableStream({
@@ -66,11 +70,29 @@ export async function GET() {
         }
       }
 
+      function closeStream() {
+        if (closed) return;
+        closed = true;
+        if (heartbeatTimer) clearInterval(heartbeatTimer);
+        if (maxLifetimeTimer) clearTimeout(maxLifetimeTimer);
+        subscriber.unsubscribe(channel).catch(() => {});
+        subscriber.quit().catch(() => {});
+        try { controller.close(); } catch { /* sudah closed */ }
+      }
+
       send(JSON.stringify({ type: "connected", ts: Date.now() }));
 
       heartbeatTimer = setInterval(() => {
         send(JSON.stringify({ type: "heartbeat", ts: Date.now() }));
       }, HEARTBEAT_INTERVAL_MS);
+
+      // Tutup koneksi secara paksa setelah MAX_CONNECTION_MS.
+      // Browser EventSource akan otomatis reconnect — mencegah akumulasi
+      // Entry Process di cPanel akibat tab idle yang tidak pernah disconnect.
+      maxLifetimeTimer = setTimeout(() => {
+        send(JSON.stringify({ type: "reconnect", ts: Date.now() }));
+        closeStream();
+      }, MAX_CONNECTION_MS);
 
       await subscriber.subscribe(channel);
 
@@ -86,6 +108,7 @@ export async function GET() {
     cancel() {
       closed = true;
       if (heartbeatTimer) clearInterval(heartbeatTimer);
+      if (maxLifetimeTimer) clearTimeout(maxLifetimeTimer);
       subscriber.unsubscribe(channel).catch(() => {});
       subscriber.quit().catch(() => {});
     },
