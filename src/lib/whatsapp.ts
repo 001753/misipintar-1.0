@@ -95,6 +95,94 @@ export async function sendQrisAdminNotif(params: {
   }
 }
 
+/**
+ * Kirim notifikasi WhatsApp ke user (PARENT) saat pembayaran QRIS disetujui atau ditolak.
+ * Fire-and-forget — error tidak memblokir response admin.
+ */
+export async function sendQrisUserNotif(params: {
+  userPhone: string
+  familyName: string
+  action: 'APPROVED' | 'REJECTED'
+  planType: string
+  billingCycle: string
+  totalAmount: number
+  periodEnd?: Date
+  adminNote?: string
+  dashboardUrl: string
+}): Promise<void> {
+  const token = process.env.FONNTE_TOKEN
+  const { userPhone, familyName, action, planType, billingCycle, totalAmount, periodEnd, adminNote, dashboardUrl } = params
+
+  const cycleLabel = billingCycle === 'YEARLY' ? 'Tahunan' : 'Bulanan'
+  const planLabel = planType === 'EDUCATOR' ? 'Educator' : planType === 'PRO' ? 'Pro' : planType
+  const nominalFmt = `Rp ${totalAmount.toLocaleString('id-ID')}`
+
+  let message: string
+  if (action === 'APPROVED') {
+    const endFmt = periodEnd
+      ? periodEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+      : '-'
+    message =
+      `✅ *Pembayaran Berhasil Diverifikasi!*\n\n` +
+      `Halo, keluarga *${familyName}*!\n\n` +
+      `Pembayaran Anda telah *disetujui* oleh admin.\n\n` +
+      `📦 Paket: *${planLabel} ${cycleLabel}*\n` +
+      `💰 Nominal: *${nominalFmt}*\n` +
+      `📅 Aktif hingga: *${endFmt}*\n\n` +
+      `Selamat! Fitur premium Anda sudah aktif.\n` +
+      `Klik link berikut untuk masuk ke dashboard:\n` +
+      `${dashboardUrl}\n\n` +
+      `_Terima kasih telah menggunakan Misi Pintar!_ 🎉`
+  } else {
+    message =
+      `❌ *Pembayaran Tidak Dapat Diverifikasi*\n\n` +
+      `Halo, keluarga *${familyName}*!\n\n` +
+      `Maaf, pembayaran Anda *tidak dapat disetujui* saat ini.\n\n` +
+      `📦 Paket: *${planLabel} ${cycleLabel}*\n` +
+      `💰 Nominal: *${nominalFmt}*\n` +
+      (adminNote ? `📝 Keterangan: _${adminNote}_\n` : '') +
+      `\nSilakan hubungi admin atau coba transfer ulang.\n` +
+      `${dashboardUrl}\n\n` +
+      `_Misi Pintar Admin System_`
+  }
+
+  if (!token) {
+    console.warn('[QRIS User Notif] FONNTE_TOKEN tidak di-set — notif WA dilewati')
+    console.warn(`  ➜ Pesan yang akan dikirim ke ${userPhone}:\n${message}`)
+    return
+  }
+
+  const normalized = normalizePhone(userPhone)
+
+  try {
+    const res = await fetch(FONNTE_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: token,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        target: normalized,
+        message,
+        countryCode: '62',
+      }),
+    })
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      console.error(`[QRIS User Notif] Fonnte error ${res.status}: ${body}`)
+      return
+    }
+
+    const data = await res.json().catch(() => ({}))
+    if (data?.status === false) {
+      console.error(`[QRIS User Notif] Fonnte gagal: ${data?.reason ?? 'unknown'}`)
+    }
+  } catch (err) {
+    console.error('[QRIS User Notif] Gagal kirim WA:', err)
+  }
+}
+
 export async function sendWhatsAppOtp(phone: string, otp: string): Promise<void> {
   const token = process.env.FONNTE_TOKEN
   const normalized = normalizePhone(phone)

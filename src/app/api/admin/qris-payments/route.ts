@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/prisma'
 import { addMonths, addYears } from 'date-fns'
+import { sendQrisUserNotif } from '@/lib/whatsapp'
 
 // ─── GET: Daftar semua QRIS payment (admin only) ──────────────────────────────
 export async function GET(req: NextRequest) {
@@ -84,7 +85,14 @@ export async function PATCH(req: NextRequest) {
 
     const payment = await prisma.qrisPayment.findUnique({
       where: { id },
-      include: { familySpace: { include: { subscription: { include: { plan: true } } } } },
+      include: {
+        familySpace: {
+          include: {
+            subscription: { include: { plan: true } },
+            owner: { select: { phone: true } },   // untuk notifikasi WA ke user
+          },
+        },
+      },
     })
 
     if (!payment) {
@@ -98,11 +106,13 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (action === 'REJECT') {
+      const note = adminNote ?? 'Ditolak oleh admin'
+
       await prisma.qrisPayment.update({
         where: { id },
         data: {
           status: 'REJECTED',
-          adminNote: adminNote ?? 'Ditolak oleh admin',
+          adminNote: note,
           reviewedBy: session.user.id,
           reviewedAt: new Date(),
         },
@@ -115,9 +125,25 @@ export async function PATCH(req: NextRequest) {
           action: 'QRIS_PAYMENT_REJECTED',
           targetType: 'QrisPayment',
           targetId: id,
-          after: { adminNote: adminNote ?? 'Ditolak oleh admin' },
+          after: { adminNote: note },
         },
       })
+
+      // Notifikasi WA ke user — fire-and-forget
+      const ownerPhone = payment.familySpace.owner.phone
+      if (ownerPhone) {
+        const appUrl = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? ''
+        sendQrisUserNotif({
+          userPhone: ownerPhone,
+          familyName: payment.familySpace.name,
+          action: 'REJECTED',
+          planType: payment.planType,
+          billingCycle: payment.billingCycle,
+          totalAmount: payment.totalAmount,
+          adminNote: note,
+          dashboardUrl: `${appUrl}/dashboard/billing`,
+        }).catch((e) => console.error('[QRIS User Notif REJECT] fire-and-forget error:', e))
+      }
 
       return NextResponse.json({ success: true, status: 'REJECTED' })
     }
@@ -190,6 +216,23 @@ export async function PATCH(req: NextRequest) {
         },
       },
     })
+
+    // Notifikasi WA ke user — fire-and-forget
+    const ownerPhone = payment.familySpace.owner.phone
+    if (ownerPhone) {
+      const appUrl = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? ''
+      sendQrisUserNotif({
+        userPhone: ownerPhone,
+        familyName: payment.familySpace.name,
+        action: 'APPROVED',
+        planType: payment.planType,
+        billingCycle: payment.billingCycle,
+        totalAmount: payment.totalAmount,
+        periodEnd,
+        adminNote: adminNote ?? undefined,
+        dashboardUrl: `${appUrl}/dashboard/billing`,
+      }).catch((e) => console.error('[QRIS User Notif APPROVE] fire-and-forget error:', e))
+    }
 
     return NextResponse.json({ success: true, status: 'APPROVED', periodEnd: periodEnd.toISOString() })
   } catch (err) {
