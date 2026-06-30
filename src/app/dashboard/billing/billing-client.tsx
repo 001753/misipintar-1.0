@@ -50,6 +50,20 @@ type Invoice = {
   createdAt: string;
 };
 
+type QrisPayment = {
+  id: string;
+  planType: string;
+  billingCycle: string;
+  baseAmount: number;
+  uniqueCode: number;
+  totalAmount: number;
+  proofImagePath: string | null;
+  status: string;
+  adminNote: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+};
+
 type Subscription = {
   id: string;
   status: string;
@@ -67,6 +81,7 @@ interface Props {
   snapUrl: string;
   clientKey: string;
   isProduction: boolean;
+  qrisPayments: QrisPayment[];
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -105,6 +120,7 @@ export default function BillingClient({
   snapUrl,
   clientKey,
   isProduction,
+  qrisPayments,
 }: Props) {
   const router = useRouter();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("MONTHLY");
@@ -533,6 +549,11 @@ export default function BillingClient({
           </div>
         )}
 
+        {/* Riwayat QRIS Statis */}
+        {qrisPayments.length > 0 && (
+          <QrisPaymentHistory payments={qrisPayments} />
+        )}
+
         {/* Sandbox Notice */}
         {!isProduction && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
@@ -541,6 +562,232 @@ export default function BillingClient({
         )}
       </div>
     </>
+  );
+}
+
+// ── Status badge konfigurasi untuk QRIS ─────────────────────────────────────
+const QRIS_STATUS: Record<
+  string,
+  { label: string; dot: string; bg: string; text: string; border: string }
+> = {
+  PENDING: {
+    label: "Menunggu Verifikasi",
+    dot: "bg-amber-400",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    border: "border-amber-200",
+  },
+  APPROVED: {
+    label: "Disetujui",
+    dot: "bg-emerald-500",
+    bg: "bg-emerald-50",
+    text: "text-emerald-700",
+    border: "border-emerald-200",
+  },
+  REJECTED: {
+    label: "Ditolak",
+    dot: "bg-red-500",
+    bg: "bg-red-50",
+    text: "text-red-700",
+    border: "border-red-200",
+  },
+};
+
+const PLAN_LABEL: Record<string, string> = {
+  PRO: "Pro",
+  EDUCATOR: "Educator",
+  SCHOOL: "School",
+};
+
+function QrisPaymentHistory({ payments }: { payments: QrisPayment[] }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-gray-900">Riwayat Transfer QRIS Statis</h3>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Pembayaran manual via scan QRIS + upload bukti
+          </p>
+        </div>
+        <span className="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full font-medium">
+          {payments.length} transaksi
+        </span>
+      </div>
+
+      {/* List */}
+      <div className="divide-y divide-gray-50">
+        {payments.map((p) => {
+          const meta = QRIS_STATUS[p.status] ?? QRIS_STATUS.PENDING;
+          const planLabel = PLAN_LABEL[p.planType] ?? p.planType;
+          const cycleLabel = p.billingCycle === "YEARLY" ? "Tahunan" : "Bulanan";
+          const isExpanded = expandedId === p.id;
+          const dateStr = new Date(p.createdAt).toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          });
+          const timeStr = new Date(p.createdAt).toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          return (
+            <div key={p.id} className="transition-colors hover:bg-gray-50/50">
+              {/* Row utama */}
+              <button
+                onClick={() => setExpandedId(isExpanded ? null : p.id)}
+                className="w-full text-left px-5 py-4 flex items-center gap-4"
+              >
+                {/* Status indicator */}
+                <div className="shrink-0">
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${meta.dot}`} />
+                </div>
+
+                {/* Info utama */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-gray-900">
+                      {PLAN_ICONS[p.planType] ?? "📦"} {planLabel} {cycleLabel}
+                    </span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium border ${meta.bg} ${meta.text} ${meta.border}`}
+                    >
+                      {meta.label}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {dateStr} · {timeStr}
+                  </p>
+                </div>
+
+                {/* Nominal */}
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-bold text-gray-900">{fmt(p.totalAmount)}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    kode&nbsp;
+                    <span className="font-semibold text-emerald-600">+{p.uniqueCode}</span>
+                  </p>
+                </div>
+
+                {/* Chevron */}
+                <span
+                  className={`text-gray-300 text-xs transition-transform shrink-0 ${
+                    isExpanded ? "rotate-180" : ""
+                  }`}
+                >
+                  ▼
+                </span>
+              </button>
+
+              {/* Panel detail (expand) */}
+              {isExpanded && (
+                <div className="px-5 pb-5 pt-1 space-y-4">
+                  {/* Grid detail */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <DetailCell label="Nominal Dasar" value={fmt(p.baseAmount)} />
+                    <DetailCell
+                      label="Kode Unik"
+                      value={`+ Rp ${p.uniqueCode}`}
+                      valueClass="text-emerald-600 font-bold"
+                    />
+                    <DetailCell
+                      label="Total Transfer"
+                      value={fmt(p.totalAmount)}
+                      valueClass="font-bold text-gray-900"
+                    />
+                    <DetailCell label="Paket" value={`${planLabel} ${cycleLabel}`} />
+                    <DetailCell label="Tanggal Dibuat" value={`${dateStr} ${timeStr}`} />
+                    {p.reviewedAt && (
+                      <DetailCell
+                        label="Diproses Admin"
+                        value={new Date(p.reviewedAt).toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      />
+                    )}
+                  </div>
+
+                  {/* Bukti transfer */}
+                  {p.proofImagePath ? (
+                    <div>
+                      <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">
+                        Bukti Transfer
+                      </p>
+                      <a
+                        href={p.proofImagePath}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 rounded-lg font-medium transition-colors"
+                      >
+                        <span>🖼️</span>
+                        Lihat Bukti Transfer
+                      </a>
+                    </div>
+                  ) : p.status === "PENDING" ? (
+                    <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                      <span className="text-base">⏳</span>
+                      <span>Bukti belum diunggah. Buka halaman checkout untuk upload bukti transfer.</span>
+                    </div>
+                  ) : null}
+
+                  {/* Alasan tolak */}
+                  {p.status === "REJECTED" && p.adminNote && (
+                    <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                      <span className="text-base mt-0.5">❌</span>
+                      <div>
+                        <p className="font-semibold mb-0.5">Alasan Penolakan</p>
+                        <p className="text-red-500">{p.adminNote}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Status APPROVED */}
+                  {p.status === "APPROVED" && (
+                    <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+                      <span className="text-base">✅</span>
+                      <span className="font-medium">Pembayaran disetujui — langganan Anda sudah aktif.</span>
+                    </div>
+                  )}
+
+                  {/* CTA untuk PENDING tanpa bukti atau REJECTED */}
+                  {(p.status === "REJECTED" || (p.status === "PENDING" && !p.proofImagePath)) && (
+                    <Link
+                      href={`/dashboard/billing/qris-static?planType=${p.planType}&cycle=${p.billingCycle}`}
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2.5 rounded-xl transition-colors"
+                    >
+                      <span>🧾</span>
+                      {p.status === "REJECTED" ? "Transfer Ulang" : "Upload Bukti Transfer"}
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DetailCell({
+  label,
+  value,
+  valueClass = "text-gray-700",
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="bg-gray-50 rounded-xl px-3 py-2.5">
+      <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+      <p className={`text-sm font-medium ${valueClass}`}>{value}</p>
+    </div>
   );
 }
 

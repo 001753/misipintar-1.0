@@ -17,7 +17,7 @@ export default async function BillingPage() {
     : "https://app.sandbox.midtrans.com/snap/snap.js";
   const clientKey = process.env.MIDTRANS_CLIENT_KEY ?? "";
 
-  const [subscription, plans, user] = await Promise.all([
+  const [subscription, plans, user, qrisPayments] = await Promise.all([
     prisma.subscription.findUnique({
       where: { familySpaceId },
       include: {
@@ -35,6 +35,11 @@ export default async function BillingPage() {
     prisma.user.findUniqueOrThrow({
       where: { id: session.user.id },
       select: { name: true, email: true, phone: true },
+    }),
+    prisma.qrisPayment.findMany({
+      where: { familySpaceId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
     }),
   ]);
 
@@ -77,6 +82,20 @@ export default async function BillingPage() {
     limits: p.limits,
   }));
 
+  const serializedQrisPayments = qrisPayments.map((p) => ({
+    id: p.id,
+    planType: p.planType as string,
+    billingCycle: p.billingCycle as string,
+    baseAmount: p.baseAmount,
+    uniqueCode: p.uniqueCode,
+    totalAmount: p.totalAmount,
+    proofImagePath: p.proofImagePath,
+    status: p.status as string,
+    adminNote: p.adminNote,
+    reviewedAt: p.reviewedAt?.toISOString() ?? null,
+    createdAt: p.createdAt.toISOString(),
+  }));
+
   return (
     <BillingClient
       subscription={serializedSubscription}
@@ -85,6 +104,7 @@ export default async function BillingPage() {
       snapUrl={snapUrl}
       clientKey={clientKey}
       isProduction={isProduction}
+      qrisPayments={serializedQrisPayments}
     />
   );
 }
