@@ -80,6 +80,12 @@ enum OtpPurpose {
   VERIFY_PHONE
 }
 
+enum QrisPayStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ─── FAMILYSPACE (TENANT UTAMA) ──────────────────────────
 model FamilySpace {
   id            String              @id @default(uuid())
@@ -93,6 +99,7 @@ model FamilySpace {
   ledger        TransactionLedger[]
   notifications Notification[]
   subscription  Subscription?
+  qrisPayments  QrisPayment[]
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 }
@@ -340,6 +347,28 @@ model CronLock {
   expiresAt DateTime
 
   @@index([expiresAt])
+}
+
+// ─── QRIS PAYMENT (pembayaran QRIS statis manual) ──────────
+model QrisPayment {
+  id             String        @id @default(uuid())
+  familySpaceId  String
+  familySpace    FamilySpace   @relation(fields: [familySpaceId], references: [id])
+  planType       PlanType
+  billingCycle   String
+  baseAmount     Int
+  uniqueCode     Int
+  totalAmount    Int
+  proofImagePath String?
+  status         QrisPayStatus @default(PENDING)
+  adminNote      String?
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([familySpaceId])
+  @@index([status, createdAt(sort: Desc)])
 }
 
 // ─── FILE UPLOAD (pengganti Cloudflare R2) ─────────────────

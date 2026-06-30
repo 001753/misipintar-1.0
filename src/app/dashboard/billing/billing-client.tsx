@@ -466,6 +466,13 @@ export default function BillingClient({
                         </>
                       )}
                     </button>
+                    <Link
+                      href={`/dashboard/billing/qris-static?planType=${plan.type}&cycle=${billingCycle}`}
+                      className="w-full py-2 text-sm font-medium rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <span>🧾</span>
+                      QRIS Statis (transfer manual)
+                    </Link>
                   </div>
                 )}
               </div>

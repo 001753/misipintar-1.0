@@ -18,6 +18,7 @@ export default async function SuperAdminLayout({
     { href: "/superadmin/plans", label: "Plan", icon: "💎" },
     { href: "/superadmin/families", label: "Keluarga", icon: "👨‍👩‍👧" },
     { href: "/superadmin/payments", label: "Pembayaran", icon: "💳" },
+    { href: "/superadmin/qris-payments", label: "QRIS Manual", icon: "🧾" },
     { href: "/superadmin/analytics", label: "Analitik", icon: "📈" },
     { href: "/superadmin/audit", label: "Audit Log", icon: "📋" },
     { href: "/superadmin/security/login-attempts", label: "Keamanan", icon: "🔒" },

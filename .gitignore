@@ -43,3 +43,4 @@ coverage/
 
 # Prisma generated (di-generate ulang via prisma generate)
 # Jangan exclude — prisma client perlu ada untuk build & runtime
+public/uploads/
