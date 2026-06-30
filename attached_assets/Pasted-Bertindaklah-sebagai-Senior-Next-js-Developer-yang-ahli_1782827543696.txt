@@ -1,0 +1,31 @@
+Bertindaklah sebagai Senior Next.js Developer yang ahli dalam optimasi aplikasi untuk shared hosting cPanel (Passenger Node.js). 
+
+Saya ingin mengimplementasikan fitur sistem pembayaran semi-otomatis menggunakan QRIS Statis berdasarkan NMID yang terdaftar di .env (NEXT_PUBLIC_NMID dan NEXT_PUBLIC_MERCHANT_NAME). Karena ini berjalan di shared hosting tanpa API Key/Webhook InterActive, seluruh sistem validasi akan mengandalkan "Kode Unik 3 Digit Terakhir" pada nominal harga dan form upload bukti transfer (Proof of Payment).
+
+Tolong bangunkan struktur kode yang ringkas, hemat RAM, dan minim dependensi dengan spesifikasi berikut:
+
+1. DATABASE SCHEMA & PRISMA EXTENSION
+- Tambahkan enum `SubscriptionPlan { FREE, PINTAR_BULANAN, PINTAR_TAHUNAN }` dan `TransactionStatus { PENDING, SUCCESS, FAILED }`.
+- Modifikasi model User/FamilySpace agar memiliki field `currentPlan` (default: FREE) dan `planExpiredAt` (DateTime?).
+- Buat model `Transaction` yang menyimpan `id`, `familySpaceId`, `planRequested`, `amount` (Int, harga asli + kode unik), `proofImage` (String/Path file), `status`, dan `createdAt`.
+
+2. API ROUTE CHECKOUT & PEMBAGIAN KODE UNIK (Server-Side)
+- Buat file `app/api/checkout/route.ts`. Logika: Menerima POST request berisi `familySpaceId` dan `plan`. Harga bulanan Rp 50.000, tahunan Rp 500.000.
+- Logika Kode Unik: Sistem meng-generate acak 3 digit angka (100-999), menambahkannya ke harga dasar, lalu menyimpan transaksi dengan status PENDING ke database. Kembalikan data nominal total ke client.
+
+3. COMPONENT FORM PEMBAYARAN & UPLOAD BUKTI (Client-Side)
+- Buat halaman/komponen client Next.js yang menampilkan:
+  a. Ringkasan paket yang dipilih dan teks instruksi nominal transfer yang menonjol (Contoh: "Harus transfer tepat: Rp 50.342").
+  b. Gambar QRIS Statis (bisa menggunakan komponen image Next.js yang memuat file QRIS dari folder /public/ atau generate canvas qr sederhana).
+  c. Form upload file untuk bukti transfer (.jpg/.png). Batasi ukuran maksimal file hanya 2MB demi menghemat penyimpanan cPanel.
+- Buat API Route pendukung di `app/api/checkout/upload/route.ts` untuk memproses penyimpanan file fisik bukti transfer tersebut ke folder `/public/uploads/proofs/` dan mengupdate field `proofImage` di database.
+
+4. LOGIKA INTEGRASI FITUR DI DASHBOARD
+- Tulis fungsi middleware atau utility pengecekan plan: Jika `currentPlan === 'FREE'`, batasi jumlah misi anak maksimal 3 per hari. Jika Premium, buka akses tak terbatas (unlimited).
+
+5. OPTIMASI CPANEL / SHARED HOSTING (Penting!)
+- Semua API Route harus menggunakan `export const dynamic = 'force-dynamic'` jika diperlukan, untuk mencegah caching data transaksi lama.
+- Jangan gunakan library pihak ketiga yang memakan RAM besar untuk pengolahan gambar bukti transfer. Cukup simpan file mentah secara streaming.
+- Pastikan logika kode menggunakan native fetch/NextResponse tanpa memory leak agar proses Node.js di cPanel tidak menyentuh limit memori hosting.
+
+Terakhir, setelah membuat kode di atas, berikan 1 ide atau fitur praktis tambahan orisinal darimu (Replit AI) yang bisa langsung diimplementasikan agar sistem pembayaran manual berbasis NMID ini terasa jauh lebih otomatis, instan, dan minim repot dari sisi admin!
