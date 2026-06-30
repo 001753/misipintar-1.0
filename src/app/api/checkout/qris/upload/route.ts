@@ -5,6 +5,7 @@ import { auth } from '@/lib/auth/config'
 import { prisma } from '@/lib/prisma'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
+import { sendQrisAdminNotif } from '@/lib/whatsapp'
 
 const MAX_SIZE = 2 * 1024 * 1024 // 2 MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
@@ -66,6 +67,22 @@ export async function POST(req: NextRequest) {
       where: { id: qrisPaymentId },
       data: { proofImagePath: `/uploads/proofs/${filename}` },
     })
+
+    // Kirim notifikasi WhatsApp ke admin — fire-and-forget, tidak blokir response
+    const appUrl = process.env.NEXTAUTH_URL ?? process.env.APP_URL ?? 'http://localhost:3000'
+    const family = await prisma.familySpace.findUnique({
+      where: { id: familySpaceId },
+      select: { name: true },
+    })
+    sendQrisAdminNotif({
+      familyName: family?.name ?? 'Tidak diketahui',
+      planType: payment.planType,
+      billingCycle: payment.billingCycle,
+      totalAmount: payment.totalAmount,
+      uniqueCode: payment.uniqueCode,
+      qrisPaymentId: payment.id,
+      adminUrl: `${appUrl}/superadmin/qris-payments`,
+    }).catch((e) => console.error('[QRIS Notif] fire-and-forget error:', e))
 
     return NextResponse.json({ success: true, proofImagePath: `/uploads/proofs/${filename}` })
   } catch (err) {
