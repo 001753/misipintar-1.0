@@ -66,6 +66,8 @@ if [ -f "$BUILD_COMMIT_FILE" ]; then
       | grep -v '^\.next/' \
       | grep -v '^public/' \
       | grep -v '^\.' \
+      | grep -v '^package-lock\.json$' \
+      | grep -v '^yarn\.lock$' \
       | grep -c . 2>/dev/null || echo "0")
 
     if [ "$NON_NEXT_CHANGES" = "0" ]; then
@@ -98,6 +100,21 @@ echo ""
 
 # ── 2. Install dependencies ───────────────────────────────────────────────────
 echo "▶ [2/5] Install Node.js dependencies ..."
+
+# ── Setup PATH: tambahkan lokasi ea-nodejs cPanel ─────────────────────────
+for _NDIR in \
+  "/opt/cpanel/ea-nodejs22/root/usr/bin" \
+  "/opt/cpanel/ea-nodejs20/root/usr/bin" \
+  "/opt/cpanel/ea-nodejs18/root/usr/bin" \
+  "/opt/cpanel/ea-nodejs22/bin" \
+  "/opt/cpanel/ea-nodejs20/bin" \
+  "$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node/ 2>/dev/null | sort -V | tail -1)/bin" \
+  "$HOME/nodevenv/public_html/misipintar/misipintar-1.0/22/bin" \
+  "$HOME/nodevenv/public_html/misipintar/misipintar-1.0/20/bin"; do
+  if [ -d "$_NDIR" ] && [[ ":$PATH:" != *":$_NDIR:"* ]]; then
+    export PATH="$_NDIR:$PATH"
+  fi
+done
 
 # Batasi semua sumber thread — harus di-export sebelum node/npm apapun dijalankan
 export UV_THREADPOOL_SIZE=1
