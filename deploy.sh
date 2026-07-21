@@ -68,6 +68,14 @@ if [ -f "$BUILD_COMMIT_FILE" ]; then
       | grep -v '^\.' \
       | grep -v '^package-lock\.json$' \
       | grep -v '^yarn\.lock$' \
+      | grep -v '^deploy\.sh$' \
+      | grep -v '^replit\.md$' \
+      | grep -v '^README\.md$' \
+      | grep -v '^attached_assets/' \
+      | grep -v '^scripts/' \
+      | grep -v '^prisma/migrations/' \
+      | grep -v '^\.agents/' \
+      | grep -v '^\.gitignore$' \
       | grep -c . 2>/dev/null || echo "0")
 
     if [ "$NON_NEXT_CHANGES" = "0" ]; then
