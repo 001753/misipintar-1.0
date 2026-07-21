@@ -1,8 +1,12 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV !== "production";
+
 const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  // X-Frame-Options dinonaktifkan di development agar Replit preview (iframe) bisa load.
+  // Di production tetap aktif via SAMEORIGIN.
+  ...(isDev ? [] : [{ key: "X-Frame-Options", value: "SAMEORIGIN" }]),
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
@@ -36,6 +40,8 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   allowedDevOrigins: [
+    "127.0.0.1",
+    "localhost",
     "*.pike.replit.dev",
     "*.replit.dev",
     "*.sisko.replit.dev",
