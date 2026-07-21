@@ -1,0 +1,97 @@
+[public_html/misipintar/misipintar-1.0 (22)] [smknwon2@tirtonirmolo misipintar-1.0]$ bash deploy.sh
+
+════════════════════════════════════════════════════════
+  MisiPintar — Deploy Script
+  Dir : /home/smknwon2/public_html/misipintar/misipintar-1.0
+  Date: Tue Jul 21 19:15:22 WIB 2026
+════════════════════════════════════════════════════════
+
+▶ [1/5] Git pull origin main ...
+remote: Enumerating objects: 23, done.
+remote: Counting objects: 100% (23/23), done.
+remote: Compressing objects: 100% (5/5), done.
+remote: Total 15 (delta 9), reused 15 (delta 9), pack-reused 0 (from 0)
+Unpacking objects: 100% (15/15), 551.53 KiB | 559.00 KiB/s, done.
+From https://github.com/001753/misipintar-1.0
+   0fc3d8f..2f06e48  main       -> origin/main
+HEAD is now at 2f06e48 Update configuration and add project assets for enterprise QRIS integration
+  ✓ Kode berhasil diperbarui
+
+  ✓ Symlink standalone/node_modules → root node_modules
+
+
+  ⚠️  ══════════════════════════════════════════════════════════
+  ⚠️  PERINGATAN: Standalone TIDAK sinkron dengan commit terbaru!
+  ⚠️  HEAD saat ini : 2f06e488f7fa
+  ⚠️  Dibangun dari : c2fe68687d95
+  ⚠️  File kode yang belum di-build: 2 file
+  ⚠️
+  ⚠️  Artinya: ada perubahan kode yang belum di-build.
+  ⚠️  Halaman produksi akan menampilkan versi LAMA.
+  ⚠️
+  ⚠️  Solusi — jalankan di Replit:
+  ⚠️    npm run build   (atau 2 step manual jika timeout)
+  ⚠️    → commit & push ke GitHub
+  ⚠️    → bash deploy.sh
+  ⚠️  ══════════════════════════════════════════════════════════
+
+
+▶ [2/5] Install Node.js dependencies ...
+  → package.json tidak berubah — skip install (node_modules sudah up-to-date)
+  ✓ Dependencies siap
+
+▶ [3/5] Prisma generate ...
+Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (v6.19.3, engine=binary) to ./../../../nodevenv/public_html/misipintar/misipintar-1.0/22/lib/node_modules/@prisma/client in 404ms
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
+
+  ✓ Prisma client siap
+
+▶ [4/5] Prisma migrate deploy ...
+warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
+For more information, see: https://pris.ly/prisma-config
+
+Environment variables loaded from .env
+Prisma schema loaded from prisma/schema.prisma
+Datasource "db": PostgreSQL database "smknwon2_misipintar_db", schema "public" at "127.0.0.1:5432"
+
+4 migrations found in prisma/migrations
+
+
+No pending migrations to apply.
+  ✓ Migrasi database selesai
+
+▶ [5/7] Seed plans & AppConfig ...
+◇ injected env (18) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+⏭   Plan STARTER sudah ada — skip.
+⏭   Plan PRO sudah ada — skip.
+⏭   Plan EDUCATOR sudah ada — skip.
+⏭   Plan SCHOOL sudah ada — skip.
+⏭   AppConfig sudah ada (phaseMode: FREEMIUM) — skip.
+ℹ️   Semua data sudah ada — tidak ada yang diubah.
+
+▶ [6/7] Seed admin ...
+◇ injected env (18) from .env // tip: ⌘ enable debugging { debug: true }
+⏭   Admin sudah ada — skip (tidak ada perubahan).
+    ID   : 90d716ce-f9d8-4d28-b727-1d321053357a
+    Email: admin@misi-pintar.id
+    Role : SUPER_ADMIN
+
+▶ [7/7] Pre-restart check & restart aplikasi ...
+  ⚠️  PERINGATAN: NODE_ENV=production tidak ditemukan di .env!
+      Aplikasi akan berjalan dalam mode development → RAM 2-3x lebih besar.
+      Tambahkan: echo 'NODE_ENV=production' >> .env
+  ℹ️  Proses Node.js aktif sebelum restart: 2
+
+  ✓ Restart via tmp/restart.txt (Passenger reload pada request berikutnya)
+  ℹ️  Untuk immediate restart: cPanel → Node.js Selector → Restart App
+
+════════════════════════════════════════════════════════
+  ✅ Deploy selesai! Aplikasi sudah di-restart otomatis.
+════════════════════════════════════════════════════════
+
+[public_html/misipintar/misipintar-1.0 (22)] [smknwon2@tirtonirmolo misipintar-1.0]$
