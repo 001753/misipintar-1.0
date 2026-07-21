@@ -128,6 +128,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../src/app/(superadmin)/superadmin/qris-payments/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/superadmin/qris-payments">> = Specific
+  const handler = {} as typeof import("../../src/app/(superadmin)/superadmin/qris-payments/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../src/app/(superadmin)/superadmin/security/login-attempts/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/superadmin/security/login-attempts">> = Specific
@@ -240,6 +249,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends AppPageConfig<"/dashboard/billing">> = Specific
   const handler = {} as typeof import("../../src/app/dashboard/billing/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/dashboard/billing/qris-static/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/dashboard/billing/qris-static">> = Specific
+  const handler = {} as typeof import("../../src/app/dashboard/billing/qris-static/page.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
@@ -434,10 +452,37 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../src/app/api/admin/qris-payments/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/admin/qris-payments">> = Specific
+  const handler = {} as typeof import("../../src/app/api/admin/qris-payments/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../src/app/api/auth/[...nextauth]/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/auth/[...nextauth]">> = Specific
   const handler = {} as typeof import("../../src/app/api/auth/[...nextauth]/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/api/checkout/qris/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/checkout/qris">> = Specific
+  const handler = {} as typeof import("../../src/app/api/checkout/qris/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/api/checkout/qris/upload/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/checkout/qris/upload">> = Specific
+  const handler = {} as typeof import("../../src/app/api/checkout/qris/upload/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

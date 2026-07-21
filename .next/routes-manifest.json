@@ -158,6 +158,24 @@
       "namedRegex": "^/adm\\-panel(?:/)?$"
     },
     {
+      "page": "/api/admin/qris-payments",
+      "regex": "^/api/admin/qris\\-payments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/qris\\-payments(?:/)?$"
+    },
+    {
+      "page": "/api/checkout/qris",
+      "regex": "^/api/checkout/qris(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/checkout/qris(?:/)?$"
+    },
+    {
+      "page": "/api/checkout/qris/upload",
+      "regex": "^/api/checkout/qris/upload(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/checkout/qris/upload(?:/)?$"
+    },
+    {
       "page": "/api/cron/cleanup-login-attempts",
       "regex": "^/api/cron/cleanup\\-login\\-attempts(?:/)?$",
       "routeKeys": {},
@@ -288,6 +306,12 @@
       "regex": "^/dashboard/billing(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/dashboard/billing(?:/)?$"
+    },
+    {
+      "page": "/dashboard/billing/qris-static",
+      "regex": "^/dashboard/billing/qris\\-static(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/billing/qris\\-static(?:/)?$"
     },
     {
       "page": "/dashboard/children",
@@ -456,6 +480,12 @@
       "regex": "^/superadmin/plans(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/superadmin/plans(?:/)?$"
+    },
+    {
+      "page": "/superadmin/qris-payments",
+      "regex": "^/superadmin/qris\\-payments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/superadmin/qris\\-payments(?:/)?$"
     },
     {
       "page": "/superadmin/security/login-attempts",
