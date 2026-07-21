@@ -55,6 +55,7 @@ SMTP_PORT = "465"
 SMTP_USER = "admin@jobenapp.cloud"
 GOOGLE_SITE_VERIFICATION = "google-site-verification=UeqxKkcMuSzc8ZuH1oD-9ihH7A62Rsbf68Zr8CM86sY"
 QRIS_ADMIN_WA = "081460081343"
+MIDTRANS_CLIENT_KEY = "Mid-client-90bGHR0yjUxazY_b"
 
 [userenv.production]
 NODE_ENV = "production"
