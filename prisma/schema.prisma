@@ -49,6 +49,8 @@ enum PayMethod {
   BANK_TRANSFER
   CREDIT_CARD
   VA
+  MANDIRI_VA
+  EWALLET
 }
 
 enum TaskStatus {
@@ -250,6 +252,12 @@ model Invoice {
   subscription    Subscription @relation(fields: [subscriptionId], references: [id])
   amount          Int
   status          InvStatus    @default(PENDING)
+  billingCycle    String?
+  paymentProvider String       @default("MIDTRANS")
+  providerInvoiceNumber String? @unique
+  providerRequestId     String? @unique
+  providerTransactionId String?
+  paymentUrl      String?
   midtransOrderId String?      @unique
   snapToken       String?
   qrisQrUrl       String?
@@ -261,6 +269,8 @@ model Invoice {
   paymentLogs     PaymentLog[]
 
   @@index([subscriptionId])
+  @@index([paymentProvider, status])
+  @@index([providerTransactionId])
   @@index([midtransOrderId])
   @@index([status, expiredAt])
 }

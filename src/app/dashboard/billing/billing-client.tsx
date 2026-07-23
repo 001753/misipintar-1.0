@@ -2,32 +2,13 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Script from "next/script";
 import {
   createCheckout,
-  createQrisCheckout,
   cancelSubscription,
   resumeSubscription,
   BillingCycle,
 } from "@/actions/subscription";
-import QrisModal from "./qris-modal";
 import Link from "next/link";
-
-declare global {
-  interface Window {
-    snap?: {
-      pay: (
-        token: string,
-        options: {
-          onSuccess?: (result: unknown) => void;
-          onPending?: (result: unknown) => void;
-          onError?: (result: unknown) => void;
-          onClose?: () => void;
-        }
-      ) => void;
-    };
-  }
-}
 
 type Plan = {
   id: string;
@@ -43,24 +24,10 @@ type Invoice = {
   id: string;
   amount: number;
   status: string;
-  midtransOrderId: string | null;
+  paymentReference: string | null;
   paymentMethod: string | null;
   paidAt: string | null;
   expiredAt: string;
-  createdAt: string;
-};
-
-type QrisPayment = {
-  id: string;
-  planType: string;
-  billingCycle: string;
-  baseAmount: number;
-  uniqueCode: number;
-  totalAmount: number;
-  proofImagePath: string | null;
-  status: string;
-  adminNote: string | null;
-  reviewedAt: string | null;
   createdAt: string;
 };
 
@@ -78,10 +45,6 @@ interface Props {
   subscription: Subscription | null;
   plans: Plan[];
   user: { name: string; email: string };
-  snapUrl: string;
-  clientKey: string;
-  isProduction: boolean;
-  qrisPayments: QrisPayment[];
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -117,10 +80,6 @@ export default function BillingClient({
   subscription,
   plans,
   user,
-  snapUrl,
-  clientKey,
-  isProduction,
-  qrisPayments,
 }: Props) {
   const router = useRouter();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("MONTHLY");
@@ -128,17 +87,7 @@ export default function BillingClient({
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const snapLoaded = useRef(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const [qrisModal, setQrisModal] = useState<{
-    orderId: string;
-    qrCodeUrl: string;
-    qrString: string;
-    amount: number;
-    planName: string;
-    expiredAt: string;
-  } | null>(null);
 
   useEffect(() => {
     if (toast) {
@@ -189,49 +138,7 @@ export default function BillingClient({
         setError(result.error);
         return;
       }
-      if (!snapLoaded.current || !window.snap) {
-        setError("Payment gateway belum siap. Coba refresh halaman.");
-        return;
-      }
-      window.snap.pay(result.snapToken, {
-        onSuccess: () => {
-          setToast("Menunggu konfirmasi pembayaran dari server...");
-          startPolling();
-        },
-        onPending: () => {
-          setToast("Pembayaran sedang diproses. Kami akan mengonfirmasi segera.");
-          startPolling();
-        },
-        onError: () => {
-          setError("Pembayaran gagal. Silakan coba lagi.");
-        },
-        onClose: () => {
-          setToast("Jendela pembayaran ditutup. Jika sudah bayar, tunggu konfirmasi otomatis.");
-          router.refresh();
-        },
-      });
-    } finally {
-      setLoading(null);
-    }
-  }
-
-  async function handleQrisCheckout(planId: string, planName: string, amount: number) {
-    setError(null);
-    setLoading(`qris-${planId}`);
-    try {
-      const result = await createQrisCheckout(planId, billingCycle);
-      if ("error" in result) {
-        setError(result.error);
-        return;
-      }
-      setQrisModal({
-        orderId: result.orderId,
-        qrCodeUrl: result.qrCodeUrl,
-        qrString: result.qrString,
-        amount,
-        planName,
-        expiredAt: result.expiredAt,
-      });
+      window.location.assign(result.paymentUrl);
     } finally {
       setLoading(null);
     }
@@ -275,38 +182,11 @@ export default function BillingClient({
 
   return (
     <>
-      <Script
-        src={snapUrl}
-        data-client-key={clientKey}
-        strategy="afterInteractive"
-        onLoad={() => {
-          snapLoaded.current = true;
-        }}
-      />
-
       {/* Toast */}
       {toast && (
         <div className="fixed top-4 right-4 z-50 bg-emerald-600 text-white text-sm px-4 py-3 rounded-xl shadow-lg max-w-sm">
           {toast}
         </div>
-      )}
-
-      {/* QRIS Modal */}
-      {qrisModal && (
-        <QrisModal
-          orderId={qrisModal.orderId}
-          qrCodeUrl={qrisModal.qrCodeUrl}
-          qrString={qrisModal.qrString}
-          amount={qrisModal.amount}
-          planName={qrisModal.planName}
-          expiredAt={qrisModal.expiredAt}
-          onClose={() => setQrisModal(null)}
-          onSuccess={() => {
-            setQrisModal(null);
-            setToast("🎉 Pembayaran berhasil! Langganan Anda sedang diaktifkan.");
-            startPolling();
-          }}
-        />
       )}
 
       <div className="space-y-8">
@@ -468,27 +348,6 @@ export default function BillingClient({
                     >
                       {loading === plan.id ? "Memproses..." : `Bayar Sekarang`}
                     </button>
-                    <button
-                      onClick={() => handleQrisCheckout(plan.id, plan.name, price)}
-                      disabled={!!loading}
-                      className="w-full py-2 text-sm font-semibold rounded-xl border-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      {loading === `qris-${plan.id}` ? (
-                        "Memproses..."
-                      ) : (
-                        <>
-                          <span className="text-base leading-none">⊡</span>
-                          Bayar via QRIS
-                        </>
-                      )}
-                    </button>
-                    <Link
-                      href={`/dashboard/billing/qris-static?planType=${plan.type}&cycle=${billingCycle}`}
-                      className="w-full py-2 text-sm font-medium rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <span>🧾</span>
-                      QRIS Statis (transfer manual)
-                    </Link>
                   </div>
                 )}
               </div>
@@ -513,7 +372,7 @@ export default function BillingClient({
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {inv.midtransOrderId ?? `INV-${inv.id.slice(0, 8)}`}
+                        {inv.paymentReference ?? `INV-${inv.id.slice(0, 8)}`}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {new Date(inv.createdAt).toLocaleDateString("id-ID", {
@@ -549,245 +408,11 @@ export default function BillingClient({
           </div>
         )}
 
-        {/* Riwayat QRIS Statis */}
-        {qrisPayments.length > 0 && (
-          <QrisPaymentHistory payments={qrisPayments} />
-        )}
-
-        {/* Sandbox Notice */}
-        {!isProduction && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
-            ⚠️ <strong>Mode Sandbox</strong> — Gunakan kartu test Midtrans. Pembayaran tidak nyata.
-          </div>
-        )}
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700">
+          Pembayaran diproses aman melalui DOKU: Mandiri Virtual Account, kartu kredit, dan e-wallet.
+        </div>
       </div>
     </>
-  );
-}
-
-// ── Status badge konfigurasi untuk QRIS ─────────────────────────────────────
-const QRIS_STATUS: Record<
-  string,
-  { label: string; dot: string; bg: string; text: string; border: string }
-> = {
-  PENDING: {
-    label: "Menunggu Verifikasi",
-    dot: "bg-amber-400",
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    border: "border-amber-200",
-  },
-  APPROVED: {
-    label: "Disetujui",
-    dot: "bg-emerald-500",
-    bg: "bg-emerald-50",
-    text: "text-emerald-700",
-    border: "border-emerald-200",
-  },
-  REJECTED: {
-    label: "Ditolak",
-    dot: "bg-red-500",
-    bg: "bg-red-50",
-    text: "text-red-700",
-    border: "border-red-200",
-  },
-};
-
-const PLAN_LABEL: Record<string, string> = {
-  PRO: "Pro",
-  EDUCATOR: "Educator",
-  SCHOOL: "School",
-};
-
-function QrisPaymentHistory({ payments }: { payments: QrisPayment[] }) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-        <div>
-          <h3 className="font-semibold text-gray-900">Riwayat Transfer QRIS Statis</h3>
-          <p className="text-xs text-gray-400 mt-0.5">
-            Pembayaran manual via scan QRIS + upload bukti
-          </p>
-        </div>
-        <span className="text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full font-medium">
-          {payments.length} transaksi
-        </span>
-      </div>
-
-      {/* List */}
-      <div className="divide-y divide-gray-50">
-        {payments.map((p) => {
-          const meta = QRIS_STATUS[p.status] ?? QRIS_STATUS.PENDING;
-          const planLabel = PLAN_LABEL[p.planType] ?? p.planType;
-          const cycleLabel = p.billingCycle === "YEARLY" ? "Tahunan" : "Bulanan";
-          const isExpanded = expandedId === p.id;
-          const dateStr = new Date(p.createdAt).toLocaleDateString("id-ID", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          });
-          const timeStr = new Date(p.createdAt).toLocaleTimeString("id-ID", {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-
-          return (
-            <div key={p.id} className="transition-colors hover:bg-gray-50/50">
-              {/* Row utama */}
-              <button
-                onClick={() => setExpandedId(isExpanded ? null : p.id)}
-                className="w-full text-left px-5 py-4 flex items-center gap-4"
-              >
-                {/* Status indicator */}
-                <div className="shrink-0">
-                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${meta.dot}`} />
-                </div>
-
-                {/* Info utama */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-gray-900">
-                      {PLAN_ICONS[p.planType] ?? "📦"} {planLabel} {cycleLabel}
-                    </span>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium border ${meta.bg} ${meta.text} ${meta.border}`}
-                    >
-                      {meta.label}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {dateStr} · {timeStr}
-                  </p>
-                </div>
-
-                {/* Nominal */}
-                <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-gray-900">{fmt(p.totalAmount)}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    kode&nbsp;
-                    <span className="font-semibold text-emerald-600">+{p.uniqueCode}</span>
-                  </p>
-                </div>
-
-                {/* Chevron */}
-                <span
-                  className={`text-gray-300 text-xs transition-transform shrink-0 ${
-                    isExpanded ? "rotate-180" : ""
-                  }`}
-                >
-                  ▼
-                </span>
-              </button>
-
-              {/* Panel detail (expand) */}
-              {isExpanded && (
-                <div className="px-5 pb-5 pt-1 space-y-4">
-                  {/* Grid detail */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <DetailCell label="Nominal Dasar" value={fmt(p.baseAmount)} />
-                    <DetailCell
-                      label="Kode Unik"
-                      value={`+ Rp ${p.uniqueCode}`}
-                      valueClass="text-emerald-600 font-bold"
-                    />
-                    <DetailCell
-                      label="Total Transfer"
-                      value={fmt(p.totalAmount)}
-                      valueClass="font-bold text-gray-900"
-                    />
-                    <DetailCell label="Paket" value={`${planLabel} ${cycleLabel}`} />
-                    <DetailCell label="Tanggal Dibuat" value={`${dateStr} ${timeStr}`} />
-                    {p.reviewedAt && (
-                      <DetailCell
-                        label="Diproses Admin"
-                        value={new Date(p.reviewedAt).toLocaleDateString("id-ID", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      />
-                    )}
-                  </div>
-
-                  {/* Bukti transfer */}
-                  {p.proofImagePath ? (
-                    <div>
-                      <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-2">
-                        Bukti Transfer
-                      </p>
-                      <a
-                        href={p.proofImagePath}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 px-3 py-2 rounded-lg font-medium transition-colors"
-                      >
-                        <span>🖼️</span>
-                        Lihat Bukti Transfer
-                      </a>
-                    </div>
-                  ) : p.status === "PENDING" ? (
-                    <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                      <span className="text-base">⏳</span>
-                      <span>Bukti belum diunggah. Buka halaman checkout untuk upload bukti transfer.</span>
-                    </div>
-                  ) : null}
-
-                  {/* Alasan tolak */}
-                  {p.status === "REJECTED" && p.adminNote && (
-                    <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-                      <span className="text-base mt-0.5">❌</span>
-                      <div>
-                        <p className="font-semibold mb-0.5">Alasan Penolakan</p>
-                        <p className="text-red-500">{p.adminNote}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Status APPROVED */}
-                  {p.status === "APPROVED" && (
-                    <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
-                      <span className="text-base">✅</span>
-                      <span className="font-medium">Pembayaran disetujui — langganan Anda sudah aktif.</span>
-                    </div>
-                  )}
-
-                  {/* CTA untuk PENDING tanpa bukti atau REJECTED */}
-                  {(p.status === "REJECTED" || (p.status === "PENDING" && !p.proofImagePath)) && (
-                    <Link
-                      href={`/dashboard/billing/qris-static?planType=${p.planType}&cycle=${p.billingCycle}`}
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-4 py-2.5 rounded-xl transition-colors"
-                    >
-                      <span>🧾</span>
-                      {p.status === "REJECTED" ? "Transfer Ulang" : "Upload Bukti Transfer"}
-                    </Link>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function DetailCell({
-  label,
-  value,
-  valueClass = "text-gray-700",
-}: {
-  label: string;
-  value: string;
-  valueClass?: string;
-}) {
-  return (
-    <div className="bg-gray-50 rounded-xl px-3 py-2.5">
-      <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-      <p className={`text-sm font-medium ${valueClass}`}>{value}</p>
-    </div>
   );
 }
 

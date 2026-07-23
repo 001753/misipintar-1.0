@@ -17,6 +17,7 @@ let testPlanId: string
 let testParentId: string
 let otherFamilySpaceId: string
 let otherChildId: string
+let otherParentId: string
 
 beforeAll(async () => {
   // Ensure STARTER plan exists
@@ -93,6 +94,7 @@ beforeAll(async () => {
       role: 'PARENT',
     },
   })
+  otherParentId = otherParent.id
   const otherFs = await prisma.familySpace.create({
     data: {
       name: 'Other Family',
@@ -136,8 +138,12 @@ afterAll(async () => {
     await prisma.child.deleteMany({ where: { familySpaceId: otherFamilySpaceId } })
     await prisma.subscription.deleteMany({ where: { familySpaceId: testFamilySpaceId } })
     await prisma.subscription.deleteMany({ where: { familySpaceId: otherFamilySpaceId } })
+    await prisma.user.updateMany({
+      where: { id: { in: [testParentId, otherParentId] } },
+      data: { familySpaceId: null },
+    })
     await prisma.familySpace.deleteMany({ where: { id: { in: [testFamilySpaceId, otherFamilySpaceId] } } })
-    await prisma.user.deleteMany({ where: { email: { endsWith: '@test.internal' } } })
+    await prisma.user.deleteMany({ where: { id: { in: [testParentId, otherParentId] } } })
   }
   await prisma.$disconnect()
 })

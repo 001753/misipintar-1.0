@@ -27,7 +27,7 @@
 | Database | PostgreSQL (Replit dev), PostgreSQL cPanel (prod) |
 | ORM | Prisma |
 | Auth | NextAuth v5 (credentials — phone + password) |
-| Payment | Midtrans |
+| Payment | DOKU Checkout (invoice baru) + Midtrans legacy (invoice lama) |
 | Email | Nodemailer + SMTP |
 | Job Queue | BullMQ + Redis (opsional) |
 | Notifikasi | Firebase FCM + Fonnte (WhatsApp OTP) |
@@ -162,6 +162,8 @@ Sudah di-seed otomatis oleh `deploy.sh`:
 ### Di Replit (development)
 Set via Replit Secrets UI — **JANGAN** hardcode ke kode atau `.env`:
 - `DATABASE_URL` — Replit PostgreSQL (auto-provisioned)
+- `DOKU_CLIENT_ID`, `DOKU_SECRET_KEY` — DOKU Checkout invoice baru
+- `DOKU_API_KEY`, `DOKU_PUBLIC_KEY` — kredensial DOKU tambahan sesuai kebutuhan akun
 - `MIDTRANS_CLIENT_KEY`
 - `MIDTRANS_SERVER_KEY`
 - `SMTP_PASS`
@@ -175,6 +177,10 @@ NEXTAUTH_URL=https://mp.jobenapp.cloud
 SESSION_SECRET=<min 32 karakter>
 APP_URL=https://mp.jobenapp.cloud
 NODE_ENV=production
+DOKU_CLIENT_ID=...
+DOKU_SECRET_KEY=...
+DOKU_IS_PRODUCTION=false
+# Midtrans hanya untuk invoice lama:
 MIDTRANS_SERVER_KEY=...
 MIDTRANS_CLIENT_KEY=...
 SMTP_PASS=...

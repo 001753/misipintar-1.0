@@ -8,7 +8,8 @@ type Invoice = {
   id: string;
   status: string;
   amount: number;
-  midtransOrderId: string;
+  providerInvoiceNumber: string;
+  paymentProvider: string;
   paymentMethod: string | null;
   paidAt: string | null;
   expiredAt: string;
@@ -97,7 +98,7 @@ export default function PaymentsClient({ invoices, total, page, pageSize, curren
               <th className="text-left px-4 py-3 text-gray-400 font-medium">Keluarga / Plan</th>
               <th className="text-left px-4 py-3 text-gray-400 font-medium">Status</th>
               <th className="text-right px-4 py-3 text-gray-400 font-medium">Jumlah</th>
-              <th className="text-left px-4 py-3 text-gray-400 font-medium">Midtrans ID</th>
+              <th className="text-left px-4 py-3 text-gray-400 font-medium">Provider / Referensi</th>
               <th className="text-left px-4 py-3 text-gray-400 font-medium">Tanggal</th>
               <th className="text-left px-4 py-3 text-gray-400 font-medium">Aksi</th>
             </tr>
@@ -128,7 +129,7 @@ export default function PaymentsClient({ invoices, total, page, pageSize, curren
                     Rp {inv.amount.toLocaleString("id-ID")}
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-gray-400">
-                    {inv.midtransOrderId || "-"}
+                    {inv.paymentProvider} · {inv.providerInvoiceNumber || "-"}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-400">
                     {new Date(inv.createdAt).toLocaleDateString("id-ID")}

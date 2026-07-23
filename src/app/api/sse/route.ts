@@ -75,8 +75,9 @@ export async function GET() {
         closed = true;
         if (heartbeatTimer) clearInterval(heartbeatTimer);
         if (maxLifetimeTimer) clearTimeout(maxLifetimeTimer);
-        subscriber.unsubscribe(channel).catch(() => {});
-        subscriber.quit().catch(() => {});
+        const activeSubscriber = subscriber as NonNullable<typeof subscriber>;
+        activeSubscriber.unsubscribe(channel).catch(() => {});
+        activeSubscriber.quit().catch(() => {});
         try { controller.close(); } catch { /* sudah closed */ }
       }
 

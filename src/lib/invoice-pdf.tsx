@@ -12,6 +12,7 @@ import {
 export interface InvoiceReceiptData {
   invoiceNumber: string;
   orderId: string;
+  paymentProvider: string;
   issuedAt: string;
   paidAt: string | null;
   status: string;
@@ -56,6 +57,8 @@ function payMethodLabel(pm: string | null): string {
     BANK_TRANSFER: "Transfer Bank",
     CREDIT_CARD: "Kartu Kredit",
     VA: "Virtual Account",
+    MANDIRI_VA: "Mandiri Virtual Account",
+    EWALLET: "E-wallet",
   };
   return map[pm] ?? pm;
 }
@@ -340,14 +343,16 @@ export function InvoiceReceiptPDF({ data }: { data: InvoiceReceiptData }) {
 
           {data.orderId && (
             <View style={S.payRow}>
-              <Text style={S.payKey}>Order ID Midtrans</Text>
+              <Text style={S.payKey}>Referensi Provider</Text>
               <Text style={S.payVal}>{data.orderId}</Text>
             </View>
           )}
 
           <View style={S.payRow}>
             <Text style={S.payKey}>Platform Pembayaran</Text>
-            <Text style={S.payVal}>Midtrans · PT Midtrans</Text>
+            <Text style={S.payVal}>
+              {data.paymentProvider === "DOKU" ? "DOKU Checkout" : "Midtrans"}
+            </Text>
           </View>
 
           <View style={S.payRow}>

@@ -1,1 +1,3 @@
 - [Pricing Visibility Architecture](pricing-visibility.md) — showPricingSection in AppConfig.data, showOnLanding in Plan.limits JSON (no migration needed)
+- [DOKU Checkout Integration](doku-checkout.md) — new subscription invoices use hosted Checkout; legacy Midtrans and QRIS history remain separate
+- [Next build cache](next-build-cache.md) — clean `.next` before production builds if dev workflow and build output have been used concurrently

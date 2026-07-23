@@ -191,6 +191,7 @@ export async function POST(req: NextRequest) {
           invoiceId: invoice.id,
           invoiceNumber: invoice.midtransOrderId ?? `INV-${invoice.id.slice(0, 8).toUpperCase()}`,
           orderId: invoice.midtransOrderId ?? "",
+            paymentProvider: invoice.paymentProvider,
           issuedAt: invoice.createdAt,
           paidAt: now,
           amount: invoice.amount,

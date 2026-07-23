@@ -8,6 +8,7 @@ interface InvoiceData {
   id: string;
   invoiceNumber: string;
   orderId: string;
+  paymentProvider: string;
   issuedAt: string;
   paidAt: string | null;
   status: string;
@@ -65,6 +66,8 @@ const PAY_METHOD_LABELS: Record<string, string> = {
   BANK_TRANSFER: "Transfer Bank",
   CREDIT_CARD: "Kartu Kredit",
   VA: "Virtual Account",
+  MANDIRI_VA: "Mandiri Virtual Account",
+  EWALLET: "E-wallet",
 };
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
@@ -229,9 +232,12 @@ export default function ReceiptView({ invoice, customer }: Props) {
               </p>
               <RefRow label="Nomor Invoice" value={invoice.invoiceNumber} mono />
               {invoice.orderId && (
-                <RefRow label="Order ID Midtrans" value={invoice.orderId} mono />
+                <RefRow label="Referensi Provider" value={invoice.orderId} mono />
               )}
-              <RefRow label="Platform" value="Midtrans · PT Midtrans" />
+              <RefRow
+                label="Platform"
+                value={invoice.paymentProvider === "DOKU" ? "DOKU Checkout" : "Midtrans"}
+              />
               <RefRow label="Mata Uang" value={invoice.currency} />
             </div>
 

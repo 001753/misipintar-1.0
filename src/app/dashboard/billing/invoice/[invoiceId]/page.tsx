@@ -40,8 +40,10 @@ export default async function InvoiceReceiptPage({
   });
 
   const billingCycle: "MONTHLY" | "YEARLY" =
-    invoice.amount >= invoice.subscription.plan.yearlyPrice &&
-    invoice.subscription.plan.yearlyPrice > 0
+    invoice.billingCycle === "YEARLY" ||
+    (invoice.billingCycle === null &&
+      invoice.amount >= invoice.subscription.plan.yearlyPrice &&
+      invoice.subscription.plan.yearlyPrice > 0)
       ? "YEARLY"
       : "MONTHLY";
 
@@ -49,8 +51,12 @@ export default async function InvoiceReceiptPage({
     <ReceiptView
       invoice={{
         id: invoice.id,
-        invoiceNumber: invoice.midtransOrderId ?? `INV-${invoice.id.slice(0, 8).toUpperCase()}`,
-        orderId: invoice.midtransOrderId ?? "",
+        invoiceNumber:
+          invoice.providerInvoiceNumber ??
+          invoice.midtransOrderId ??
+          `INV-${invoice.id.slice(0, 8).toUpperCase()}`,
+        orderId: invoice.providerInvoiceNumber ?? invoice.midtransOrderId ?? "",
+        paymentProvider: invoice.paymentProvider,
         issuedAt: invoice.createdAt.toISOString(),
         paidAt: invoice.paidAt?.toISOString() ?? null,
         status: invoice.status as string,

@@ -65,8 +65,13 @@ export async function GET() {
     NEXTAUTH_SECRET:  { required: true,  present: !!(process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET) },
     APP_URL:          { required: true,  present: !!process.env.APP_URL },
     NEXTAUTH_URL:     { required: true,  present: !!process.env.NEXTAUTH_URL },
-    MIDTRANS_SERVER_KEY: { required: true,  present: !!process.env.MIDTRANS_SERVER_KEY },
-    MIDTRANS_CLIENT_KEY: { required: true,  present: !!process.env.MIDTRANS_CLIENT_KEY },
+    DOKU_CLIENT_ID:     { required: true,  present: !!process.env.DOKU_CLIENT_ID },
+    DOKU_SECRET_KEY:    { required: true,  present: !!process.env.DOKU_SECRET_KEY },
+    DOKU_API_KEY:       { required: false, present: !!process.env.DOKU_API_KEY },
+    DOKU_PUBLIC_KEY:    { required: false, present: !!process.env.DOKU_PUBLIC_KEY },
+    // Dibutuhkan hanya untuk menyelesaikan invoice Midtrans lama.
+    MIDTRANS_SERVER_KEY: { required: false, present: !!process.env.MIDTRANS_SERVER_KEY },
+    MIDTRANS_CLIENT_KEY: { required: false, present: !!process.env.MIDTRANS_CLIENT_KEY },
     SMTP_HOST:        { required: false, present: !!process.env.SMTP_HOST },
     SMTP_USER:        { required: false, present: !!process.env.SMTP_USER },
     SMTP_PASS:        { required: false, present: !!process.env.SMTP_PASS },
@@ -110,12 +115,19 @@ export async function GET() {
     ? { status: 'ok', detail: `${process.env.SMTP_USER} via ${process.env.SMTP_HOST}:${process.env.SMTP_PORT ?? '587'}` }
     : { status: 'warn', detail: 'SMTP belum dikonfigurasi — email receipts nonaktif' }
 
-  // ── Midtrans config ─────────────────────────────────────────────────────────
+  // ── DOKU config: gateway invoice baru ────────────────────────────────────────
+  const dokuConfigured = !!(process.env.DOKU_CLIENT_ID && process.env.DOKU_SECRET_KEY)
+  const dokuMode = process.env.DOKU_IS_PRODUCTION === 'true' ? 'production' : 'sandbox'
+  checks.doku = dokuConfigured
+    ? { status: 'ok', detail: `mode: ${dokuMode}` }
+    : { status: 'error', detail: 'DOKU_CLIENT_ID atau DOKU_SECRET_KEY tidak diset' }
+
+  // ── Midtrans config: legacy invoice only ─────────────────────────────────────
   const midtransConfigured = !!(process.env.MIDTRANS_SERVER_KEY && process.env.MIDTRANS_CLIENT_KEY)
   const midtransMode = process.env.MIDTRANS_IS_PRODUCTION === 'true' ? 'production' : 'sandbox'
   checks.midtrans = midtransConfigured
-    ? { status: 'ok', detail: `mode: ${midtransMode}` }
-    : { status: 'error', detail: 'MIDTRANS_SERVER_KEY atau MIDTRANS_CLIENT_KEY tidak diset' }
+    ? { status: 'ok', detail: `legacy mode: ${midtransMode}` }
+    : { status: 'warn', detail: 'Midtrans legacy tidak dikonfigurasi — invoice lama tidak dapat diproses' }
 
   // ── Memory ──────────────────────────────────────────────────────────────────
   const mem = process.memoryUsage()

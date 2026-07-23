@@ -16,6 +16,7 @@ interface SendReceiptEmailParams {
   invoiceId: string;
   invoiceNumber: string;
   orderId: string;
+  paymentProvider: string;
   issuedAt: Date;
   paidAt: Date;
   amount: number;
@@ -56,6 +57,7 @@ export async function sendReceiptEmail(params: SendReceiptEmailParams): Promise<
   const pdfData = {
     invoiceNumber: params.invoiceNumber,
     orderId: params.orderId,
+    paymentProvider: params.paymentProvider,
     issuedAt: params.issuedAt.toISOString(),
     paidAt: params.paidAt.toISOString(),
     status: "PAID",
@@ -87,6 +89,7 @@ export async function sendReceiptEmail(params: SendReceiptEmailParams): Promise<
     familySpaceName: params.familySpaceName,
     invoiceNumber: params.invoiceNumber,
     orderId: params.orderId,
+    paymentProvider: params.paymentProvider,
     planName: params.plan.name,
     billingCycle: params.billingCycle,
     amount: params.amount,

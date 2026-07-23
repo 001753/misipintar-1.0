@@ -1,14 +1,19 @@
 "use server";
 
-// WAJIB: Subscription HANYA diaktifkan via Midtrans webhook (server-to-server)
-// JANGAN aktifkan dari Snap.js onSuccess callback di client
-// WAJIB: Signature Midtrans divalidasi di webhook handler sebelum apapun
+// Subscription hanya diaktifkan oleh webhook server-to-server.
 
 import { auth } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { snap } from "@/lib/midtrans";
 import type { BillingCycle } from "@/lib/utils";
+import crypto from "node:crypto";
+import {
+  DOKU_CHECKOUT_PAYMENT_METHODS,
+  extractDokuPaymentUrl,
+  getDokuCheckoutUrl,
+  getDokuPublicBaseUrl,
+  buildDokuRequestHeaders,
+} from "@/lib/doku";
 
 export type { BillingCycle } from "@/lib/utils";
 
@@ -45,14 +50,14 @@ export async function getSubscriptionInfo() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Create Snap checkout token
+// Create DOKU Checkout URL.
 // Subscription diaktifkan HANYA oleh webhook — bukan di sini
 // ─────────────────────────────────────────────────────────────
 export async function createCheckout(
   planId: string,
   billingCycle: BillingCycle
 ): Promise<
-  | { success: true; snapToken: string; clientKey: string; orderId: string }
+  | { success: true; paymentUrl: string; orderId: string }
   | { error: string }
 > {
   const session = await requireParentSession();
@@ -79,24 +84,24 @@ export async function createCheckout(
     update: {},
   });
 
-  // Idempotency: kembalikan snapToken existing yang masih valid
+  // Idempotency: kembalikan invoice DOKU yang masih valid.
   const existing = await prisma.invoice.findFirst({
     where: {
       subscriptionId: subscription.id,
       status: "PENDING",
       expiredAt: { gt: new Date() },
       amount,
-      NOT: { snapToken: null },
+      paymentProvider: "DOKU",
+      NOT: { paymentUrl: null },
     },
     orderBy: { createdAt: "desc" },
   });
 
-  if (existing?.snapToken) {
+  if (existing?.paymentUrl && existing.providerInvoiceNumber) {
     return {
       success: true,
-      snapToken: existing.snapToken,
-      clientKey: process.env.MIDTRANS_CLIENT_KEY ?? "",
-      orderId: existing.midtransOrderId ?? `INV-${existing.id}`,
+      paymentUrl: existing.paymentUrl,
+      orderId: existing.providerInvoiceNumber,
     };
   }
 
@@ -108,43 +113,96 @@ export async function createCheckout(
       amount,
       status: "PENDING",
       expiredAt,
+      billingCycle,
+      paymentProvider: "DOKU",
     },
   });
 
-  const orderId = `INV-${invoice.id}`;
+  // DOKU invoice number tidak perlu memuat UUID dengan tanda hubung.
+  const orderId = `DOKU-${invoice.id.replace(/-/g, "").slice(0, 24)}`;
 
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: session.user.id },
-    select: { name: true, email: true },
+    select: { name: true, email: true, phone: true },
   });
 
   try {
-    const snapResp = await snap.createTransaction({
-      transaction_details: { order_id: orderId, gross_amount: amount },
-      customer_details: { first_name: user.name, email: user.email ?? undefined },
-      item_details: [
-        {
-          id: `plan-${plan.type.toLowerCase()}-${billingCycle.toLowerCase()}`,
-          price: amount,
-          quantity: 1,
-          name: `Misi Pintar ${plan.name} — ${billingCycle === "YEARLY" ? "Tahunan" : "Bulanan"}`,
-        },
-      ],
-      expiry: { unit: "hours", duration: 24 },
+    const requestId = crypto.randomUUID();
+    const requestTimestamp = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+    const appUrl = getDokuPublicBaseUrl();
+    const requestBody = {
+      order: {
+        amount,
+        invoice_number: orderId,
+        currency: "IDR",
+        callback_url: `${appUrl}/dashboard/billing?payment=doku`,
+        callback_url_cancel: `${appUrl}/dashboard/billing?payment=cancelled`,
+        line_items: [
+          {
+            id: `plan-${plan.type.toLowerCase()}-${billingCycle.toLowerCase()}`,
+            name: `Misi Pintar ${plan.name} — ${billingCycle === "YEARLY" ? "Tahunan" : "Bulanan"}`,
+            quantity: 1,
+            price: amount,
+          },
+        ],
+      },
+      payment: {
+        payment_method_types: [...DOKU_CHECKOUT_PAYMENT_METHODS],
+        payment_due_date: 1440,
+      },
+      customer: {
+        id: session.user.id,
+        name: user.name,
+        phone: user.phone ?? undefined,
+        email: user.email ?? undefined,
+        country: "ID",
+      },
+      additional_info: {
+        override_notification_url: `${appUrl}/api/webhooks/doku`,
+      },
+    };
+    const body = JSON.stringify(requestBody);
+    const response = await fetch(getDokuCheckoutUrl(), {
+      method: "POST",
+      headers: buildDokuRequestHeaders({
+        body,
+        requestId,
+        requestTimestamp,
+      }),
+      body,
+      cache: "no-store",
     });
-
+    const responseText = await response.text();
+    let responsePayload: unknown;
+    try {
+      responsePayload = JSON.parse(responseText);
+    } catch {
+      responsePayload = null;
+    }
+    if (!response.ok) {
+      const message =
+        responsePayload &&
+        typeof responsePayload === "object" &&
+        "message" in responsePayload &&
+        typeof responsePayload.message === "string"
+          ? responsePayload.message
+          : `DOKU mengembalikan HTTP ${response.status}.`;
+      throw new Error(message);
+    }
+    const paymentUrl = extractDokuPaymentUrl(responsePayload);
+    if (!paymentUrl) throw new Error("DOKU tidak mengembalikan payment URL.");
     await prisma.invoice.update({
       where: { id: invoice.id },
       data: {
-        snapToken: snapResp.token as string,
-        midtransOrderId: orderId,
+        providerInvoiceNumber: orderId,
+        providerRequestId: requestId,
+        paymentUrl,
       },
     });
 
     return {
       success: true,
-      snapToken: snapResp.token as string,
-      clientKey: process.env.MIDTRANS_CLIENT_KEY ?? "",
+      paymentUrl,
       orderId,
     };
   } catch (err: unknown) {
@@ -154,15 +212,13 @@ export async function createCheckout(
     });
     return {
       error:
-        err instanceof Error ? err.message : "Gagal membuat transaksi Midtrans.",
+        err instanceof Error ? err.message : "Gagal membuat transaksi DOKU.",
     };
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Create QRIS charge via Midtrans Core API (server-side only)
-// Subscription diaktifkan HANYA oleh webhook — bukan di sini
-// ─────────────────────────────────────────────────────────────
+// QRIS lama dipertahankan hanya sebagai data historis. Semua action pembuatan
+// QRIS baru menolak agar tidak ada jalur checkout tersembunyi yang aktif.
 export async function createQrisCheckout(
   planId: string,
   billingCycle: BillingCycle
@@ -170,131 +226,9 @@ export async function createQrisCheckout(
   | { success: true; qrCodeUrl: string; qrString: string; orderId: string; expiredAt: string }
   | { error: string }
 > {
-  const session = await requireParentSession();
-  const familySpaceId = session.user.familySpaceId!;
-
-  const plan = await prisma.plan.findUnique({ where: { id: planId } });
-  if (!plan) return { error: "Plan tidak ditemukan." };
-  if (plan.price === 0 && plan.yearlyPrice === 0)
-    return { error: "Plan ini gratis, tidak perlu pembayaran." };
-
-  const amount = billingCycle === "YEARLY" ? plan.yearlyPrice : plan.price;
-  if (amount <= 0) return { error: "Harga plan tidak valid." };
-
-  const subscription = await prisma.subscription.upsert({
-    where: { familySpaceId },
-    create: {
-      familySpaceId,
-      planId: plan.id,
-      status: "FREE",
-      currentPeriodStart: new Date(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    },
-    update: {},
-  });
-
-  // Idempotency: kembalikan QRIS yang masih valid (belum expired, masih PENDING)
-  const existing = await prisma.invoice.findFirst({
-    where: {
-      subscriptionId: subscription.id,
-      status: "PENDING",
-      expiredAt: { gt: new Date() },
-      amount,
-      NOT: { qrisQrUrl: null },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-
-  if (existing?.qrisQrUrl && existing.qrisQrString && existing.midtransOrderId) {
-    return {
-      success: true,
-      qrCodeUrl: existing.qrisQrUrl,
-      qrString: existing.qrisQrString,
-      orderId: existing.midtransOrderId,
-      expiredAt: existing.expiredAt.toISOString(),
-    };
-  }
-
-  // QRIS berlaku 15 menit
-  const expiredAt = new Date(Date.now() + 15 * 60 * 1000);
-
-  const invoice = await prisma.invoice.create({
-    data: {
-      subscriptionId: subscription.id,
-      amount,
-      status: "PENDING",
-      expiredAt,
-    },
-  });
-
-  const orderId = `QRIS-${invoice.id}`;
-
-  const user = await prisma.user.findUniqueOrThrow({
-    where: { id: session.user.id },
-    select: { name: true, email: true },
-  });
-
-  try {
-    const { coreApi } = await import("@/lib/midtrans");
-
-    const chargeResp = await coreApi.charge({
-      payment_type: "qris",
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: amount,
-      },
-      customer_details: {
-        first_name: user.name,
-        email: user.email ?? undefined,
-      },
-      item_details: [
-        {
-          id: `plan-${plan.type.toLowerCase()}-${billingCycle.toLowerCase()}`,
-          price: amount,
-          quantity: 1,
-          name: `Misi Pintar ${plan.name} — ${billingCycle === "YEARLY" ? "Tahunan" : "Bulanan"}`,
-        },
-      ],
-      qris: { acquirer: "gopay" },
-    }) as Record<string, unknown>;
-
-    // Midtrans returns QR URL under actions array
-    let qrCodeUrl = "";
-    let qrString = "";
-    const actions = chargeResp.actions as Array<{ name: string; url: string }> | undefined;
-    if (Array.isArray(actions)) {
-      const qrAction = actions.find((a) => a.name === "generate-qr-code");
-      if (qrAction) qrCodeUrl = qrAction.url;
-    }
-    if (chargeResp.qr_string) qrString = chargeResp.qr_string as string;
-    if (!qrCodeUrl && chargeResp.qr_code_url) qrCodeUrl = chargeResp.qr_code_url as string;
-
-    await prisma.invoice.update({
-      where: { id: invoice.id },
-      data: {
-        midtransOrderId: orderId,
-        qrisQrUrl: qrCodeUrl,
-        qrisQrString: qrString,
-      },
-    });
-
-    return {
-      success: true,
-      qrCodeUrl,
-      qrString,
-      orderId,
-      expiredAt: expiredAt.toISOString(),
-    };
-  } catch (err: unknown) {
-    await prisma.invoice.update({
-      where: { id: invoice.id },
-      data: { status: "FAILED" },
-    });
-    return {
-      error:
-        err instanceof Error ? err.message : "Gagal membuat transaksi QRIS.",
-    };
-  }
+  void planId;
+  void billingCycle;
+  return { error: "Pembayaran QRIS sudah dinonaktifkan." };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -304,20 +238,8 @@ export async function createQrisCheckout(
 export async function checkQrisStatus(
   orderId: string
 ): Promise<{ status: string; paidAt?: string } | { error: string }> {
-  const session = await requireParentSession();
-  if (!session) return { error: "Tidak terautentikasi." };
-
-  const invoice = await prisma.invoice.findUnique({
-    where: { midtransOrderId: orderId },
-    select: { status: true, paidAt: true, subscriptionId: true },
-  });
-
-  if (!invoice) return { error: "Invoice tidak ditemukan." };
-
-  return {
-    status: invoice.status,
-    paidAt: invoice.paidAt?.toISOString(),
-  };
+  void orderId;
+  return { error: "Pembayaran QRIS sudah dinonaktifkan." };
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ interface ReceiptEmailData {
   familySpaceName: string;
   invoiceNumber: string;
   orderId: string;
+  paymentProvider: string;
   planName: string;
   billingCycle: "MONTHLY" | "YEARLY";
   amount: number;
@@ -40,6 +41,8 @@ const PAY_METHOD_LABELS: Record<string, string> = {
   BANK_TRANSFER: "Transfer Bank",
   CREDIT_CARD: "Kartu Kredit",
   VA: "Virtual Account",
+  MANDIRI_VA: "Mandiri Virtual Account",
+  EWALLET: "E-wallet",
 };
 
 export function buildReceiptEmailHtml(data: ReceiptEmailData): string {
@@ -181,7 +184,7 @@ export function buildReceiptEmailHtml(data: ReceiptEmailData): string {
                       ${data.orderId ? `
                       <tr>
                         <td style="padding:3px 0;">
-                          <p style="margin:0;color:#6b7280;font-size:12px;">Order ID Midtrans</p>
+                          <p style="margin:0;color:#6b7280;font-size:12px;">Referensi Provider</p>
                         </td>
                         <td align="right" style="padding:3px 0;">
                           <p style="margin:0;color:#111827;font-size:12px;font-family:monospace;">${escapeHtml(data.orderId)}</p>
@@ -192,7 +195,7 @@ export function buildReceiptEmailHtml(data: ReceiptEmailData): string {
                           <p style="margin:0;color:#6b7280;font-size:12px;">Platform</p>
                         </td>
                         <td align="right" style="padding:3px 0;">
-                          <p style="margin:0;color:#111827;font-size:12px;">Midtrans · PT Midtrans</p>
+                          <p style="margin:0;color:#111827;font-size:12px;">${data.paymentProvider === "DOKU" ? "DOKU Checkout" : "Midtrans"}</p>
                         </td>
                       </tr>
                       <tr>
@@ -293,7 +296,7 @@ TOTAL DIBAYAR: ${fmtIDR(data.amount)}
 REFERENSI
 ---------
 Nomor Invoice: ${data.invoiceNumber}
-${data.orderId ? `Order ID     : ${data.orderId}\n` : ""}Platform     : Midtrans · PT Midtrans
+${data.orderId ? `Referensi    : ${data.orderId}\n` : ""}Platform     : ${data.paymentProvider === "DOKU" ? "DOKU Checkout" : "Midtrans"}
 Mata Uang    : ${data.currency}
 
 Unduh kuitansi PDF Anda di:

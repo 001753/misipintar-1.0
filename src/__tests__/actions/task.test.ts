@@ -28,6 +28,16 @@ vi.mock('@/lib/notifications/sse', () => ({
 }))
 // Redis tidak tersedia dalam test environment
 vi.mock('@/lib/redis', () => ({ redis: undefined }))
+vi.mock('@/lib/prisma', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/prisma')>('@/lib/prisma')
+  const testPrisma = Object.create(actual.prisma) as typeof actual.prisma
+  Object.defineProperty(testPrisma, '$transaction', {
+    configurable: true,
+    writable: true,
+    value: actual.prisma.$transaction.bind(actual.prisma),
+  })
+  return { ...actual, prisma: testPrisma }
+})
 
 import { auth } from '@/lib/auth/config'
 import { approveTask } from '@/actions/tasks'
@@ -37,6 +47,7 @@ let familySpaceId: string
 let otherFamilySpaceId: string
 let childId: string
 let parentId: string
+let otherParentId: string
 
 const UNIQUE = `__test__task-${Date.now()}`
 
@@ -76,6 +87,7 @@ beforeAll(async () => {
   const otherParent = await prisma.user.create({
     data: { email: `${UNIQUE}-other@test.internal`, passwordHash: await bcrypt.hash('pass', 4), name: 'Other Parent', role: 'PARENT' },
   })
+  otherParentId = otherParent.id
   const otherFs = await prisma.familySpace.create({
     data: { name: `__test__task-fs-other-${Date.now()}`, spaceCode: `U${Date.now().toString().slice(-5)}`, ownerId: otherParent.id, users: { connect: { id: otherParent.id } } },
   })
@@ -93,8 +105,12 @@ afterAll(async () => {
   await prisma.task.deleteMany({ where: { familySpaceId: otherFamilySpaceId } })
   await prisma.child.deleteMany({ where: { familySpaceId: otherFamilySpaceId } })
   await prisma.subscription.deleteMany({ where: { familySpaceId: otherFamilySpaceId } })
+  await prisma.user.updateMany({
+    where: { id: { in: [parentId, otherParentId] } },
+    data: { familySpaceId: null },
+  })
   await prisma.familySpace.deleteMany({ where: { id: { in: [familySpaceId, otherFamilySpaceId] } } })
-  await prisma.user.deleteMany({ where: { email: { startsWith: UNIQUE } } })
+  await prisma.user.deleteMany({ where: { id: { in: [parentId, otherParentId] } } })
 })
 
 // ── Helper: setup task & child balance ────────────────────
