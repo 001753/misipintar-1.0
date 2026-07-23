@@ -242,6 +242,12 @@
       "namedRegex": "^/api/upload/proof(?:/)?$"
     },
     {
+      "page": "/api/webhooks/doku",
+      "regex": "^/api/webhooks/doku(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/webhooks/doku(?:/)?$"
+    },
+    {
       "page": "/api/webhooks/midtrans",
       "regex": "^/api/webhooks/midtrans(?:/)?$",
       "routeKeys": {},

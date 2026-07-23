@@ -27,6 +27,7 @@
   "/api/health/route": "app/api/health/route.js",
   "/api/notifications/recent/route": "app/api/notifications/recent/route.js",
   "/api/sse/route": "app/api/sse/route.js",
+  "/api/webhooks/doku/route": "app/api/webhooks/doku/route.js",
   "/blog/page": "app/blog/page.js",
   "/webhook-test/page": "app/webhook-test/page.js",
   "/blog/[slug]/page": "app/blog/[slug]/page.js",

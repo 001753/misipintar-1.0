@@ -605,6 +605,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../src/app/api/webhooks/doku/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/webhooks/doku">> = Specific
+  const handler = {} as typeof import("../../src/app/api/webhooks/doku/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../src/app/api/webhooks/midtrans/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/webhooks/midtrans">> = Specific

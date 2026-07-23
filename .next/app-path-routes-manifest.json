@@ -27,6 +27,7 @@
   "/api/health/route": "/api/health",
   "/api/notifications/recent/route": "/api/notifications/recent",
   "/api/sse/route": "/api/sse",
+  "/api/webhooks/doku/route": "/api/webhooks/doku",
   "/blog/page": "/blog",
   "/webhook-test/page": "/webhook-test",
   "/blog/[slug]/page": "/blog/[slug]",
