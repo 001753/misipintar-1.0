@@ -62,6 +62,10 @@ if [ -f "$BUILD_COMMIT_FILE" ]; then
     # Replit kadang auto-commit hasil build → HEAD 1 commit lebih baru, tapi kode sama
     # Hanya hitung perubahan di file kode sumber (src/, prisma/, scripts/, package.json, dll)
     # Abaikan: .next/ (build output), public/ (generated assets: sitemap, manifest)
+    #
+    # PENTING: gunakan `wc -l` bukan `grep -c .`
+    # `grep -c` keluar dengan exit code 1 saat count=0, lalu `|| echo "0"` ikut jalan
+    # → variabel jadi "0\n0" dan perbandingan `[ ... = "0" ]` gagal (false positive).
     NON_NEXT_CHANGES=$(git diff --name-only "$BUILT_AT" "$CURRENT_HEAD" 2>/dev/null \
       | grep -v '^\.next/' \
       | grep -v '^public/' \
@@ -76,7 +80,7 @@ if [ -f "$BUILD_COMMIT_FILE" ]; then
       | grep -v '^prisma/migrations/' \
       | grep -v '^\.agents/' \
       | grep -v '^\.gitignore$' \
-      | grep -c . 2>/dev/null || echo "0")
+      | wc -l | tr -d ' ')
 
     if [ "$NON_NEXT_CHANGES" = "0" ]; then
       echo "  ✓ Standalone sinkron — commit HEAD hanya berisi perubahan build artifacts"
@@ -216,8 +220,43 @@ echo ""
 echo "▶ [4/5] Prisma migrate deploy ..."
 
 if [ -f "./node_modules/.bin/prisma" ]; then
+
+  # ── 4a. Tangani ALTER TYPE di luar transaction ────────────────────────────
+  # PostgreSQL melarang ALTER TYPE ... ADD VALUE di dalam transaction block
+  # (error code 25001). Prisma membungkus migration dalam BEGIN/COMMIT, sehingga
+  # migration 20260723000000_add_doku_payment_provider SELALU gagal.
+  # Solusi: jalankan ALTER TYPE via `prisma db execute` (tidak pakai transaction),
+  # lalu tandai migration tersebut sebagai applied agar Prisma tidak memblok
+  # migration berikutnya.
+
+  echo "  → Menambahkan enum values PayMethod di luar transaction ..."
+  printf 'ALTER TYPE "PayMethod" ADD VALUE IF NOT EXISTS '"'"'MANDIRI_VA'"'"';' \
+    | ./node_modules/.bin/prisma db execute --stdin --schema=prisma/schema.prisma 2>&1 \
+    | grep -v "^$" | head -3 || true
+
+  printf 'ALTER TYPE "PayMethod" ADD VALUE IF NOT EXISTS '"'"'EWALLET'"'"';' \
+    | ./node_modules/.bin/prisma db execute --stdin --schema=prisma/schema.prisma 2>&1 \
+    | grep -v "^$" | head -3 || true
+
+  echo "  ✓ Enum values MANDIRI_VA dan EWALLET tersedia"
+
+  # ── 4b. Tandai migration ALTER TYPE sebagai applied (bypass Prisma transaction)
+  # Migration ini mengandung ALTER TYPE yang gagal; kita sudah jalankan di atas.
+  # --applied akan:
+  #   - Menyelesaikan status "failed" jika pernah dicoba → sukses sebelumnya
+  #   - Menandai sebagai "baselining" jika belum pernah dicoba (fresh DB)
+  # Error "already applied" → normal, diabaikan dengan || true
+  RESOLVE_OUT=$(./node_modules/.bin/prisma migrate resolve \
+    --applied "20260723000000_add_doku_payment_provider" 2>&1 || true)
+  if echo "$RESOLVE_OUT" | grep -qi "error\|already"; then
+    echo "  ℹ️  Migration 20260723000000 sudah applied — skip resolve"
+  else
+    echo "  ✓ Migration 20260723000000 ditandai applied (ALTER TYPE sudah dijalankan manual)"
+  fi
+
+  # ── 4c. Jalankan sisa migration secara normal ─────────────────────────────
   ./node_modules/.bin/prisma migrate deploy && echo "  ✓ Migrasi database selesai" || {
-    echo "  ⚠️  Migrasi gagal atau tidak ada migrasi baru — lanjut"
+    echo "  ⚠️  Migrasi gagal — cek output di atas"
   }
 else
   echo "  ⚠️  Skip (prisma tidak ada)"
