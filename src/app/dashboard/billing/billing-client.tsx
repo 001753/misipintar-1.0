@@ -343,8 +343,8 @@ export default function BillingClient({
                   <div className="mt-5 space-y-2">
                     <button
                       onClick={() => handleCheckout(plan.id)}
-                      disabled={!!loading}
-                      className="w-full py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                      disabled={loading === plan.id}
+                      className="w-full py-2.5 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       {loading === plan.id ? "Memproses..." : `Bayar Sekarang`}
                     </button>
