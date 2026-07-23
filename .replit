@@ -58,6 +58,7 @@ QRIS_ADMIN_WA = "081460081343"
 MIDTRANS_CLIENT_KEY = "Mid-client-90bGHR0yjUxazY_b"
 NEXT_PUBLIC_MERCHANT_NAME = "Joben Enterprise"
 NEXT_PUBLIC_NMID = "ID1026540599283"
+DOKU_IS_PRODUCTION = "false"
 
 [userenv.production]
 NODE_ENV = "production"
