@@ -225,36 +225,19 @@ if [ -f "./node_modules/.bin/prisma" ]; then
   # PostgreSQL melarang ALTER TYPE ... ADD VALUE di dalam transaction block
   # (error code 25001). Prisma membungkus migration dalam BEGIN/COMMIT, sehingga
   # migration 20260723000000_add_doku_payment_provider SELALU gagal.
-  # Solusi: jalankan ALTER TYPE via `prisma db execute` (tidak pakai transaction),
-  # lalu tandai migration tersebut sebagai applied agar Prisma tidak memblok
-  # migration berikutnya.
+  #
+  # Solusi: scripts/fix-doku-migration.js menjalankan ALTER TYPE via pg client
+  # langsung (tanpa transaction), menambahkan kolom Invoice, dan menandai
+  # migration sebagai applied di _prisma_migrations.
+  # Script menggunakan IF NOT EXISTS di semua statement → aman dijalankan ulang.
 
-  echo "  → Menambahkan enum values PayMethod di luar transaction ..."
-  printf 'ALTER TYPE "PayMethod" ADD VALUE IF NOT EXISTS '"'"'MANDIRI_VA'"'"';' \
-    | ./node_modules/.bin/prisma db execute --stdin --schema=prisma/schema.prisma 2>&1 \
-    | grep -v "^$" | head -3 || true
-
-  printf 'ALTER TYPE "PayMethod" ADD VALUE IF NOT EXISTS '"'"'EWALLET'"'"';' \
-    | ./node_modules/.bin/prisma db execute --stdin --schema=prisma/schema.prisma 2>&1 \
-    | grep -v "^$" | head -3 || true
-
-  echo "  ✓ Enum values MANDIRI_VA dan EWALLET tersedia"
-
-  # ── 4b. Tandai migration ALTER TYPE sebagai applied (bypass Prisma transaction)
-  # Migration ini mengandung ALTER TYPE yang gagal; kita sudah jalankan di atas.
-  # --applied akan:
-  #   - Menyelesaikan status "failed" jika pernah dicoba → sukses sebelumnya
-  #   - Menandai sebagai "baselining" jika belum pernah dicoba (fresh DB)
-  # Error "already applied" → normal, diabaikan dengan || true
-  RESOLVE_OUT=$(./node_modules/.bin/prisma migrate resolve \
-    --applied "20260723000000_add_doku_payment_provider" 2>&1 || true)
-  if echo "$RESOLVE_OUT" | grep -qi "error\|already"; then
-    echo "  ℹ️  Migration 20260723000000 sudah applied — skip resolve"
+  if node scripts/fix-doku-migration.js; then
+    echo "  ✓ Fix migrasi DOKU selesai"
   else
-    echo "  ✓ Migration 20260723000000 ditandai applied (ALTER TYPE sudah dijalankan manual)"
+    echo "  ⚠️  fix-doku-migration.js gagal — coba lanjutkan migrate tetap"
   fi
 
-  # ── 4c. Jalankan sisa migration secara normal ─────────────────────────────
+  # ── 4b. Jalankan sisa migration secara normal ─────────────────────────────
   ./node_modules/.bin/prisma migrate deploy && echo "  ✓ Migrasi database selesai" || {
     echo "  ⚠️  Migrasi gagal — cek output di atas"
   }
