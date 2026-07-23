@@ -1,0 +1,262 @@
+Build produksi sudah berhasil setelah .next dibersihkan dari awal, termasuk route webhook DOKU dan standalone output. Saya akan melakukan verifikasi penutup secara berurutan sekarang: rapikan cache typecheck yang sempat berubah, restart workflow setelah build, cek log, dan pastikan hanya perubahan implementasi yang tersisa.
+
+
+5 actions
+Build produksi akhirnya berhasil setelah .next dibangun ulang dari nol. Log workflow sempat menampilkan konflik cache karena server dev masih memakai folder .next saat build berjalan; saya akan restart workflow untuk membersihkan state itu, merapikan cache generated yang tracked, lalu cek log dan preview final.
+
+
+4 actions
+Build final sudah sukses dan route DOKU serta standalone server tersedia. Saya akan melakukan pemeriksaan penutup setelah restart: log workflow, screenshot preview, serta memastikan perubahan generated dan konfigurasi yang tersisa memang terkait pekerjaan ini.
+
+
+5 actions
+Verifikasi akhir sudah lengkap. Saya akan menyimpan dua catatan teknis yang berguna untuk pekerjaan berikutnya—format metode DOKU dan kebutuhan membersihkan .next sebelum build produksi—lalu saya tandai aplikasi siap dipublikasikan.
+
+
+3 actions
+Implementasi migrasi pembayaran ke DOKU sudah selesai.
+
+Perubahan utama:
+
+Checkout langganan baru memakai DOKU Hosted Checkout.
+Metode aktif: Mandiri VA, kartu kredit, dan e-wallet.
+QRIS baru dinonaktifkan sepenuhnya, termasuk QRIS dinamis dan upload bukti manual.
+Histori QRIS lama dan invoice Midtrans lama tetap dipertahankan.
+Aktivasi langganan hanya melalui webhook server DOKU.
+Webhook memvalidasi signature, invoice, nominal, status, dan idempotency.
+Invoice sekarang memiliki metadata provider-neutral.
+Receipt, PDF, dashboard billing, dan admin payment list mendukung DOKU serta Midtrans legacy.
+Migration DOKU sudah diterapkan ke development database.
+Health check sekarang menjadikan DOKU sebagai provider utama dan Midtrans sebagai legacy.
+Test signature DOKU dan validasi bahwa QRIS tidak termasuk allowlist sudah ditambahkan.
+Verifikasi:
+
+npm test: 6 file, 26 test lulus
+npx tsc --noEmit: lulus
+npm run build: berhasil, termasuk standalone output dan route /api/webhooks/doku
+Workflow Start application: running
+Preview aplikasi: berhasil dibuka tanpa error browser
+Yang masih perlu dilakukan sebelum transaksi nyata:
+
+Set Notification URL DOKU sandbox ke URL publik: /api/webhooks/doku
+Uji end-to-end di sandbox untuk pembayaran sukses, gagal, expired, duplicate notification, dan nominal mismatch.
+Pastikan seluruh metode e-wallet yang diizinkan memang aktif pada akun DOKU merchant.
+Setelah sandbox sukses, publish aplikasi dan konfigurasi kredensial produksi DOKU.
+
+Worked for 25 minutes
+Publish
+Domain
+Available
+misipintar-10--zer8989
+.replit.app
+Who can access your app
+
+Public
+Anyone on the internet with the URL
+Set Notification URL DOKU sandbox ke URL publik: /api/webhooks/doku bagaimana caranya . ada yang perlu dimaukksn ke dasbosrd doku?
+
+16 minutes ago
+Ya, ada konfigurasi yang perlu dimasukkan di dashboard DOKU. Saya akan cek dulu URL publik aplikasi yang benar dan memastikan endpoint webhook di kode memakai path yang tepat, lalu saya berikan langkah dashboard DOKU secara rinci.
+
+
+4 actions
+Ya, perlu diisi di dashboard DOKU. Saya cek dulu URL production yang benar dan panduan DOKU terbaru supaya URL yang dimasukkan tidak memakai alamat development Replit.
+
+
+URL production dan panduan DOKU diperiksa
+
+Searched the web for "DOKU Checkout sandbox configure Notification URL dashboard notification URL"
+Aplikasi saat ini belum dipublish, jadi belum ada URL production https://...replit.app yang bisa dipakai DOKU. Saya akan cek instruksi resmi DOKU untuk lokasi menu dan format Notification URL, lalu saya berikan langkah lengkap termasuk apa yang perlu diisi di Secrets/Replit setelah publish.
+
+
+8 actions
+Saya sudah memastikan poin pentingnya: DOKU meminta URL lengkap yang bisa diakses internet, bukan hanya /api/webhooks/doku. Karena project ini belum punya deployment Replit aktif, URL *.replit.dev dari development jangan dimasukkan ke DOKU. Saya akan cek apakah domain production mp.jobenapp.cloud sudah merespons endpoint webhook.
+
+
+2 actions
+
+Searched the web for "site:developers.doku.com DOKU Checkout configure notifications Payment Configuration Notification URL Back Office"
+
+2 actions
+Ya, ada yang harus dimasukkan ke Dashboard DOKU: Notification URL lengkap, bukan hanya path.
+
+Formatnya:
+
+https://DOMAIN-PRODUCTION-ANDA/api/webhooks/doku
+
+Contoh jika aplikasi sudah live di domain production:
+
+https://mp.jobenapp.cloud/api/webhooks/doku
+
+Jangan memasukkan:
+
+/api/webhooks/doku
+
+atau:
+
+http://localhost:5000/api/webhooks/doku
+
+Jangan juga memakai URL development Replit *.replit.dev, karena URL tersebut bukan endpoint production yang stabil untuk webhook eksternal.
+
+Kondisi project saat ini
+Saat ini project belum memiliki deployment Replit aktif. Saya juga sudah mengecek:
+
+https://mp.jobenapp.cloud/api/webhooks/doku
+
+Hasilnya masih 404, berarti versi aplikasi dengan route DOKU belum aktif di domain production tersebut.
+
+Jadi, jangan masukkan URL itu ke Dashboard DOKU dulu sebelum aplikasi production sudah diperbarui.
+
+Langkah yang benar
+1. Deploy versi aplikasi terbaru
+Jika production Anda menggunakan cPanel dengan domain:
+
+https://mp.jobenapp.cloud
+
+deploy build terbaru ke server cPanel. Setelah deploy selesai, route berikut harus tersedia:
+
+https://mp.jobenapp.cloud/api/webhooks/doku
+
+Jika menggunakan Replit Deployments, publish project terlebih dahulu. Gunakan URL production yang diberikan Replit, misalnya:
+
+https://nama-project.replit.app/api/webhooks/doku
+
+Gunakan URL *.replit.app, bukan *.replit.dev.
+
+2. Tes apakah route sudah aktif
+Jalankan:
+
+curl -i -X POST \
+  https://mp.jobenapp.cloud/api/webhooks/doku \
+  -H "Content-Type: application/json" \
+  --data '{}'
+
+Jika route sudah aktif, respons yang diharapkan adalah kira-kira:
+
+HTTP/1.1 403
+{"message":"Invalid signature"}
+
+Itu justru berarti route sudah benar dan bisa diakses. Signature invalid wajar karena request tersebut bukan notification DOKU yang ditandatangani.
+
+Kalau hasilnya:
+
+404 Not Found
+
+berarti aplikasi terbaru belum aktif di domain tersebut.
+
+3. Masukkan URL ke Dashboard DOKU Sandbox
+Di DOKU Back Office sandbox, buka pengaturan payment method.
+
+Menurut dokumentasi DOKU, lokasinya dapat berbeda berdasarkan metode:
+
+Virtual Account SNAP
+Settings → Payment Settings → Virtual Account SNAP → pilih metode → Configure
+Cards
+Settings → Payment Settings → Cards → Payment Configuration
+E-wallet atau metode lain
+Buka konfigurasi payment method yang sesuai dan cari kolom Notification URL
+Masukkan URL lengkap:
+
+https://DOMAIN-PRODUCTION-ANDA/api/webhooks/doku
+
+Kemudian simpan konfigurasi tersebut.
+
+DOKU menyarankan menggunakan HTTPS dan URL yang dapat diakses langsung dari internet, tanpa login, VPN, localhost, atau port khusus.
+
+Apakah perlu memasukkan Secret Key ke Dashboard DOKU?
+Tidak.
+
+Di Dashboard DOKU cukup masukkan:
+
+https://DOMAIN-PRODUCTION-ANDA/api/webhooks/doku
+
+Jangan memasukkan:
+
+DOKU_SECRET_KEY
+DOKU_API_KEY
+SESSION_SECRET
+password atau credential lain
+Secret tetap disimpan di Secrets/environment aplikasi.
+
+Catatan penting tentang kode aplikasi
+Kode Checkout juga mengirim:
+
+additional_info.override_notification_url
+
+dengan nilai:
+
+https://DOMAIN-PRODUCTION-ANDA/api/webhooks/doku
+
+Namun nilai tersebut mengikuti APP_URL atau NEXTAUTH_URL. Jadi di environment production, pastikan:
+
+APP_URL=https://mp.jobenapp.cloud
+NEXTAUTH_URL=https://mp.jobenapp.cloud
+
+Bukan URL *.replit.dev.
+
+Setelah deployment production aktif, URL yang benar untuk DOKU adalah:
+
+https://mp.jobenapp.cloud/api/webhooks/doku
+
+Dokumentasi resmi DOKU juga menegaskan bahwa Notification URL harus dapat diakses dari public internet dan menggunakan HTTPS.
+
+
+Worked for 1 minute
+ok kita deploy dulu ke cpanel. step2 ya?
+
+12 minutes ago
+Planning the cPanel deployment
+
+Planning the cPanel deployment
+Ya, kita lanjut ke langkah 2: deploy build terbaru ke cPanel terlebih dahulu. Saya akan cek alur deploy yang sudah ada, status repository, dan apakah deploy.sh memang melakukan git pull/reset, supaya saya tidak mengubah konfigurasi cPanel secara keliru.
+
+
+5 actions
+Betul, kita lakukan langkah 2 dulu: push build terbaru ke GitHub, lalu jalankan deploy.sh dari SSH cPanel agar cPanel menarik commit tersebut, menjalankan migration, dan me-restart Passenger. Saya cek dulu isi perubahan yang akan dipush agar .next dan file deployment aman, lalu saya commit dan push bila tidak ada masalah.
+
+
+5 actions
+Saya cek satu hal penting sebelum push: build marker saat ini masih menunjuk commit lama. Agar deploy.sh cPanel tidak menganggap build tidak sinkron, urutannya harus commit kode → build ulang → commit hasil build → push. Saya juga akan memastikan perubahan .replit dan cache TypeScript yang tidak terkait tidak ikut terkirim.
+
+
+5 actions
+Saya menemukan urutan deployment yang aman: perubahan kode belum boleh langsung dipush bersama build artifact karena .build_commit masih menunjuk commit lama. Saya akan commit dan push kode terlebih dahulu, lalu build ulang dari commit baru, commit hasil build, dan push lagi. Setelah itu Anda cukup menjalankan bash deploy.sh di SSH cPanel.
+
+
+2 actions
+Saya lanjutkan sesuai pipeline cPanel yang ada. Saya akan commit kode dan migration terlebih dahulu tanpa menyertakan build lama, push ke GitHub, lalu build dari commit baru agar marker standalone sinkron. Setelah itu saya push artifact build dan Anda tinggal menjalankan bash deploy.sh di SSH cPanel.
+
+
+2 actions
+Commit kode sudah dibuat di branch main. Saya akan push commit ini ke GitHub sekarang, lalu menghentikan workflow sementara agar build production tidak bentrok dengan Next dev, menjalankan build ulang dari commit baru, dan push hasil standalone ke GitHub.
+
+
+2 actions
+Commit kode sudah berhasil dipush ke GitHub. Saya akan menghentikan workflow dev sementara agar tidak menulis .next bersamaan dengan build production, membangun dari commit baru, lalu push artifact hasil build.
+
+
+3 actions
+Workflow dev sudah dihentikan, jadi build tidak akan bentrok dengan proses Next.js. Saya lanjutkan build production dari commit a614010, cek marker standalone, lalu push artifact build ke GitHub.
+
+
+2 actions
+Build dari commit baru a614010 sudah berhasil dan marker standalone sudah sinkron. Saya akan push hasil build .next ke GitHub sekarang, lalu Anda bisa menjalankan bash deploy.sh di SSH cPanel.
+
+
+4 actions
+Build marker sudah sinkron dengan commit a614010. Saya akan menyimpan artifact .next hasil build ke commit terpisah dan push ke GitHub, lalu memberi Anda perintah SSH cPanel yang harus dijalankan.
+
+
+1 action
+Push lewat git CLI gagal karena autentikasi HTTPS GitHub, tetapi commit build kemungkinan sudah berhasil dibuat lokal sebelum langkah push. Saya akan cek status commit dulu, lalu mencoba push melalui koneksi GitHub Replit yang sudah berhasil dipakai sebelumnya.
+
+
+3 actions
+Build artifact sudah berhasil dipush ke GitHub lewat koneksi GitHub Replit. Sekarang tahap cPanel bisa dijalankan: deploy.sh akan menarik commit terbaru, menerapkan migration DOKU, dan me-restart Passenger. Saya cek marker/commit terakhir sekali lagi lalu saya berikan perintah SSH yang siap ditempel.
+
+
+5 actions
+Kode dan build standalone sudah berhasil dipush ke GitHub. Sekarang jalankan deploy di SSH cPanel. Saya juga akan menyalakan kembali workflow preview Replit setelah proses build tadi.
+
+Restarted workflow Start application
+You've reached your daily free quota limit. It will reset at 12:00 AM UTC.
