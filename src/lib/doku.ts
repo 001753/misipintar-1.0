@@ -129,6 +129,25 @@ export function validateDokuNotificationSignature(params: {
   );
 }
 
+/**
+ * DOKU signs the notification timestamp, but a valid signature alone does
+ * not prevent an old signed notification from being replayed. Keep the
+ * acceptance window deliberately small; DOKU retries should arrive well
+ * within this window and are separately de-duplicated by Request-Id.
+ */
+export function validateDokuNotificationTimestamp(
+  value: string | null,
+  now = new Date(),
+  maxSkewSeconds = 10 * 60
+): boolean {
+  if (!value) return false;
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return false;
+
+  const skewSeconds = Math.abs(now.getTime() - timestamp) / 1000;
+  return skewSeconds <= maxSkewSeconds;
+}
+
 export function extractDokuPaymentUrl(payload: unknown): string | null {
   if (!payload || typeof payload !== "object") return null;
 

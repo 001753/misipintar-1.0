@@ -4,12 +4,19 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import BillingClient from "./billing-client";
 
-export default async function BillingPage() {
+type BillingPageProps = {
+  searchParams: Promise<{ payment?: string }>;
+};
+
+export default async function BillingPage({ searchParams }: BillingPageProps) {
   const session = await auth();
   if (!session || session.user.role !== "PARENT") redirect("/login");
 
   const familySpaceId = session.user.familySpaceId;
   if (!familySpaceId) redirect("/login");
+  const { payment } = await searchParams;
+  const paymentReturnState =
+    payment === "doku" || payment === "cancelled" ? payment : undefined;
 
   const [subscription, plans, user] = await Promise.all([
     prisma.subscription.findUnique({
@@ -52,7 +59,8 @@ export default async function BillingPage() {
           id: inv.id,
           amount: inv.amount,
           status: inv.status as string,
-           paymentReference: inv.providerInvoiceNumber ?? inv.midtransOrderId,
+          paymentProvider: inv.paymentProvider,
+          paymentReference: inv.providerInvoiceNumber ?? inv.midtransOrderId,
           paymentMethod: inv.paymentMethod as string | null,
           paidAt: inv.paidAt?.toISOString() ?? null,
           expiredAt: inv.expiredAt.toISOString(),
@@ -76,6 +84,7 @@ export default async function BillingPage() {
       subscription={serializedSubscription}
       plans={serializedPlans}
       user={{ name: user.name, email: user.email ?? user.phone ?? "" }}
+      paymentReturnState={paymentReturnState}
     />
   );
 }

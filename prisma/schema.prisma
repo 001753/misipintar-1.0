@@ -280,6 +280,7 @@ model PaymentLog {
   id         String   @id @default(uuid())
   invoiceId  String
   invoice    Invoice  @relation(fields: [invoiceId], references: [id])
+  providerRequestId String? @unique
   event      String
   rawPayload Json
   createdAt  DateTime @default(now())

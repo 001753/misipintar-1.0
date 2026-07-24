@@ -24,6 +24,7 @@ type Invoice = {
   id: string;
   amount: number;
   status: string;
+  paymentProvider: string;
   paymentReference: string | null;
   paymentMethod: string | null;
   paidAt: string | null;
@@ -45,6 +46,7 @@ interface Props {
   subscription: Subscription | null;
   plans: Plan[];
   user: { name: string; email: string };
+  paymentReturnState?: "doku" | "cancelled";
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -80,6 +82,7 @@ export default function BillingClient({
   subscription,
   plans,
   user,
+  paymentReturnState,
 }: Props) {
   const router = useRouter();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("MONTHLY");
@@ -88,6 +91,7 @@ export default function BillingClient({
   const [toast, setToast] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingStartedRef = useRef(false);
 
   useEffect(() => {
     if (toast) {
@@ -96,22 +100,28 @@ export default function BillingClient({
     }
   }, [toast]);
 
-  // PRD §4.5: Polling status subscription maks 10x, interval 3 detik
-  // Jangan aktifkan subscription dari Snap.js onSuccess — hanya polling
+  function stopPolling() {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }
+
+  // PRD §4.5: Poll subscription status at most 10 times, every 3 seconds.
+  // Subscription activation still comes exclusively from the server webhook.
   function startPolling() {
+    if (pollingStartedRef.current) return;
+    pollingStartedRef.current = true;
     let attempts = 0;
     const MAX_ATTEMPTS = 10;
     const INTERVAL_MS = 3000;
-
-    if (pollRef.current) clearInterval(pollRef.current);
 
     pollRef.current = setInterval(() => {
       attempts++;
       router.refresh();
 
       if (attempts >= MAX_ATTEMPTS) {
-        clearInterval(pollRef.current!);
-        pollRef.current = null;
+        stopPolling();
         setToast(
           "Konfirmasi pembayaran sedang diproses. Refresh halaman ini dalam beberapa menit."
         );
@@ -119,9 +129,35 @@ export default function BillingClient({
     }, INTERVAL_MS);
   }
 
+  const hasPendingDokuInvoice =
+    subscription?.invoices.some(
+      (invoice) => invoice.paymentProvider === "DOKU" && invoice.status === "PENDING"
+    ) ?? false;
+
+  useEffect(() => {
+    if (paymentReturnState === "cancelled") {
+      setToast("Pembayaran dibatalkan. Tidak ada perubahan pada langganan.");
+      return;
+    }
+    if (paymentReturnState !== "doku") return;
+
+    if (hasPendingDokuInvoice) {
+      setToast("Pembayaran diterima oleh DOKU. Menunggu konfirmasi pembayaran...");
+      startPolling();
+    } else {
+      setToast("Pembayaran DOKU sudah dikonfirmasi.");
+    }
+  }, [paymentReturnState, hasPendingDokuInvoice]);
+
+  useEffect(() => {
+    if (paymentReturnState === "doku" && !hasPendingDokuInvoice) {
+      stopPolling();
+    }
+  }, [paymentReturnState, hasPendingDokuInvoice]);
+
   useEffect(() => {
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+      stopPolling();
     };
   }, []);
 

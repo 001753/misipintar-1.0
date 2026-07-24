@@ -6,6 +6,7 @@ import {
   resolveDokuPaymentMethod,
   sha256Base64,
   validateDokuNotificationSignature,
+  validateDokuNotificationTimestamp,
 } from "@/lib/doku";
 
 const originalEnv = {
@@ -66,5 +67,20 @@ describe("DOKU payment helper", () => {
       "CREDIT_CARD"
     );
     expect(resolveDokuPaymentMethod({ channel: { id: "EMONEY_DANA" } })).toBe("EWALLET");
+  });
+
+  it("menolak notification DOKU di luar jendela waktu replay", () => {
+    const now = new Date("2026-07-24T02:00:00.000Z");
+
+    expect(
+      validateDokuNotificationTimestamp("2026-07-24T01:55:00.000Z", now)
+    ).toBe(true);
+    expect(
+      validateDokuNotificationTimestamp("2026-07-24T01:40:00.000Z", now)
+    ).toBe(false);
+    expect(
+      validateDokuNotificationTimestamp("2026-07-24T02:15:00.000Z", now)
+    ).toBe(false);
+    expect(validateDokuNotificationTimestamp("not-a-date", now)).toBe(false);
   });
 });
