@@ -215,13 +215,36 @@ export async function createCheckout(
           responsePayload = null;
         }
         if (!response.ok) {
+          // Log full response for diagnosis via Passenger / server logs.
+          console.error(
+            `[DOKU checkout] HTTP ${response.status} from ${getDokuCheckoutUrl()}`,
+            "\nRequest-Id:", requestId,
+            "\nResponse body:", responseText,
+          );
+          // DOKU error shapes vary: top-level "message", nested "error.message",
+          // or nested "response.message". Try all before falling back.
+          const obj =
+            responsePayload && typeof responsePayload === "object"
+              ? (responsePayload as Record<string, unknown>)
+              : null;
+          // DOKU pakai beragam format error: top-level message, nested error/response,
+          // atau field khusus seperti error_message / response_message / detail.
+          const str = (v: unknown): string | null =>
+            typeof v === "string" && v.length > 0 ? v : null;
+          const nested = (key: string): string | null => {
+            const child = obj?.[key];
+            if (!child || typeof child !== "object") return null;
+            const c = child as Record<string, unknown>;
+            return str(c.message) ?? str(c.error_message) ?? str(c.detail) ?? null;
+          };
           const message =
-            responsePayload &&
-            typeof responsePayload === "object" &&
-            "message" in responsePayload &&
-            typeof responsePayload.message === "string"
-              ? responsePayload.message
-              : `DOKU mengembalikan HTTP ${response.status}.`;
+            str(obj?.message) ??
+            str(obj?.error_message) ??
+            str(obj?.response_message) ??
+            str(obj?.detail) ??
+            nested("error") ??
+            nested("response") ??
+            `DOKU mengembalikan HTTP ${response.status}. Lihat server log untuk detail.`;
           throw new Error(message);
         }
         const paymentUrl = extractDokuPaymentUrl(responsePayload);

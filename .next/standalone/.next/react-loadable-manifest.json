@@ -2,8 +2,8 @@
   "app/(superadmin)/superadmin/analytics/revenue-chart-wrapper.tsx -> ./revenue-chart-client": {
     "id": 85910,
     "files": [
-      "static/chunks/2120-e20696b1eb9065a7.js",
-      "static/chunks/5910.621622690c651f47.js"
+      "static/chunks/5808-6c77c941197a3aeb.js",
+      "static/chunks/5910.9db1c95ee5f7ca3e.js"
     ]
   },
   "components/NavigationProgressWrapper.tsx -> ./NavigationProgress": {

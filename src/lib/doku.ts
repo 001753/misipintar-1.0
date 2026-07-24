@@ -8,11 +8,12 @@ export const DOKU_CHECKOUT_PAYMENT_METHODS = [
   // Kartu kredit.
   "CREDIT_CARD",
   // E-wallet yang tersedia pada DOKU Checkout.
+  // EMONEY_DOKU (DOKU Wallet) dihilangkan — butuh aktivasi merchant terpisah
+  // dan menyebabkan HTTP 400 di sandbox jika belum diaktifkan.
   "EMONEY_OVO",
   "EMONEY_SHOPEE_PAY",
   "EMONEY_DANA",
   "EMONEY_LINKAJA",
-  "EMONEY_DOKU",
 ] as const;
 
 export type DokuPaymentMethod = (typeof DOKU_CHECKOUT_PAYMENT_METHODS)[number];
