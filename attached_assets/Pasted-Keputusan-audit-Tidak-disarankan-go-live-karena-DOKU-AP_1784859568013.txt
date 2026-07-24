@@ -1,0 +1,461 @@
+Keputusan audit
+Tidak disarankan go-live karena:
+DOKU_API_KEY tidak digunakan dan jenis kredensial belum terkonfirmasi
+Webhook belum melindungi replay berdasarkan timestamp/request ID
+Webhook dapat memproses invoice yang sudah FAILED atau EXPIRED
+Frontend belum otomatis polling setelah kembali dari DOKU
+Belum ada test webhook DOKU end-to-end
+Status migration DOKU pada database target belum dipastikan bersih
+Workflow aplikasi saat ini gagal karena next tidak ditemukan
+Belum ada transaksi sandbox yang membuktikan seluruh alur
+Yang sudah cukup baik:
+Hosted Checkout DOKU sudah terintegrasi
+Secret key tidak diekspos ke frontend
+Nominal pembayaran berasal dari server/database
+QRIS baru sudah dinonaktifkan
+Histori Midtrans lama tetap dipertahankan
+Aktivasi subscription tidak bergantung pada callback client
+Signature request dan notification menggunakan pola DOKU yang benar secara umum
+Prioritas tindak lanjut
+P0: Batasi webhook hanya untuk invoice PENDING yang belum expired dan tambahkan replay protection.
+P0: Pastikan migration DOKU pada database target tidak berstatus failed.
+P0: Konfirmasi kredensial DOKU Checkout di dashboard: Client ID, Secret Key, mode sandbox/production.
+P1: Perbaiki return flow frontend agar ?payment=doku memulai polling 10 × 3 detik.
+P1: Jalankan pengujian sandbox untuk success, failed, expired, duplicate, signature invalid, dan nominal mismatch.
+P1: Perbaiki race condition pembuatan invoice.
+P2: Pisahkan dan lengkapi test khusus webhook DOKU.
+Tidak ada kode, database, dependency, secret, atau konfigurasi yang diubah selama audit.
+
+
+Worked for 29 seconds
+P0: Batasi webhook hanya untuk invoice PENDING yang belum expired dan tambahkan replay protection. P0: Pastikan migration DOKU pada database target tidak berstatus failed. P0: Konfirmasi kredensial DOKU Checkout di dashboard: Client ID, Secret Key, mode sandbox/production. P1: Perbaiki return flow frontend agar ?payment=doku memulai polling 10 × 3 detik. P1: Jalankan pengujian sandbox untuk success, failed, expired, duplicate, signature invalid, dan nominal mismatch. P1: Perbaiki race condition pembuatan invoice. P2: Pisahkan dan lengkapi test khusus webhook DOKU. ambil 2 pripotiras penting untuk dikerjakan terlebih dahulu. . berikan konfirmasi apabila sudah selesai, setiap modul/plan/priotiras tindaklanjut harus real work, tidak eror, terintegrasi dan full feature.
+
+20 minutes ago
+Saya akan mengambil dua prioritas pertama yang paling berdampak langsung ke keamanan dan pengalaman pembayaran:
+
+P0 — mengunci webhook DOKU: hanya invoice PENDING yang belum kedaluwarsa, plus perlindungan replay.
+P1 — menyelesaikan return flow frontend: ?payment=doku memulai polling server 10 kali setiap 3 detik.
+Saya tidak akan mengubah kredensial DOKU atau menjalankan transaksi nyata tanpa akses dashboard/credential yang sesuai. Setelah dua modul ini selesai, saya akan menjalankan test, typecheck, dan memulihkan workflow agar bisa diverifikasi.
+
+
+5 actions
+Saya mulai mengerjakan dua prioritas yang sudah dikonfirmasi: hardening webhook DOKU dan return flow billing. Saya juga akan menambahkan test regresi yang langsung mengunci perilaku tersebut, lalu memasang dependency project bila diperlukan untuk menjalankan verifikasi.
+
+
+7 actions
+Saya akan membuat hardening yang tidak mengubah kontrak provider: validasi timestamp webhook dengan jendela waktu, membatasi sukses hanya pada invoice PENDING yang belum expired, dan menjaga update tetap atomik. Di frontend, status return akan dikirim dari server page ke client agar tidak bergantung pada API tambahan, lalu polling berhenti saat subscription sudah aktif atau setelah 10 percobaan.
+
+
+10 actions
+Dependency pemasangan terblokir oleh kebijakan keamanan paket pada next-auth versi lama, jadi saya tidak akan mengganti versi atau melakukan migrasi library. Saya lanjutkan perubahan kode secara terfokus, kemudian verifikasi statis dan test yang dapat dijalankan di environment ini; hasil runtime akan saya laporkan apa adanya.
+
+
+12 actions
+Saat meninjau hardening awal, saya menemukan replay protection berbasis pencarian log masih memiliki celah race: dua notification identik yang datang bersamaan dapat sama-sama lolos sebelum log tersimpan. Agar P0 benar-benar kuat, saya akan menyimpan Request-Id webhook pada kolom unik di PaymentLog dan menangani konflik unique secara idempotent. Ini memerlukan satu perubahan schema/migration kecil yang tetap kompatibel dan tidak mengubah data invoice lama.
+
+
+4 actions
+Hardening schema dan webhook sudah terpasang; patch test hanya gagal karena posisi import di file berbeda dari konteks patch, bukan karena perubahan implementasi. Saya akan menambahkan test timestamp/replay helper pada lokasi yang tepat, lalu menjalankan pemeriksaan tipe, lint, test, dan restart workflow.
+
+
+6 actions
+Hardening P0 dan return flow P1 sudah diimplementasikan. Saya sedang menjalankan verifikasi terakhir; dependency project belum bisa dipasang karena package firewall memblokir next-auth@5.0.0-beta.31, jadi saya akan membedakan hasil verifikasi kode dari hasil yang tertahan oleh environment dan tidak akan menyatakan transaksi sandbox berhasil tanpa kredensial/dashboard DOKU.
+
+
+6 actions
+Implementasi dua prioritas sudah masuk, tetapi verifikasi penuh tertahan karena dependency lokal tidak tersedia dan pemasangan project diblokir package firewall pada next-auth@5.0.0-beta.31. Saya akan melakukan pengecekan akhir terhadap consistency schema/type dan mencoba verifikasi yang tidak memerlukan instalasi ulang; bila tetap tertahan, saya akan menyampaikan blocker secara eksplisit, bukan menandai modul “lulus” secara semu.
+
+
+Show less
+
+Found files
+
+Viewed code changes
+
+Processed text
+
+Read next-env.d.ts
+Evaluating invoice statuses
+
+Evaluating invoice statuses
+Considering database queries
+
+Considering database queries
+Saya menemukan satu hal penting sebelum menyatakan selesai: perubahan schema replay protection sudah dibuat, tetapi status migration database perlu diverifikasi langsung agar P0 kedua benar-benar tertutup. Saya akan membaca status _prisma_migrations secara read-only, lalu mencoba restart workflow; saya tidak akan menjalankan migrasi atau mengubah database tanpa jalur deployment yang didukung.
+
+
+Show less
+
+Status migration database diverifikasi
+
+Ran SELECT migration_name, finished_at, rolled_back_at, applied_steps_count, LEFT(COALESCE(logs, ''), 240) AS logs FROM "_prisma_migrations" WHERE migration_name ILIKE '%doku%' OR migration_name ILIKE '%webhook%' ORDER BY started_at DESC;
+Managing payment transactions
+
+Managing payment transactions
+Simplifying notification handling
+
+Simplifying notification handling
+Database check menunjukkan development database saat ini belum memiliki tabel _prisma_migrations, jadi saya tidak akan mengklaim migration “sudah applied”. Saya juga menemukan celah reliabilitas kecil: jika log replay dibuat sebelum transaksi aktivasi lalu transaksi gagal, retry dengan Request-Id sama bisa tertolak. Saya akan menutup celah itu dengan memasukkan pencatatan log dan perubahan state sukses ke transaksi atomik sebelum verifikasi akhir.
+
+
+2 actions
+Saya sedang melakukan pemeriksaan akhir setelah perubahan atomik webhook. Fokusnya memastikan tidak ada kurung/tipe yang rusak, setiap jalur status mencatat Request-Id dengan benar, dan polling frontend berhenti pada status sukses atau batas 10 percobaan. Setelah itu saya restart workflow untuk mendapatkan hasil runtime terbaru.
+
+
+4 actions
+Saya menemukan bahwa pemasangan dependency tidak hanya gagal, tetapi juga mengubah metadata .replit; perubahan itu tidak diperlukan untuk dua prioritas ini dan akan saya kembalikan agar scope tetap bersih. Setelah itu saya akan restart workflow dan cek log terbaru.
+
+
+7 actions
+Saya menghapus perubahan .replit yang tidak terkait akibat percobaan instalasi dependency. File aplikasi dan migration tetap dipertahankan. Setelah itu saya akan mencoba verifikasi dengan toolchain minimal yang tidak menarik dependency terblokir, lalu restart workflow.
+
+Exploring file handling
+
+Exploring file handling
+Percobaan mengembalikan .replit lewat edit biasa ditolak oleh aturan konfigurasi platform. Saya akan mengembalikannya melalui jalur validasi konfigurasi resmi, lalu menjalankan restart workflow dan pemeriksaan akhir.
+
+
+4 actions
+Konfigurasi sudah dikembalikan tanpa perubahan sampingan. Saya akan restart workflow sekarang untuk memeriksa apakah aplikasi bisa boot setelah perubahan; jika tetap gagal, saya akan mencatatnya sebagai blocker dependency environment, bukan menutupi hasil verifikasi.
+
+
+2 actions
+Workflow tetap gagal karena next tidak tersedia di environment, bukan karena logika perubahan yang baru dibuat. Saya akan mengambil log terbaru dan melakukan pemeriksaan read-only terhadap tabel/migration database agar status P0 bisa disampaikan akurat.
+
+
+7 actions
+Verifikasi read-only terakhir menunjukkan development database belum memiliki tabel aplikasi maupun _prisma_migrations, jadi tidak ada migration DOKU yang bisa saya nyatakan “applied” atau “failed” di environment ini. Kode hardening tetap sudah dibuat, tetapi penerapan migration harus dilakukan lewat alur database/deployment project. Saya merapikan test regresi terakhir dan menutup audit implementasi dengan status verifikasi yang jujur.
+
+
+3 actions
+Dua prioritas yang dipilih sudah dikerjakan pada kode. Saya melakukan verifikasi penutup sekarang: memastikan diff bersih, migration baru konsisten dengan schema, dan mencatat blocker environment secara eksplisit agar hasil akhir tidak mengklaim test/runtime yang belum benar-benar berjalan.
+
+
+Show less
+
+Viewed code changes
+
+Searched for "providerRequestId|valid…"
+
+Viewed code changes
+
+Printed text
+Clarifying task priorities
+
+Clarifying task priorities
+Saya menemukan satu perubahan sampingan dari percobaan instalasi dependency yang masih tertinggal di .replit (postgresql-16). Itu bukan bagian dari pekerjaan pembayaran dan tidak boleh ikut masuk. Saya akan mengembalikannya melalui validasi konfigurasi resmi, lalu memberikan konfirmasi final beserta batas verifikasi yang memang tertahan oleh environment.
+
+
+Processed text
+Saya sedang menghapus perubahan konfigurasi sampingan terakhir dari percobaan setup dependency. Setelah itu tidak ada perubahan non-pembayaran yang tersisa; saya akan menyelesaikan dengan ringkasan implementasi, hasil verifikasi, dan blocker environment yang transparan.
+
+
+Show less
+
+Konfigurasi dikembalikan dengan validasi
+Addressing migration and dashboard credentials
+
+Addressing migration and dashboard credentials
+Patching memory topics
+
+Patching memory topics
+Implementasi dua prioritas sudah selesai. Saya melakukan pengecekan final terhadap konfigurasi dan diff agar tidak ada perubahan sampingan; saya juga akan menyimpan keputusan hardening DOKU yang bersifat permanen untuk pekerjaan berikutnya.
+
+
+Show less
+
+Checked git status
+
+Searched for "modules"
+
+Viewed code changes
+
+Read .agents/memory/doku-checkout.md
+Finalizing implementation details
+
+Finalizing implementation details
+Storing memory instructions
+
+Storing memory instructions
+Dua prioritas terpilih sudah selesai diimplementasikan. Saya akan menyimpan keputusan hardening webhook sebagai catatan permanen, lalu memberikan konfirmasi akhir dengan pemisahan jelas antara bagian yang sudah selesai dan bagian yang belum bisa divalidasi karena dependency/database environment.
+
+
+Show less
+[MemoryUpdated]
+Clarifying migration priorities
+
+Clarifying migration priorities
+Updating implementation status
+
+Updating implementation status
+Konfirmasi progres 2 prioritas
+Dua prioritas yang dipilih sudah dikerjakan pada source code dan sudah diintegrasikan ke alur pembayaran.
+
+1. P0 — Hardening Webhook DOKU
+Sudah diterapkan:
+
+Webhook hanya dapat mengaktifkan invoice dengan:
+status = PENDING
+expiredAt > waktu sekarang
+Invoice yang sudah expired tidak dapat berubah menjadi PAID
+Notification dengan timestamp di luar toleransi 10 menit ditolak
+Request-Id DOKU disimpan pada PaymentLog
+Request-Id dibuat unique untuk mencegah replay dan duplicate notification paralel
+Pencatatan log dan update pembayaran sukses diproses dalam transaksi atomik
+Konflik unique P2002 diperlakukan sebagai duplicate yang aman
+Nominal pembayaran tetap divalidasi sebelum aktivasi subscription
+Aktivasi subscription tetap hanya berasal dari webhook server-to-server
+File terkait:
+
+src/app/api/webhooks/doku/route.ts
+src/lib/doku.ts
+prisma/schema.prisma
+prisma/migrations/20260724000000_add_doku_webhook_request_id/migration.sql
+Test helper juga ditambahkan untuk:
+
+Timestamp valid
+Timestamp terlalu lama
+Timestamp masa depan
+Timestamp invalid
+2. P1 — Return Flow Frontend DOKU
+Sudah diterapkan:
+
+Halaman billing sekarang membaca:
+?payment=doku
+?payment=cancelled
+Setelah kembali dari DOKU, frontend menampilkan status yang sesuai
+Jika masih ada invoice DOKU berstatus PENDING, polling otomatis dimulai
+Polling dilakukan:
+setiap 3 detik
+maksimal 10 kali
+Polling berhenti ketika:
+invoice tidak lagi PENDING
+subscription sudah diperbarui
+10 percobaan telah tercapai
+Frontend tidak pernah mengaktifkan subscription secara langsung
+File terkait:
+
+src/app/dashboard/billing/page.tsx
+src/app/dashboard/billing/billing-client.tsx
+Status verifikasi
+Berhasil diverifikasi
+git diff --check — tidak ada whitespace error
+Migration SQL replay protection tersedia
+Schema dan route menggunakan nama field yang konsisten
+Tidak ada perubahan credential atau secret
+Tidak ada perubahan konfigurasi DOKU dashboard
+Tidak ada perubahan di luar scope pembayaran
+Belum dapat diverifikasi karena blocker environment
+Workflow masih gagal dengan:
+
+next: not found
+
+Environment tidak memiliki:
+
+node_modules
+next
+tsc
+vitest
+eslint
+Percobaan instalasi dependency diblokir oleh package firewall karena dependency lama:
+
+next-auth@5.0.0-beta.31
+
+Database development juga belum memiliki tabel aplikasi maupun _prisma_migrations, sehingga migration DOKU belum dapat dikonfirmasi sudah diterapkan.
+
+Kesimpulan
+Implementasi kode untuk dua prioritas sudah selesai. Namun saya belum dapat menyatakan modul benar-benar “full feature tanpa error runtime” karena:
+
+Dependency project belum terpasang.
+Workflow tidak dapat start.
+Migration PaymentLog.providerRequestId belum diterapkan ke database.
+Belum ada pengujian sandbox DOKU dengan kredensial merchant.
+Migration wajib diterapkan sebelum webhook digunakan, karena route sekarang membutuhkan kolom:
+
+PaymentLog.providerRequestId
+
+Tanpa migration tersebut, webhook akan gagal saat menyimpan log notification.
+
+
+Checkpoint made
+13 minutes ago
+
+Worked for 6 minutes
+lanjutkan 1 prioritas yang lain, 1 saja.
+
+13 minutes ago
+
+3 actions
+Saya akan mengambil prioritas P1: memperbaiki race condition pembuatan invoice. Solusinya akan mengunci baris subscription keluarga selama proses checkout, sehingga dua klik/request paralel tidak dapat membuat dua invoice DOKU untuk periode dan plan yang sama. Saya juga akan menyelaraskan pencarian invoice dengan billing cycle, menambahkan test helper bila memungkinkan, lalu memverifikasi diff dan typecheck semampu environment.
+
+
+Show less
+
+Processed text
+
+Processed text
+
+Processed text
+
+Checked git status
+Addressing concurrency in user requests
+
+Addressing concurrency in user requests
+Addressing checkout issues
+
+Addressing checkout issues
+Evaluating server crash response
+
+Evaluating server crash response
+Considering transaction handling
+
+Considering transaction handling
+Considering serialization issues
+
+Considering serialization issues
+Identifying transaction issues
+
+Identifying transaction issues
+Race condition akan diperbaiki dengan database advisory lock per family space selama reservation invoice dan pemanggilan checkout DOKU, ditambah checkoutKey untuk membedakan plan/cycle. Dengan ini request paralel akan menunggu request pertama: jika URL sudah tersedia, request kedua memakai invoice yang sama; jika request pertama gagal, request kedua dapat membuat invoice baru tanpa duplikasi.
+
+
+4 actions
+Saya sudah mengimplementasikan penguncian per keluarga dan reservation key untuk checkout paralel. Sebelum verifikasi akhir, saya menemukan edge case penting pada invoice pending yang sudah expired: unique index dapat menghalangi invoice baru. Saya akan menandai invoice lama itu EXPIRED di dalam lock yang sama sebelum membuat reservation baru, lalu menjalankan pemeriksaan final.
+
+
+8 actions
+Race-condition fix sudah masuk. Saya akan melakukan verifikasi terakhir pada kontrak transaksi Prisma, migration SQL, diff, dan workflow. Jika toolchain tetap tidak tersedia, saya akan menyatakan dengan jelas bahwa verifikasi runtime tertahan oleh dependency environment—tanpa menganggap modul lulus secara semu.
+
+
+6 actions
+Perbaikan race condition sudah selesai secara kode. Saya melakukan verifikasi penutup sekarang dengan restart workflow dan pemeriksaan log; jika tetap gagal, penyebabnya adalah dependency environment yang sebelumnya sudah teridentifikasi (next belum tersedia), bukan perubahan race-condition ini.
+
+
+2 actions
+Perbaikan prioritas race condition sudah selesai. Saya akan mengambil log restart terakhir dan melakukan satu pemeriksaan akhir terhadap diff/migration; setelah itu saya konfirmasi status implementasi dan blocker verifikasi runtime secara eksplisit.
+
+
+4 actions
+Prioritas P1 — Race Condition Pembuatan Invoice Selesai
+Perbaikan sudah diterapkan pada alur pembuatan checkout DOKU.
+
+Yang sudah dikerjakan
+Menambahkan PostgreSQL advisory transaction lock per familySpace
+Menambahkan checkoutKey berdasarkan:
+keluarga
+plan
+billing cycle
+nominal
+Menambahkan unique partial index untuk invoice PENDING
+Request paralel sekarang:
+menunggu request pertama selesai
+menggunakan kembali payment URL yang sama jika sudah tersedia
+tidak membuat invoice duplikat
+Invoice pending yang sudah expired otomatis diubah menjadi EXPIRED
+Jika request DOKU gagal, invoice ditandai FAILED dan reservation dapat digunakan kembali
+Pencarian invoice sekarang membedakan plan dan billing cycle, sehingga invoice bulanan dan tahunan tidak tercampur
+File yang diubah
+src/actions/subscription.ts
+prisma/schema.prisma
+prisma/migrations/20260724010000_add_invoice_checkout_key/migration.sql
+Verifikasi
+git diff --check: berhasil
+Migration SQL sudah tersedia dan konsisten dengan schema
+Tidak ada perubahan secret atau konfigurasi DOKU
+Tidak ada perubahan di luar modul pembayaran
+Blocker environment
+Verifikasi runtime belum dapat dijalankan karena dependency project belum tersedia:
+
+next: not found
+tsc: unavailable
+vitest: unavailable
+
+Workflow juga masih gagal sebelum aplikasi dijalankan karena next belum terpasang.
+
+Migration baru perlu diterapkan sebelum fitur digunakan:
+
+prisma/migrations/20260724010000_add_invoice_checkout_key/migration.sql
+
+Jadi, implementasi race-condition fix sudah selesai, tetapi validasi end-to-end belum bisa dinyatakan lulus sampai dependency dan database project tersedia.
+
+
+Checkpoint made
+10 minutes ago
+
+Worked for 2 minutes
+lanjutkan
+
+10 minutes ago
+Planning Doku tests
+
+Planning Doku tests
+Saya lanjutkan satu prioritas berikutnya: P2 — memisahkan dan melengkapi test khusus webhook DOKU. Saya akan membuat test yang mencakup signature valid/invalid, timestamp replay, ekstraksi invoice/nominal/status, metode pembayaran, serta kontrak state webhook PENDING/expired/duplicate. Saya tidak akan mengklaim sandbox payment berhasil karena environment belum memiliki dependency dan kredensial DOKU.
+
+
+5 actions
+Saya akan menambahkan test suite terpisah untuk route webhook DOKU, bukan hanya helper signature. Test akan mengeksekusi handler dengan mock database/provider sehingga mencakup keputusan bisnis yang penting tanpa membutuhkan transaksi sandbox atau database nyata.
+
+
+2 actions
+Test suite route-level sudah ditambahkan. Saya akan menutup coverage status FAILED, lalu menjalankan pemeriksaan diff dan mencoba test suite yang tersedia; bila tetap tertahan karena dependency, saya akan melaporkannya sebagai blocker environment.
+
+
+2 actions
+Coverage test khusus webhook DOKU sudah ditambahkan untuk signature, replay timestamp, sukses, expired, nominal mismatch, gagal, dan duplicate Request-Id. Saya akan melakukan pemeriksaan akhir terhadap test/mocking dan diff, lalu mencoba menjalankan test jika toolchain tersedia.
+
+
+5 actions
+Suite test route-level sudah ada dan mencakup jalur utama. Saya akan menambahkan dua kasus batas terakhir—payload JSON invalid dan order DOKU tidak dikenal—agar webhook tidak hanya aman untuk transaksi valid, tetapi juga deterministik saat menerima request rusak atau order asing.
+
+
+Edited doku-webhook.test.ts
+Coverage test khusus webhook DOKU sudah lengkap dengan payload rusak dan unknown order. Saya akan melakukan verifikasi akhir: cek diff, restart workflow sesuai prosedur, dan membaca log terbaru. Test runner tetap akan saya jalankan hanya jika binary lokal tersedia.
+
+
+4 actions
+Suite test webhook DOKU sudah lengkap. Saya akan melakukan verifikasi penutup pada file test, diff, dan status workflow; karena perubahan terakhir hanya test, workflow tidak perlu dipaksa restart lagi selain memastikan blocker next tetap tercatat.
+
+
+4 actions
+Prioritas P2 — Test Khusus Webhook DOKU Selesai
+Test suite terpisah sudah dibuat di:
+
+src/__tests__/api/doku-webhook.test.ts
+
+Total terdapat 9 skenario test:
+
+Payload JSON rusak → 400
+Signature invalid → 403
+Timestamp notification terlalu lama → 403
+Unknown DOKU order tidak mengaktifkan subscription
+Invoice PENDING dan belum expired berhasil mengaktifkan subscription
+Invoice expired tidak mengaktifkan subscription
+Nominal mismatch → 400, tanpa update invoice
+Status pembayaran FAILED mengubah invoice menjadi FAILED
+Duplicate Request-Id → dianggap aman dan tidak menjalankan update kedua
+Test menggunakan mock untuk:
+
+Prisma
+Notification
+FCM push
+SSE
+Receipt email
+Dengan begitu pengujian route webhook tidak bergantung pada database produksi atau transaksi DOKU nyata.
+
+Status verifikasi
+git diff --check: berhasil
+Test suite sudah terpisah dari test Midtrans
+Tidak ada perubahan secret atau konfigurasi DOKU
+Tidak ada perubahan workflow atau database pada prioritas ini
+Blocker environment
+Test belum bisa dieksekusi karena dependency project belum tersedia:
+
+vitest unavailable
+tsc unavailable
+next not found
+
+Workflow masih gagal sebelum aplikasi berjalan karena:
+
+sh: 1: next: not found
+
+Jadi test code sudah dibuat lengkap, tetapi status “test lulus” belum dapat dikonfirmasi sampai dependency project dipasang kembali.
