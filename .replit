@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "bash", "web"]
+modules = ["nodejs-20", "bash", "web", "postgresql-16"]
 [agent]
 expertMode = true
 stack = "BEST_EFFORT_FALLBACK"
@@ -59,6 +59,8 @@ MIDTRANS_CLIENT_KEY = "Mid-client-90bGHR0yjUxazY_b"
 NEXT_PUBLIC_MERCHANT_NAME = "Joben Enterprise"
 NEXT_PUBLIC_NMID = "ID1026540599283"
 DOKU_IS_PRODUCTION = "false"
+CRON_SECRET = "dev-cron-secret-replit-misipintar-2026"
+DOKU_CLIENT_ID = "BRN-0272-1784742279828"
 
 [userenv.production]
 NODE_ENV = "production"
