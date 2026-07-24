@@ -253,6 +253,7 @@ model Invoice {
   amount          Int
   status          InvStatus    @default(PENDING)
   billingCycle    String?
+  checkoutKey     String?
   paymentProvider String       @default("MIDTRANS")
   providerInvoiceNumber String? @unique
   providerRequestId     String? @unique
@@ -273,6 +274,7 @@ model Invoice {
   @@index([providerTransactionId])
   @@index([midtransOrderId])
   @@index([status, expiredAt])
+  @@index([checkoutKey, status])
 }
 
 // ─── PAYMENT LOG ─────────────────────────────────────────
