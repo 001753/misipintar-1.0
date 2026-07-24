@@ -108,13 +108,22 @@ export default function BillingClient({
   }
 
   // PRD §4.5: Poll subscription status at most 10 times, every 3 seconds.
-  // Subscription activation still comes exclusively from the server webhook.
+  // Attempt 1 fires immediately (t=0) so the user gets feedback without
+  // waiting the full first interval. Attempts 2–10 fire at t=3,6,…,27 s.
+  // Subscription activation comes exclusively from the server webhook;
+  // polling only refreshes the server-component data until it reflects PAID.
   function startPolling() {
     if (pollingStartedRef.current) return;
     pollingStartedRef.current = true;
-    let attempts = 0;
+
     const MAX_ATTEMPTS = 10;
     const INTERVAL_MS = 3000;
+    let attempts = 0;
+
+    // Attempt 1: immediate refresh so the UI reflects the latest DB state
+    // as soon as possible after returning from DOKU Checkout.
+    attempts++;
+    router.refresh();
 
     pollRef.current = setInterval(() => {
       attempts++;
@@ -134,6 +143,20 @@ export default function BillingClient({
       (invoice) => invoice.paymentProvider === "DOKU" && invoice.status === "PENDING"
     ) ?? false;
 
+  // ── Effect 1: decide polling strategy on return from DOKU ─────────────────
+  // Deps: only paymentReturnState (a stable prop derived from the URL param).
+  // Intentionally excludes hasPendingDokuInvoice so this runs exactly once
+  // on mount and captures the initial server-rendered state — either the
+  // webhook already fired (hasPendingDokuInvoice = false) or it hasn't yet.
+  //
+  // Fast-webhook path (hasPendingDokuInvoice = false on mount):
+  //   The server component may have rendered microseconds before the webhook
+  //   updated the subscription record. We do one router.refresh() to ensure
+  //   the displayed data is current, then show the confirmation toast.
+  //
+  // Normal path (hasPendingDokuInvoice = true on mount):
+  //   The webhook hasn't fired yet. Start polling; Effect 2 stops it when
+  //   the invoice transitions out of PENDING.
   useEffect(() => {
     if (paymentReturnState === "cancelled") {
       setToast("Pembayaran dibatalkan. Tidak ada perubahan pada langganan.");
@@ -145,16 +168,27 @@ export default function BillingClient({
       setToast("Pembayaran diterima oleh DOKU. Menunggu konfirmasi pembayaran...");
       startPolling();
     } else {
-      setToast("Pembayaran DOKU sudah dikonfirmasi.");
+      // Webhook was faster than page render. One refresh guarantees fresh data.
+      router.refresh();
+      setToast("Pembayaran DOKU sudah dikonfirmasi. ✅");
     }
-  }, [paymentReturnState, hasPendingDokuInvoice]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentReturnState]);
 
+  // ── Effect 2: stop polling once payment is confirmed ──────────────────────
+  // Runs whenever hasPendingDokuInvoice changes (driven by router.refresh()).
+  // The pollingStartedRef guard ensures this effect does not interfere with
+  // the fast-webhook path where polling was never started.
   useEffect(() => {
-    if (paymentReturnState === "doku" && !hasPendingDokuInvoice) {
+    if (paymentReturnState !== "doku") return;
+    if (!pollingStartedRef.current) return; // polling was not started; skip
+    if (!hasPendingDokuInvoice) {
       stopPolling();
+      setToast("Pembayaran DOKU sudah dikonfirmasi. ✅");
     }
   }, [paymentReturnState, hasPendingDokuInvoice]);
 
+  // ── Effect 3: cleanup interval on unmount ─────────────────────────────────
   useEffect(() => {
     return () => {
       stopPolling();

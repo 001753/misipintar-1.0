@@ -88,14 +88,22 @@ export async function createCheckout(
         SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))
       `;
 
+      // Anchor a single "now" for the entire transaction so that all three
+      // date comparisons below (expire stale, find valid, set new expiry)
+      // use the same instant. Multiple Date() calls within the same async
+      // function can straddle millisecond or even second boundaries if the
+      // event loop yields between them, causing an invoice whose expiredAt
+      // falls exactly at the boundary to be missed by both queries.
+      const now = new Date();
+
       const subscription = await tx.subscription.upsert({
         where: { familySpaceId },
         create: {
           familySpaceId,
           planId: plan.id,
           status: "FREE",
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          currentPeriodStart: now,
+          currentPeriodEnd: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
         },
         update: {},
       });
@@ -106,7 +114,7 @@ export async function createCheckout(
         where: {
           checkoutKey,
           status: "PENDING",
-          expiredAt: { lte: new Date() },
+          expiredAt: { lte: now },
         },
         data: { status: "EXPIRED" },
       });
@@ -116,7 +124,7 @@ export async function createCheckout(
           checkoutKey,
           subscriptionId: subscription.id,
           status: "PENDING",
-          expiredAt: { gt: new Date() },
+          expiredAt: { gt: now },
           paymentProvider: "DOKU",
         },
         orderBy: { createdAt: "desc" },
@@ -137,7 +145,7 @@ export async function createCheckout(
         };
       }
 
-      const expiredAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const expiredAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       const invoice = await tx.invoice.create({
         data: {
           subscriptionId: subscription.id,
@@ -233,10 +241,21 @@ export async function createCheckout(
           orderId,
         };
       } catch (err: unknown) {
-        await tx.invoice.update({
-          where: { id: invoice.id },
-          data: { status: "FAILED" },
-        });
+        // Mark the invoice FAILED so the next checkout attempt can create a
+        // fresh one. The inner try-catch guards against the rare case where
+        // the Prisma transaction has already been aborted at the DB level
+        // (e.g. 30 s timeout) — in that scenario the update itself would
+        // throw, which must not hide the original error returned to the user.
+        try {
+          await tx.invoice.update({
+            where: { id: invoice.id },
+            data: { status: "FAILED" },
+          });
+        } catch {
+          // Transaction already aborted. The invoice stays PENDING and will
+          // be cleaned up by the stale-expiry updateMany on the next checkout
+          // attempt for the same checkoutKey.
+        }
         return {
           error:
             err instanceof Error ? err.message : "Gagal membuat transaksi DOKU.",
