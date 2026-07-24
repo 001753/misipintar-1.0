@@ -303,4 +303,79 @@ describe("POST /api/webhooks/doku", () => {
     expect(mocks.prisma.invoice.updateMany).not.toHaveBeenCalled();
     expect(mocks.prisma.subscription.update).not.toHaveBeenCalled();
   });
+
+  it("menangani notifikasi REFUND: invoice → REFUNDED, subscription → FREE, notifikasi terkirim", async () => {
+    mocks.prisma.invoice.findFirst.mockResolvedValue(makeInvoice({ status: "PAID" }));
+    mocks.prisma.invoice.updateMany.mockResolvedValue({ count: 1 });
+
+    const response = await POST(
+      makeRequest({
+        ...successPayload(),
+        transaction: { status: "REFUND" },
+      }) as never
+    );
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).message).toBe("OK");
+
+    // Invoice harus diubah ke REFUNDED — hanya jika masih PAID
+    expect(mocks.prisma.invoice.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "invoice-doku-test", status: "PAID" },
+        data: { status: "REFUNDED" },
+      })
+    );
+
+    // Subscription harus dikembalikan ke FREE
+    expect(mocks.prisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "subscription-doku-test" },
+        data: expect.objectContaining({ status: "FREE" }),
+      })
+    );
+
+    // Notifikasi in-app harus dibuat
+    expect(mocks.prisma.notification.create).toHaveBeenCalledTimes(1);
+    expect(mocks.prisma.notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ type: "SUBSCRIPTION_REFUNDED" }),
+      })
+    );
+  });
+
+  it("menangani notifikasi REFUNDED (alias): subscription di-downgrade ke FREE", async () => {
+    mocks.prisma.invoice.findFirst.mockResolvedValue(makeInvoice({ status: "PAID" }));
+    mocks.prisma.invoice.updateMany.mockResolvedValue({ count: 1 });
+
+    const response = await POST(
+      makeRequest({
+        ...successPayload(),
+        transaction: { status: "REFUNDED" },
+      }) as never
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.prisma.subscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "FREE", cancelReason: "Refund dari DOKU" }),
+      })
+    );
+  });
+
+  it("refund duplicate Request-Id tidak menjalankan update kedua", async () => {
+    mocks.prisma.invoice.findFirst.mockResolvedValue(makeInvoice({ status: "PAID" }));
+    const duplicateError = Object.assign(new Error("unique"), { code: "P2002" });
+    // paymentLog.create di dalam transaction lempar duplicate
+    mocks.prisma.$transaction.mockRejectedValue(duplicateError);
+
+    const response = await POST(
+      makeRequest({
+        ...successPayload(),
+        transaction: { status: "REFUND" },
+      }) as never
+    );
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).message).toBe("OK — duplicate notification");
+  });
 });

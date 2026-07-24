@@ -453,15 +453,62 @@ export async function manualRefundInvoice(
 ): Promise<ActionResult<null>> {
   const { adminId, ip } = await requireSuperAdmin();
 
-  const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId } });
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    include: {
+      subscription: {
+        include: {
+          familySpace: { select: { id: true, name: true, ownerId: true } },
+          plan: { select: { name: true } },
+        },
+      },
+    },
+  });
   if (!invoice) return { success: false, error: "Invoice tidak ditemukan." };
   if (invoice.status !== "PAID") {
     return { success: false, error: "Hanya invoice PAID yang bisa direfund." };
   }
 
-  await prisma.invoice.update({
-    where: { id: invoiceId },
-    data: { status: "REFUNDED" },
+  const familySpace = invoice.subscription.familySpace;
+  const planName = invoice.subscription.plan.name;
+  const now = new Date();
+
+  // Atomic: update invoice + downgrade subscription + catat PaymentLog + kirim notifikasi
+  await prisma.$transaction(async (tx) => {
+    await tx.invoice.update({
+      where: { id: invoiceId },
+      data: { status: "REFUNDED" },
+    });
+
+    // Kembalikan subscription ke FREE
+    await tx.subscription.update({
+      where: { id: invoice.subscriptionId },
+      data: {
+        status: "FREE",
+        cancelAtPeriodEnd: false,
+        cancelReason: "Refund oleh admin",
+      },
+    });
+
+    // Catat di PaymentLog sebagai audit trail pembayaran
+    await tx.paymentLog.create({
+      data: {
+        invoiceId: invoice.id,
+        event: "MANUAL_REFUND",
+        rawPayload: { adminId, refundedAt: now.toISOString() },
+      },
+    });
+
+    // Kirim notifikasi in-app ke parent
+    await tx.notification.create({
+      data: {
+        familySpaceId: familySpace.id,
+        userId: familySpace.ownerId,
+        title: "Refund Diproses 💸",
+        body: `Refund untuk langganan ${planName} keluarga ${familySpace.name} sudah diproses. Langganan kembali ke paket Gratis.`,
+        type: "SUBSCRIPTION_REFUNDED",
+      },
+    });
   });
 
   await writeAuditLog({
@@ -470,10 +517,11 @@ export async function manualRefundInvoice(
     action: "MANUAL_REFUND",
     targetType: "Invoice",
     targetId: invoiceId,
-    before: { status: invoice.status, amount: invoice.amount },
-    after: { status: "REFUNDED" },
+    before: { status: invoice.status, amount: invoice.amount, subscriptionStatus: invoice.subscription.status },
+    after: { status: "REFUNDED", subscriptionStatus: "FREE" },
   });
 
+  revalidatePath("/superadmin/payments");
   return { success: true, data: null };
 }
 

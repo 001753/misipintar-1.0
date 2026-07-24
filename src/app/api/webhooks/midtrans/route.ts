@@ -225,12 +225,53 @@ export async function POST(req: NextRequest) {
 
     // Status FAILED/EXPIRED tersimpan di PaymentLog
   } else if (isRefund) {
-    await prisma.invoice.update({
-      where: { id: invoice.id },
-      data: { status: "REFUNDED" },
-    });
+    const familySpace = invoice.subscription.familySpace;
+    const planName = invoice.subscription.plan.name;
 
-    // Status REFUNDED tersimpan di PaymentLog
+    await prisma.$transaction([
+      prisma.invoice.update({
+        where: { id: invoice.id },
+        data: { status: "REFUNDED" },
+      }),
+      // Kembalikan subscription ke FREE
+      prisma.subscription.update({
+        where: { id: invoice.subscriptionId },
+        data: {
+          status: "FREE",
+          cancelAtPeriodEnd: false,
+          cancelReason: "Refund dari Midtrans",
+        },
+      }),
+      prisma.notification.create({
+        data: {
+          familySpaceId: familySpace.id,
+          userId: familySpace.ownerId,
+          title: "Refund Diproses 💸",
+          body: `Refund untuk langganan ${planName} keluarga ${familySpace.name} sudah diproses. Langganan kembali ke paket Gratis.`,
+          type: "SUBSCRIPTION_REFUNDED",
+        },
+      }),
+    ]);
+
+    // Notifikasi push non-fatal
+    try {
+      await incrementUnreadBadge(familySpace.ownerId);
+      await publishToFamily(familySpace.id, {
+        type: "subscription_refunded",
+        payload: { planName },
+      });
+      const tokens = await getUserFcmTokens(familySpace.ownerId);
+      if (tokens.length > 0) {
+        const notifTitle = "Refund Diproses 💸";
+        const notifBody = `Refund untuk langganan ${planName} keluarga ${familySpace.name} sudah diproses.`;
+        await sendPushNotification(tokens, notifTitle, notifBody, {
+          type: "SUBSCRIPTION_REFUNDED",
+          planName,
+        });
+      }
+    } catch (notifErr) {
+      console.error("[Webhook] Refund notification error (non-fatal):", notifErr);
+    }
   }
 
   return NextResponse.json({ message: "OK" });

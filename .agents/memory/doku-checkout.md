@@ -20,3 +20,9 @@ Checkout creation uses a per-family PostgreSQL advisory transaction lock plus a 
 **Why:** A read-then-create idempotency check is not safe for parallel clicks, and stale pending rows otherwise block replacement invoices under a partial unique index.
 
 **How to apply:** Keep provider checkout creation inside the guarded reservation flow; reuse an existing URL, report an in-progress reservation, or create a replacement only after stale pending rows are expired.
+
+Refund events from DOKU arrive when the invoice is already PAID. The PAID early-exit idempotency guard must NOT apply to refund events — resolve `isRefund` before the guard and skip it when true. Refund handler atomically: (1) mark invoice REFUNDED (only if PAID), (2) downgrade subscription to FREE, (3) create SUBSCRIPTION_REFUNDED notification; then fire FCM/SSE non-fatally. Amount validation is also skipped for refund events.
+
+`manualRefundInvoice` in `src/actions/admin.ts` does the same atomic triple in a transaction, writes to AdminAuditLog, and calls `revalidatePath`. Both DOKU and Midtrans webhooks now include subscription downgrade and push notification on refund.
+
+**Why:** Without the subscription downgrade a refunded user retains PRO/EDUCATOR access; without the guard restructure the refund webhook never reaches its handler.

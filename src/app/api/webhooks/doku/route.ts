@@ -94,7 +94,16 @@ export async function POST(req: NextRequest) {
   const receivedAmount = extractDokuAmount(payload);
   const payMethod = resolveDokuPaymentMethod(payload);
 
-  if (invoice.status === "PAID") {
+  const isSuccess = status === "SUCCESS" || status === "SETTLEMENT";
+  const isExpired = status === "EXPIRED" || status === "ORDER_EXPIRED";
+  const isFailure = status === "FAILED" || status === "FAILURE" || status === "CANCEL";
+  // Refund events arrive AFTER the invoice is already PAID, so this check
+  // must be resolved before the PAID early-exit guard below.
+  const isRefund = status === "REFUND" || status === "REFUNDED" || status === "PARTIAL_REFUND";
+
+  // Already-processed guard: idempotent no-op for non-refund events on a paid invoice.
+  // Refund events are intentionally excluded — they must be able to process a PAID invoice.
+  if (invoice.status === "PAID" && !isRefund) {
     try {
       await prisma.paymentLog.create({
         data: {
@@ -113,7 +122,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "OK — already processed" });
   }
 
-  if (receivedAmount === null || receivedAmount !== invoice.amount) {
+  // Amount validation is only meaningful for payment events (not refunds).
+  if (!isRefund && (receivedAmount === null || receivedAmount !== invoice.amount)) {
     try {
       await prisma.paymentLog.create({
         data: {
@@ -132,10 +142,6 @@ export async function POST(req: NextRequest) {
     console.warn(`[DOKU webhook] Amount mismatch for ${invoiceNumber}`);
     return NextResponse.json({ message: "Amount mismatch" }, { status: 400 });
   }
-
-  const isSuccess = status === "SUCCESS" || status === "SETTLEMENT";
-  const isExpired = status === "EXPIRED" || status === "ORDER_EXPIRED";
-  const isFailure = status === "FAILED" || status === "FAILURE" || status === "CANCEL";
 
   if (isSuccess) {
     const plan = invoice.subscription.plan;
@@ -272,6 +278,74 @@ export async function POST(req: NextRequest) {
       }).catch((error) =>
         console.error("[DOKU webhook] Receipt email error (non-fatal):", error)
       );
+    }
+  } else if (isRefund) {
+    // ── Refund: kembalikan subscription ke FREE, catat log ──────────────────
+    const familySpace = invoice.subscription.familySpace;
+    const planName = invoice.subscription.plan.name;
+    const notifTitle = "Refund Diproses 💸";
+    const notifBody = `Refund untuk langganan ${planName} keluarga ${familySpace.name} sudah diproses. Langganan kembali ke paket Gratis.`;
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.paymentLog.create({
+          data: {
+            invoiceId: invoice.id,
+            providerRequestId: requestId,
+            event: `DOKU:${status}`,
+            rawPayload: payload as import("@prisma/client").Prisma.InputJsonValue,
+          },
+        });
+
+        // Hanya downgrade jika invoice saat ini masih PAID
+        await tx.invoice.updateMany({
+          where: { id: invoice.id, status: "PAID" },
+          data: { status: "REFUNDED" },
+        });
+
+        // Kembalikan subscription ke FREE
+        await tx.subscription.update({
+          where: { id: invoice.subscriptionId },
+          data: {
+            status: "FREE",
+            cancelAtPeriodEnd: false,
+            cancelReason: "Refund dari DOKU",
+          },
+        });
+
+        await tx.notification.create({
+          data: {
+            familySpaceId: familySpace.id,
+            userId: familySpace.ownerId,
+            title: notifTitle,
+            body: notifBody,
+            type: "SUBSCRIPTION_REFUNDED",
+          },
+        });
+      });
+    } catch (error: unknown) {
+      if (isUniqueConstraintError(error)) {
+        return NextResponse.json({ message: "OK — duplicate notification" });
+      }
+      throw error;
+    }
+
+    // Notifikasi non-fatal (push + SSE)
+    try {
+      await incrementUnreadBadge(familySpace.ownerId);
+      await publishToFamily(familySpace.id, {
+        type: "subscription_refunded",
+        payload: { planName },
+      });
+      const tokens = await getUserFcmTokens(familySpace.ownerId);
+      if (tokens.length > 0) {
+        await sendPushNotification(tokens, notifTitle, notifBody, {
+          type: "SUBSCRIPTION_REFUNDED",
+          planName,
+        });
+      }
+    } catch (error) {
+      console.error("[DOKU webhook] Refund notification error (non-fatal):", error);
     }
   } else if (isExpired || isFailure) {
     try {
