@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
       updateMany: vi.fn(),
     },
     paymentLog: {
+      findFirst: vi.fn(), // replay protection early-exit check
       create: vi.fn(),
     },
     subscription: {
@@ -60,7 +61,7 @@ function makeInvoice(overrides: Record<string, unknown> = {}) {
     paymentProvider: "DOKU",
     providerInvoiceNumber: "DOKU-TEST-001",
     providerRequestId: null,
-    expiredAt: new Date(Date.now() + 60 * 60 * 1000),
+    expiredAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
     createdAt: new Date("2026-07-24T01:00:00.000Z"),
     subscriptionId: "subscription-doku-test",
     subscription: {
@@ -135,6 +136,7 @@ describe("POST /api/webhooks/doku", () => {
 
     mocks.prisma.invoice.findFirst.mockReset();
     mocks.prisma.invoice.updateMany.mockReset();
+    mocks.prisma.paymentLog.findFirst.mockReset();
     mocks.prisma.paymentLog.create.mockReset();
     mocks.prisma.subscription.update.mockReset();
     mocks.prisma.notification.create.mockReset();
@@ -145,6 +147,9 @@ describe("POST /api/webhooks/doku", () => {
     mocks.publishToFamily.mockReset();
     mocks.incrementUnreadBadge.mockReset();
     mocks.sendReceiptEmail.mockReset();
+
+    // Default: no replay match (Request-Id not seen before)
+    mocks.prisma.paymentLog.findFirst.mockResolvedValue(null);
 
     mocks.prisma.paymentLog.create.mockResolvedValue({});
     mocks.prisma.subscription.update.mockResolvedValue({});
@@ -165,6 +170,8 @@ describe("POST /api/webhooks/doku", () => {
     );
   });
 
+  // ── Pre-DB validation ───────────────────────────────────────────────────────
+
   it("mengembalikan 400 untuk payload JSON yang rusak", async () => {
     const response = await POST(
       new Request(`http://localhost${REQUEST_TARGET}`, {
@@ -175,6 +182,7 @@ describe("POST /api/webhooks/doku", () => {
 
     expect(response.status).toBe(400);
     expect((await response.json()).message).toBe("Invalid JSON");
+    expect(mocks.prisma.paymentLog.findFirst).not.toHaveBeenCalled();
     expect(mocks.prisma.invoice.findFirst).not.toHaveBeenCalled();
   });
 
@@ -184,6 +192,7 @@ describe("POST /api/webhooks/doku", () => {
     const response = await POST(request as never);
 
     expect(response.status).toBe(403);
+    expect(mocks.prisma.paymentLog.findFirst).not.toHaveBeenCalled();
     expect(mocks.prisma.invoice.findFirst).not.toHaveBeenCalled();
   });
 
@@ -195,8 +204,91 @@ describe("POST /api/webhooks/doku", () => {
 
     expect(response.status).toBe(403);
     expect((await response.json()).message).toBe("Expired notification");
+    expect(mocks.prisma.paymentLog.findFirst).not.toHaveBeenCalled();
     expect(mocks.prisma.invoice.findFirst).not.toHaveBeenCalled();
   });
+
+  // ── P0: Replay protection (early-exit) ─────────────────────────────────────
+
+  it("P0 replay: memblokir request dengan Request-Id yang sudah ada sebelum invoice lookup", async () => {
+    // paymentLog.findFirst menemukan log yang sudah ada → early-exit
+    mocks.prisma.paymentLog.findFirst.mockResolvedValue({ id: "existing-log-001" });
+
+    const response = await POST(makeRequest(successPayload()) as never);
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).message).toBe("OK — duplicate notification");
+    // Early-exit: invoice.findFirst tidak boleh dipanggil sama sekali
+    expect(mocks.prisma.invoice.findFirst).not.toHaveBeenCalled();
+    expect(mocks.prisma.invoice.updateMany).not.toHaveBeenCalled();
+    expect(mocks.prisma.subscription.update).not.toHaveBeenCalled();
+  });
+
+  it("P0 replay: replay protection menggunakan providerRequestId dari header Request-Id", async () => {
+    mocks.prisma.paymentLog.findFirst.mockResolvedValue({ id: "existing-log-002" });
+
+    await POST(makeRequest(successPayload(), { requestId: "my-specific-request-id" }) as never);
+
+    expect(mocks.prisma.paymentLog.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { providerRequestId: "my-specific-request-id" },
+        select: { id: true },
+      })
+    );
+  });
+
+  // ── P0: Status-filtered invoice lookup ─────────────────────────────────────
+
+  it("P0 filter: invoice lookup untuk event payment menggunakan filter status PENDING + expiredAt > now", async () => {
+    mocks.prisma.invoice.findFirst.mockResolvedValue(null);
+
+    await POST(makeRequest(successPayload()) as never);
+
+    expect(mocks.prisma.invoice.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: "PENDING",
+          expiredAt: expect.objectContaining({ gt: expect.any(Date) }),
+        }),
+      })
+    );
+  });
+
+  it("P0 filter: invoice lookup untuk event REFUND menggunakan filter status PAID", async () => {
+    mocks.prisma.invoice.findFirst.mockResolvedValue(null);
+
+    await POST(
+      makeRequest({
+        ...successPayload(),
+        transaction: { status: "REFUND" },
+      }) as never
+    );
+
+    expect(mocks.prisma.invoice.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: "PAID" }),
+      })
+    );
+  });
+
+  it("P0 filter: invoice lookup untuk event REFUNDED (alias) menggunakan filter status PAID", async () => {
+    mocks.prisma.invoice.findFirst.mockResolvedValue(null);
+
+    await POST(
+      makeRequest({
+        ...successPayload(),
+        transaction: { status: "REFUNDED" },
+      }) as never
+    );
+
+    expect(mocks.prisma.invoice.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: "PAID" }),
+      })
+    );
+  });
+
+  // ── Unknown / ineligible order ──────────────────────────────────────────────
 
   it("mengakui invoice DOKU yang tidak dikenal tanpa aktivasi", async () => {
     mocks.prisma.invoice.findFirst.mockResolvedValue(null);
@@ -208,6 +300,39 @@ describe("POST /api/webhooks/doku", () => {
     expect(mocks.prisma.paymentLog.create).not.toHaveBeenCalled();
     expect(mocks.prisma.subscription.update).not.toHaveBeenCalled();
   });
+
+  it("P0 filter: notifikasi SUCCESS terlambat untuk invoice expired/failed dikembalikan sebagai unknown order tanpa aktivasi", async () => {
+    // Filter status:PENDING + expiredAt > now tidak menemukan invoice expired →
+    // findFirst mengembalikan null, handler harus berhenti di "unknown order".
+    mocks.prisma.invoice.findFirst.mockResolvedValue(null);
+
+    const response = await POST(makeRequest(successPayload()) as never);
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).message).toBe("OK — unknown order");
+    // Tidak ada mutasi apapun yang boleh terjadi
+    expect(mocks.prisma.paymentLog.create).not.toHaveBeenCalled();
+    expect(mocks.prisma.invoice.updateMany).not.toHaveBeenCalled();
+    expect(mocks.prisma.subscription.update).not.toHaveBeenCalled();
+  });
+
+  it("P0 filter: notifikasi REFUND untuk invoice yang bukan PAID dikembalikan sebagai unknown order", async () => {
+    // Invoice PENDING tidak cocok dengan filter status:PAID untuk refund events
+    mocks.prisma.invoice.findFirst.mockResolvedValue(null);
+
+    const response = await POST(
+      makeRequest({
+        ...successPayload(),
+        transaction: { status: "REFUND" },
+      }) as never
+    );
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).message).toBe("OK — unknown order");
+    expect(mocks.prisma.subscription.update).not.toHaveBeenCalled();
+  });
+
+  // ── Success flow ────────────────────────────────────────────────────────────
 
   it("mengaktifkan subscription hanya dari invoice PENDING yang belum expired", async () => {
     mocks.prisma.invoice.findFirst.mockResolvedValue(makeInvoice());
@@ -235,19 +360,20 @@ describe("POST /api/webhooks/doku", () => {
     expect(mocks.prisma.notification.create).toHaveBeenCalledTimes(1);
   });
 
-  it("tidak mengaktifkan subscription jika invoice sudah expired", async () => {
-    mocks.prisma.invoice.findFirst.mockResolvedValue(
-      makeInvoice({ expiredAt: new Date(Date.now() - 1000) })
-    );
+  it("tidak mengaktifkan subscription jika invoice expired dalam narrow window (updateMany count=0)", async () => {
+    // findFirst menemukan PENDING invoice (masih dalam filter), tapi antara
+    // findFirst dan updateMany invoice sempat expired (race condition narrow window).
+    mocks.prisma.invoice.findFirst.mockResolvedValue(makeInvoice());
     mocks.prisma.invoice.updateMany
-      .mockResolvedValueOnce({ count: 0 })
-      .mockResolvedValueOnce({ count: 1 });
+      .mockResolvedValueOnce({ count: 0 }) // lock gagal → invoice sudah berubah
+      .mockResolvedValueOnce({ count: 1 }); // mark EXPIRED
 
     const response = await POST(makeRequest(successPayload()) as never);
 
     expect(response.status).toBe(200);
     expect((await response.json()).message).toBe("OK — already processed");
     expect(mocks.prisma.subscription.update).not.toHaveBeenCalled();
+    // Harus mencoba mark EXPIRED
     expect(mocks.prisma.invoice.updateMany).toHaveBeenLastCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
@@ -259,6 +385,8 @@ describe("POST /api/webhooks/doku", () => {
     );
   });
 
+  // ── Amount mismatch ─────────────────────────────────────────────────────────
+
   it("menolak nominal mismatch dan tidak mengubah invoice", async () => {
     mocks.prisma.invoice.findFirst.mockResolvedValue(makeInvoice());
 
@@ -269,6 +397,8 @@ describe("POST /api/webhooks/doku", () => {
     expect(mocks.prisma.invoice.updateMany).not.toHaveBeenCalled();
     expect(mocks.prisma.subscription.update).not.toHaveBeenCalled();
   });
+
+  // ── Failure / Expired events ────────────────────────────────────────────────
 
   it("menandai invoice FAILED untuk notification pembayaran gagal", async () => {
     mocks.prisma.invoice.findFirst.mockResolvedValue(makeInvoice());
@@ -291,7 +421,46 @@ describe("POST /api/webhooks/doku", () => {
     expect(mocks.prisma.subscription.update).not.toHaveBeenCalled();
   });
 
-  it("mengakui duplicate Request-Id tanpa menjalankan update kedua", async () => {
+  it("menandai invoice EXPIRED untuk notification ORDER_EXPIRED dari DOKU", async () => {
+    mocks.prisma.invoice.findFirst.mockResolvedValue(makeInvoice());
+
+    const response = await POST(
+      makeRequest({
+        ...successPayload(),
+        transaction: { status: "ORDER_EXPIRED" },
+      }) as never
+    );
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).message).toBe("OK");
+    expect(mocks.prisma.invoice.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "invoice-doku-test", status: { not: "PAID" } },
+        data: expect.objectContaining({ status: "EXPIRED" }),
+      })
+    );
+    expect(mocks.prisma.subscription.update).not.toHaveBeenCalled();
+  });
+
+  // ── Duplicate / idempotency ─────────────────────────────────────────────────
+
+  it("mengakui duplicate Request-Id via early-exit tanpa menyentuh invoice", async () => {
+    // Simulasi: paymentLog.findFirst menemukan request-id yang sudah ada
+    mocks.prisma.paymentLog.findFirst.mockResolvedValue({ id: "seen-before" });
+
+    const response = await POST(makeRequest(successPayload()) as never);
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).message).toBe("OK — duplicate notification");
+    expect(mocks.prisma.invoice.findFirst).not.toHaveBeenCalled();
+    expect(mocks.prisma.invoice.updateMany).not.toHaveBeenCalled();
+    expect(mocks.prisma.subscription.update).not.toHaveBeenCalled();
+  });
+
+  it("fallback idempotency: unique constraint dalam transaction mencegah aktivasi ganda (concurrent arrival race)", async () => {
+    // Simulasi race condition: dua request dengan Request-Id sama tiba bersamaan,
+    // keduanya lolos early-exit (paymentLog.findFirst = null), lalu satu kalah
+    // di dalam transaction karena unique constraint pada paymentLog.providerRequestId.
     mocks.prisma.invoice.findFirst.mockResolvedValue(makeInvoice());
     const duplicateError = Object.assign(new Error("unique"), { code: "P2002" });
     mocks.prisma.paymentLog.create.mockRejectedValue(duplicateError);
@@ -304,7 +473,10 @@ describe("POST /api/webhooks/doku", () => {
     expect(mocks.prisma.subscription.update).not.toHaveBeenCalled();
   });
 
+  // ── Refund flow ─────────────────────────────────────────────────────────────
+
   it("menangani notifikasi REFUND: invoice → REFUNDED, subscription → FREE, notifikasi terkirim", async () => {
+    // findFirst harus mengembalikan invoice berstatus PAID (sesuai filter refund)
     mocks.prisma.invoice.findFirst.mockResolvedValue(makeInvoice({ status: "PAID" }));
     mocks.prisma.invoice.updateMany.mockResolvedValue({ count: 1 });
 
@@ -377,5 +549,25 @@ describe("POST /api/webhooks/doku", () => {
 
     expect(response.status).toBe(200);
     expect((await response.json()).message).toBe("OK — duplicate notification");
+  });
+
+  // ── Timestamp consistency ───────────────────────────────────────────────────
+
+  it("menggunakan satu nilai 'now' yang konsisten untuk seluruh request", async () => {
+    // Verifikasi bahwa expiredAt.gt (di findFirst) dan expiredAt.gt (di updateMany)
+    // menggunakan timestamp yang sama — tidak ada drift akibat multiple Date() calls.
+    mocks.prisma.invoice.findFirst.mockResolvedValue(makeInvoice());
+    mocks.prisma.invoice.updateMany.mockResolvedValue({ count: 1 });
+
+    await POST(makeRequest(successPayload()) as never);
+
+    const findFirstCall = mocks.prisma.invoice.findFirst.mock.calls[0][0];
+    const updateManyCall = mocks.prisma.invoice.updateMany.mock.calls[0][0];
+
+    const nowFromFindFirst: Date = findFirstCall.where.expiredAt.gt;
+    const nowFromUpdateMany: Date = updateManyCall.where.expiredAt.gt;
+
+    // Kedua Date harus identik (objek sama atau nilai yang sangat berdekatan ≤ 1 ms)
+    expect(Math.abs(nowFromFindFirst.getTime() - nowFromUpdateMany.getTime())).toBeLessThanOrEqual(1);
   });
 });

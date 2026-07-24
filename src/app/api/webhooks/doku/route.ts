@@ -32,8 +32,18 @@ function isUniqueConstraintError(error: unknown): boolean {
 /**
  * POST /api/webhooks/doku
  *
- * DOKU may retry notifications. Signature and amount are checked before
- * changing any subscription state; a PAID invoice is an idempotent no-op.
+ * Security model
+ * ──────────────
+ * 1. Signature validation  — HMAC-SHA256, verified with timing-safe compare.
+ * 2. Timestamp validation  — rejects notifications older than 10 minutes.
+ * 3. Replay protection     — fast-path exit if Request-Id already in PaymentLog.
+ *    Fallback: PaymentLog.providerRequestId unique constraint inside the
+ *    transaction catches the rare case where two parallel requests both pass
+ *    the early check before either inserts the log row.
+ * 4. Status-filtered query — only PENDING (non-expired) invoices are eligible
+ *    for payment events; only PAID invoices are eligible for refund events.
+ *    A late notification for an already-processed invoice returns 200 so DOKU
+ *    stops retrying, but never mutates subscription state.
  */
 export async function POST(req: NextRequest) {
   const body = await req.text();
@@ -47,6 +57,8 @@ export async function POST(req: NextRequest) {
   const requestTarget = new URL(req.url).pathname;
   const requestId = header(req, "Request-Id");
   const requestTimestamp = header(req, "Request-Timestamp");
+
+  // ── 1. Signature validation ───────────────────────────────────────────────
   const validSignature = validateDokuNotificationSignature({
     body,
     clientId: header(req, "Client-Id"),
@@ -58,6 +70,8 @@ export async function POST(req: NextRequest) {
   if (!validSignature) {
     return NextResponse.json({ message: "Invalid signature" }, { status: 403 });
   }
+
+  // ── 2. Timestamp validation ───────────────────────────────────────────────
   if (!validateDokuNotificationTimestamp(requestTimestamp)) {
     return NextResponse.json({ message: "Expired notification" }, { status: 403 });
   }
@@ -67,6 +81,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Missing invoice number" }, { status: 400 });
   }
 
+  // Determine event class early — required for routing the invoice query and
+  // for enabling replay protection before any state-mutating DB write.
+  const earlyStatus = extractDokuTransactionStatus(payload);
+  const isRefundEvent =
+    earlyStatus === "REFUND" ||
+    earlyStatus === "REFUNDED" ||
+    earlyStatus === "PARTIAL_REFUND";
+
+  // Anchor "now" once for the entire request so all comparisons are consistent.
+  const now = new Date();
+
+  // ── 3. Replay protection — fast-path before any state mutation ───────────
+  // If Request-Id is already in PaymentLog, this is a DOKU retry of an event
+  // we already fully processed. Return 200 immediately (so DOKU stops retrying)
+  // without touching invoice or subscription state.
+  // The in-transaction unique constraint on providerRequestId remains as a
+  // fallback for the concurrent-arrival race condition.
+  if (requestId) {
+    const alreadySeen = await prisma.paymentLog.findFirst({
+      where: { providerRequestId: requestId },
+      select: { id: true },
+    });
+    if (alreadySeen) {
+      return NextResponse.json({ message: "OK — duplicate notification" });
+    }
+  }
+
+  // ── 4. Status-filtered invoice lookup ────────────────────────────────────
+  // Non-refund events must only match a PENDING invoice that has not yet
+  // expired. A late success/failure/expired notification for an invoice that is
+  // already EXPIRED or FAILED must never change subscription state — returning
+  // "unknown order" (200) stops DOKU retrying without granting access.
+  // Refund events arrive after payment, so they must match a PAID invoice.
   const invoice = await prisma.invoice.findFirst({
     where: {
       paymentProvider: "DOKU",
@@ -74,6 +121,9 @@ export async function POST(req: NextRequest) {
         { providerInvoiceNumber: invoiceNumber },
         { midtransOrderId: invoiceNumber },
       ],
+      ...(isRefundEvent
+        ? { status: "PAID" }
+        : { status: "PENDING", expiredAt: { gt: now } }),
     },
     include: {
       subscription: {
@@ -86,41 +136,21 @@ export async function POST(req: NextRequest) {
   });
 
   if (!invoice) {
-    // Unknown order is acknowledged to stop retries, but is never activated.
+    // Unknown order (or ineligible status) is acknowledged to stop retries,
+    // but subscription state is never changed.
     return NextResponse.json({ message: "OK — unknown order" });
   }
 
-  const status = extractDokuTransactionStatus(payload) ?? "UNKNOWN";
+  // Re-use earlyStatus; extractDokuTransactionStatus has already been called.
+  const status = earlyStatus ?? "UNKNOWN";
   const receivedAmount = extractDokuAmount(payload);
   const payMethod = resolveDokuPaymentMethod(payload);
 
   const isSuccess = status === "SUCCESS" || status === "SETTLEMENT";
   const isExpired = status === "EXPIRED" || status === "ORDER_EXPIRED";
   const isFailure = status === "FAILED" || status === "FAILURE" || status === "CANCEL";
-  // Refund events arrive AFTER the invoice is already PAID, so this check
-  // must be resolved before the PAID early-exit guard below.
-  const isRefund = status === "REFUND" || status === "REFUNDED" || status === "PARTIAL_REFUND";
-
-  // Already-processed guard: idempotent no-op for non-refund events on a paid invoice.
-  // Refund events are intentionally excluded — they must be able to process a PAID invoice.
-  if (invoice.status === "PAID" && !isRefund) {
-    try {
-      await prisma.paymentLog.create({
-        data: {
-          invoiceId: invoice.id,
-          providerRequestId: requestId,
-          event: `DOKU:${status}`,
-          rawPayload: payload as import("@prisma/client").Prisma.InputJsonValue,
-        },
-      });
-    } catch (error: unknown) {
-      if (isUniqueConstraintError(error)) {
-        return NextResponse.json({ message: "OK — duplicate notification" });
-      }
-      throw error;
-    }
-    return NextResponse.json({ message: "OK — already processed" });
-  }
+  // isRefundEvent is already computed; alias for readability in branches below.
+  const isRefund = isRefundEvent;
 
   // Amount validation is only meaningful for payment events (not refunds).
   if (!isRefund && (receivedAmount === null || receivedAmount !== invoice.amount)) {
@@ -146,7 +176,6 @@ export async function POST(req: NextRequest) {
   if (isSuccess) {
     const plan = invoice.subscription.plan;
     const familySpace = invoice.subscription.familySpace;
-    const now = new Date();
     const isYearly =
       invoice.billingCycle === "YEARLY" ||
       (invoice.billingCycle === null &&
@@ -175,57 +204,63 @@ export async function POST(req: NextRequest) {
           },
         });
 
-      // Conditional update is the idempotency lock. In a parallel duplicate,
-      // exactly one request gets count=1 and is allowed to activate access.
-      // The invoice must also still be pending and within its validity
-      // window; a late success notification must never grant access.
-      const locked = await tx.invoice.updateMany({
-        where: {
-          id: invoice.id,
-          status: "PENDING",
-          expiredAt: { gt: now },
-        },
-        data: {
-          status: "PAID",
-          paidAt: now,
-          paymentMethod: payMethod,
-          providerTransactionId:
-            header(req, "Transaction-Id") ?? requestId ?? undefined,
-        },
-      });
-      if (locked.count !== 1) {
-        await tx.invoice.updateMany({
+        // Conditional update is the idempotency lock. In a parallel duplicate,
+        // exactly one request gets count=1 and is allowed to activate access.
+        // The invoice must still be PENDING and within its validity window;
+        // a late success notification must never grant access.
+        // (The findFirst above already enforces this; the updateMany re-checks
+        // inside the transaction to cover the concurrent-arrival race.)
+        const locked = await tx.invoice.updateMany({
           where: {
             id: invoice.id,
             status: "PENDING",
-            expiredAt: { lte: now },
+            expiredAt: { gt: now },
           },
-          data: { status: "EXPIRED" },
+          data: {
+            status: "PAID",
+            paidAt: now,
+            paymentMethod: payMethod,
+            providerTransactionId:
+              header(req, "Transaction-Id") ?? requestId ?? undefined,
+          },
         });
-        return false;
-      }
+        if (locked.count !== 1) {
+          // The invoice was changed between our findFirst and the lock
+          // (e.g. concurrent request already processed it, or it expired
+          // in the narrow window). Mark as expired if still pending but
+          // now past its deadline; otherwise treat as already processed.
+          await tx.invoice.updateMany({
+            where: {
+              id: invoice.id,
+              status: "PENDING",
+              expiredAt: { lte: now },
+            },
+            data: { status: "EXPIRED" },
+          });
+          return false;
+        }
 
-      await tx.subscription.update({
-        where: { id: invoice.subscriptionId },
-        data: {
-          planId: plan.id,
-          status: newStatus,
-          currentPeriodStart: now,
-          currentPeriodEnd: periodEnd,
-          cancelAtPeriodEnd: false,
-          cancelReason: null,
-        },
-      });
-      await tx.notification.create({
-        data: {
-          familySpaceId: familySpace.id,
-          userId: familySpace.ownerId,
-          title: notifTitle,
-          body: notifBody,
-          type: "SUBSCRIPTION_ACTIVATED",
-        },
-      });
-      return true;
+        await tx.subscription.update({
+          where: { id: invoice.subscriptionId },
+          data: {
+            planId: plan.id,
+            status: newStatus,
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+            cancelAtPeriodEnd: false,
+            cancelReason: null,
+          },
+        });
+        await tx.notification.create({
+          data: {
+            familySpaceId: familySpace.id,
+            userId: familySpace.ownerId,
+            title: notifTitle,
+            body: notifBody,
+            type: "SUBSCRIPTION_ACTIVATED",
+          },
+        });
+        return true;
       });
     } catch (error: unknown) {
       if (isUniqueConstraintError(error)) {
