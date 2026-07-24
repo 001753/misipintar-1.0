@@ -85,7 +85,7 @@ export async function createCheckout(
   return prisma.$transaction(
     async (tx) => {
       await tx.$executeRaw`
-        SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))
+        SELECT pg_advisory_xact_lock(hashtext(${lockKey})::bigint)
       `;
 
       // Anchor a single "now" for the entire transaction so that all three
