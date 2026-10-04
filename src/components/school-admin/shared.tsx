@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { AlertCircle, Check, LoaderCircle } from "lucide-react";
+import { AlertCircle, Check, Copy, LoaderCircle } from "lucide-react";
 import type { ActionResult } from "./types";
 
 export type FeedbackState =
   | { kind: "idle" }
   | { kind: "pending"; action: string }
-  | { kind: "success"; action: string; message: string }
+  | { kind: "success"; action: string; message: string; data?: unknown }
   | { kind: "error"; action: string; message: string };
 
 export function useFormActions() {
@@ -28,7 +28,7 @@ export function useFormActions() {
       try {
         const result = await callback(formData);
         if (result.success) {
-          setFeedback({ kind: "success", action, message });
+          setFeedback({ kind: "success", action, message, data: result.data });
           onSuccess?.();
         } else {
           setFeedback({ kind: "error", action, message: result.error });
@@ -79,6 +79,54 @@ export function ActionNotice({ feedback }: { feedback: FeedbackState }) {
       <span>{feedback.message}</span>
     </div>
   );
+}
+
+export function InvitationLinkNotice({ path }: { path: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}${path}`);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-[#cfdfd2] bg-[#f2f7f0] p-4">
+      <p className="text-sm font-semibold text-[#30473d]">Tautan undangan siap dibagikan</p>
+      <p className="mt-1 text-xs leading-relaxed text-[#6e7e75]">
+        Berlaku 7 hari dan hanya dapat digunakan sekali. JOBEN tidak mengirim email; bagikan tautan ini melalui saluran yang aman.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <a href={path} target="_blank" rel="noreferrer" className="max-w-full break-all text-xs font-semibold text-[#32745b] underline underline-offset-2">
+          {path}
+        </a>
+        <button
+          type="button"
+          onClick={copyLink}
+          className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-[#c8d8cc] bg-white px-3 py-1.5 text-xs font-semibold text-[#365f4d] hover:bg-[#f8faf5]"
+        >
+          {copied ? <Check aria-hidden="true" className="h-3.5 w-3.5" /> : <Copy aria-hidden="true" className="h-3.5 w-3.5" />}
+          {copied ? "Tersalin" : "Salin tautan"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function getInvitationPath(data: unknown): string | null {
+  if (
+    data !== null
+    && typeof data === "object"
+    && "inviteUrl" in data
+    && typeof data.inviteUrl === "string"
+    && data.inviteUrl.startsWith("/school-invite/")
+  ) {
+    return data.inviteUrl;
+  }
+  return null;
 }
 
 export function SubmitButton({
@@ -138,6 +186,7 @@ export const inputClass =
 const statusStyles: Record<string, string> = {
   ACTIVE: "border-emerald-200 bg-emerald-50 text-emerald-800",
   PENDING_REVIEW: "border-amber-200 bg-amber-50 text-amber-800",
+  PENDING: "border-amber-200 bg-amber-50 text-amber-800",
   INVITED: "border-sky-200 bg-sky-50 text-sky-800",
   SUSPENDED: "border-rose-200 bg-rose-50 text-rose-800",
   INACTIVE: "border-[#d9ded9] bg-[#f1f3ef] text-[#68776f]",
@@ -147,6 +196,7 @@ const statusStyles: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   ACTIVE: "Aktif",
   PENDING_REVIEW: "Menunggu tinjauan",
+  PENDING: "Menunggu",
   INVITED: "Undangan terkirim",
   SUSPENDED: "Ditangguhkan",
   INACTIVE: "Nonaktif",

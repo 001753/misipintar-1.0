@@ -15,6 +15,7 @@ export default async function SuperAdminLayout({
 
   const navLinks = [
     { href: "/superadmin", label: "Dashboard", icon: "📊" },
+    { href: "/superadmin/schools", label: "Sekolah JOBEN", icon: "🏫" },
     { href: "/superadmin/plans", label: "Plan", icon: "💎" },
     { href: "/superadmin/families", label: "Keluarga", icon: "👨‍👩‍👧" },
     { href: "/superadmin/payments", label: "Pembayaran", icon: "💳" },

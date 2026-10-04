@@ -4,14 +4,25 @@ export type School = {
   slug: string;
   status: string;
   timezone: string;
+  ownerEmail?: string;
+  ownerNeedsInvitation?: boolean;
 };
 
 export type Member = {
   id: string;
+  userId: string;
   name: string;
   email: string;
   role: string;
   status: string;
+};
+
+export type Invitation = {
+  id: string;
+  email: string;
+  role: string;
+  expiresAt: string;
+  expired: boolean;
 };
 
 export type SchoolClass = {

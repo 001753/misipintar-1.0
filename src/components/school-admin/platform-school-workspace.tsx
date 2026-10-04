@@ -7,6 +7,8 @@ import {
   ActionNotice,
   EmptyState,
   Field,
+  getInvitationPath,
+  InvitationLinkNotice,
   SectionHeading,
   StatusBadge,
   SubmitButton,
@@ -19,9 +21,11 @@ import type { FormAction, School } from "./types";
 export type PlatformSchoolWorkspaceProps = {
   schools: School[];
   createSchool: FormAction;
+  issueOwnerInvitation: FormAction;
+  updateStatus: FormAction;
 };
 
-export default function PlatformSchoolWorkspace({ schools, createSchool }: PlatformSchoolWorkspaceProps) {
+export default function PlatformSchoolWorkspace({ schools, createSchool, issueOwnerInvitation, updateStatus }: PlatformSchoolWorkspaceProps) {
   const { feedback, isPending, submit } = useFormActions();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -32,7 +36,7 @@ export default function PlatformSchoolWorkspace({ schools, createSchool }: Platf
     const term = query.trim().toLocaleLowerCase("id-ID");
     return schools
       .filter((school) => statusFilter === "ALL" || school.status === statusFilter)
-      .filter((school) => !term || `${school.name} ${school.slug} ${school.timezone}`.toLocaleLowerCase("id-ID").includes(term))
+       .filter((school) => !term || `${school.name} ${school.slug} ${school.timezone} ${school.ownerEmail ?? ""}`.toLocaleLowerCase("id-ID").includes(term))
       .sort((a, b) => sortOrder === "name" ? a.name.localeCompare(b.name, "id") : b.id.localeCompare(a.id));
   }, [schools, query, statusFilter, sortOrder]);
 
@@ -45,8 +49,35 @@ export default function PlatformSchoolWorkspace({ schools, createSchool }: Platf
     });
   }
 
+  function onStatusSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const nextStatus = new FormData(form).get("status");
+    if (nextStatus === "SUSPENDED" && !window.confirm("Tangguhkan sekolah ini? Semua akses pengelolaan tenant akan dihentikan sementara.")) return;
+    handleActionSubmit(event, `status-${new FormData(form).get("schoolId")}`, "Status sekolah berhasil diperbarui.", updateStatus, submit);
+  }
+
+  function onOwnerInvitationSubmit(event: FormEvent<HTMLFormElement>) {
+    const formData = new FormData(event.currentTarget);
+    if (!window.confirm("Buat tautan baru? Tautan undangan sebelumnya tidak akan dapat digunakan lagi.")) {
+      event.preventDefault();
+      return;
+    }
+    handleActionSubmit(
+      event,
+      `owner-invite-${formData.get("schoolId")}`,
+      "Tautan undangan pemilik berhasil dibuat ulang.",
+      issueOwnerInvitation,
+      submit,
+    );
+  }
+
   const activeCount = schools.filter((school) => school.status === "ACTIVE").length;
   const reviewCount = schools.filter((school) => school.status === "PENDING_REVIEW").length;
+  const isOwnerInvitationAction = feedback.kind !== "idle" && feedback.action.startsWith("owner-invite-");
+  const ownerInvitePath = feedback.kind === "success" && (feedback.action === "create-school" || isOwnerInvitationAction)
+    ? getInvitationPath(feedback.data)
+    : null;
 
   return (
     <main className="min-h-[100dvh] bg-[#f3f4ee] px-4 pb-12 pt-7 text-[#243a32] sm:px-7 lg:px-10">
@@ -75,7 +106,16 @@ export default function PlatformSchoolWorkspace({ schools, createSchool }: Platf
         </header>
 
         {feedback.kind !== "idle" && feedback.action === "create-school" ? (
-          <div className="mb-5"><ActionNotice feedback={feedback} /></div>
+          <div className="mb-5">
+            <ActionNotice feedback={feedback} />
+            {ownerInvitePath ? <InvitationLinkNotice path={ownerInvitePath} /> : null}
+          </div>
+        ) : null}
+        {isOwnerInvitationAction ? (
+          <div className="mb-5">
+            <ActionNotice feedback={feedback} />
+            {ownerInvitePath ? <InvitationLinkNotice path={ownerInvitePath} /> : null}
+          </div>
         ) : null}
 
         {formOpen ? (
@@ -88,7 +128,7 @@ export default function PlatformSchoolWorkspace({ schools, createSchool }: Platf
               </div>
               <button type="button" onClick={() => setFormOpen(false)} className="rounded-lg border border-[#ced9ce] bg-[#f8faf5] px-3 py-2 text-xs font-semibold text-[#5d7065] hover:bg-white">Tutup</button>
             </div>
-            <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.1fr_0.8fr_1fr_auto] xl:items-end">
+            <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2 xl:grid-cols-[1.1fr_0.8fr_1fr_1.1fr_auto] xl:items-end">
               <Field label="Nama sekolah" name="schoolName" required>
                 <input id="schoolName" name="name" required className={inputClass} autoComplete="organization" placeholder="Contoh: TK Bintang Pagi" />
               </Field>
@@ -102,7 +142,10 @@ export default function PlatformSchoolWorkspace({ schools, createSchool }: Platf
                   <option value="Asia/Jayapura">WIT · Asia/Jayapura</option>
                 </select>
               </Field>
-              <SubmitButton pending={isPending && feedback.action === "create-school"} pendingLabel="Mendaftarkan...">Simpan sekolah</SubmitButton>
+              <Field label="Email akun pemilik" name="ownerEmail" required hint="Pemilik harus sudah memiliki akun orang tua terdaftar. Undangan tidak dikirim otomatis.">
+                <input id="ownerEmail" name="ownerEmail" type="email" required className={inputClass} autoComplete="email" placeholder="pemilik@sekolah.id" />
+              </Field>
+              <SubmitButton pending={isPending && feedback.kind !== "idle" && feedback.action === "create-school"} pendingLabel="Mendaftarkan...">Simpan sekolah</SubmitButton>
             </form>
           </section>
         ) : null}
@@ -117,11 +160,12 @@ export default function PlatformSchoolWorkspace({ schools, createSchool }: Platf
           <div className="mb-5">
             <SectionHeading eyebrow="Indeks tenant" title="Daftar sekolah" description="Cari dan tinjau status tenant yang terdaftar di platform." count={filteredSchools.length} />
           </div>
+          {feedback.kind !== "idle" && feedback.action.startsWith("status-") ? <div className="mb-4"><ActionNotice feedback={feedback} /></div> : null}
           <div className="mb-4 grid gap-2 sm:grid-cols-[minmax(220px,1fr)_180px_160px]">
             <label className="relative block">
               <span className="sr-only">Cari sekolah</span>
               <Search aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#839087]" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} className={`${inputClass} pl-10`} placeholder="Cari nama, alamat, zona waktu" type="search" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} className={`${inputClass} pl-10`} placeholder="Cari nama, alamat, email pemilik" type="search" />
             </label>
             <label className="relative block">
               <span className="sr-only">Filter status sekolah</span>
@@ -131,7 +175,6 @@ export default function PlatformSchoolWorkspace({ schools, createSchool }: Platf
                 <option value="ACTIVE">Aktif</option>
                 <option value="PENDING_REVIEW">Menunggu tinjauan</option>
                 <option value="SUSPENDED">Ditangguhkan</option>
-                <option value="INACTIVE">Nonaktif</option>
               </select>
             </label>
             <label className="sr-only" htmlFor="sortSchools">Urutkan sekolah</label>
@@ -150,7 +193,7 @@ export default function PlatformSchoolWorkspace({ schools, createSchool }: Platf
               <div className="hidden overflow-hidden rounded-xl border border-[#e1e6df] md:block">
                 <table className="w-full text-left">
                   <thead className="bg-[#f1f4ee] text-[10px] font-bold uppercase tracking-[0.13em] text-[#728178]">
-                    <tr><th scope="col" className="px-4 py-3">Sekolah</th><th scope="col" className="px-4 py-3">Alamat singkat</th><th scope="col" className="px-4 py-3">Zona waktu</th><th scope="col" className="px-4 py-3">Status</th></tr>
+                    <tr><th scope="col" className="px-4 py-3">Sekolah</th><th scope="col" className="px-4 py-3">Alamat singkat</th><th scope="col" className="px-4 py-3">Pemilik</th><th scope="col" className="px-4 py-3">Zona waktu</th><th scope="col" className="px-4 py-3">Status / aksi</th></tr>
                   </thead>
                   <tbody className="divide-y divide-[#e8ece6]">
                     {filteredSchools.map((school) => (
@@ -162,8 +205,19 @@ export default function PlatformSchoolWorkspace({ schools, createSchool }: Platf
                           </div>
                         </td>
                         <td className="px-4 py-4 font-mono text-xs text-[#64766c]">{school.slug}</td>
+                        <td className="px-4 py-4 text-sm text-[#64766c]">
+                          <p>{school.ownerEmail || "—"}</p>
+                          {school.ownerNeedsInvitation && school.ownerEmail ? (
+                            <OwnerInvitationForm school={school} onSubmit={onOwnerInvitationSubmit} pending={isPending} />
+                          ) : null}
+                        </td>
                         <td className="px-4 py-4 text-sm text-[#64766c]">{timezoneLabel(school.timezone)}</td>
-                        <td className="px-4 py-4"><StatusBadge status={school.status} /></td>
+                        <td className="px-4 py-4">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <StatusBadge status={school.status} />
+                            <SchoolStatusForm school={school} onSubmit={onStatusSubmit} pending={isPending} />
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -179,7 +233,12 @@ export default function PlatformSchoolWorkspace({ schools, createSchool }: Platf
                       </div>
                       <StatusBadge status={school.status} />
                     </div>
+                    <p className="mt-3 truncate text-xs text-[#64766c]">Pemilik: {school.ownerEmail || "Belum terhubung"}</p>
+                    {school.ownerNeedsInvitation && school.ownerEmail ? (
+                      <OwnerInvitationForm school={school} onSubmit={onOwnerInvitationSubmit} pending={isPending} />
+                    ) : null}
                     <p className="mt-3 border-t border-[#edf0eb] pt-3 text-xs text-[#64766c]">Zona waktu <span className="ml-1 font-semibold">{timezoneLabel(school.timezone)}</span></p>
+                    <div className="mt-3"><SchoolStatusForm school={school} onSubmit={onStatusSubmit} pending={isPending} /></div>
                   </article>
                 ))}
               </div>
@@ -193,6 +252,52 @@ export default function PlatformSchoolWorkspace({ schools, createSchool }: Platf
         </footer>
       </div>
     </main>
+  );
+}
+
+function OwnerInvitationForm({
+  school,
+  onSubmit,
+  pending,
+}: {
+  school: School;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  pending: boolean;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="mt-2">
+      <input type="hidden" name="schoolId" value={school.id} />
+      <button type="submit" disabled={pending} className="text-xs font-semibold text-[#32745b] underline underline-offset-2 disabled:opacity-50">
+        Buat ulang tautan undangan
+      </button>
+    </form>
+  );
+}
+
+function SchoolStatusForm({
+  school,
+  onSubmit,
+  pending,
+}: {
+  school: School;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  pending: boolean;
+}) {
+  if (school.status !== "ACTIVE" && school.status !== "SUSPENDED" && school.status !== "PENDING_REVIEW") return null;
+  const nextStatus = school.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
+  const label = school.status === "PENDING_REVIEW" ? "Setujui sekolah" : nextStatus === "ACTIVE" ? "Aktifkan" : "Tangguhkan";
+  return (
+    <form onSubmit={onSubmit}>
+      <input type="hidden" name="schoolId" value={school.id} />
+      <input type="hidden" name="status" value={nextStatus} />
+      <button
+        type="submit"
+        disabled={pending}
+        className={`text-xs font-semibold underline underline-offset-2 disabled:opacity-50 ${nextStatus === "SUSPENDED" ? "text-[#a4513d] decoration-[#d8afa3]" : "text-[#32745b] decoration-[#a9cabb]"}`}
+      >
+        {label}
+      </button>
+    </form>
   );
 }
 

@@ -43,6 +43,21 @@ enum SchoolInvitationStatus {
   EXPIRED
 }
 
+enum SchoolClassStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum SchoolStudentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SchoolEnrollmentStatus {
+  ACTIVE
+  ENDED
+}
+
 enum PlanType {
   STARTER
   PRO
@@ -147,7 +162,6 @@ model User {
   notifications Notification[]
   auditLogs     AdminAuditLog[]
   schoolMemberships SchoolMembership[]
-  schoolClassAssignments SchoolClassTeacher[]
   createdSchoolInvitations SchoolInvitation[] @relation("SchoolInvitationCreator")
   acceptedSchoolInvitations SchoolInvitation[] @relation("SchoolInvitationAcceptor")
   createdAt     DateTime        @default(now())
@@ -169,6 +183,10 @@ model School {
   status      SchoolStatus       @default(PENDING_REVIEW)
   memberships SchoolMembership[]
   invitations SchoolInvitation[]
+  classes     SchoolClass[]
+  students    SchoolStudent[]
+  enrollments SchoolEnrollment[]
+  classAssignments SchoolClassTeacher[]
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
@@ -181,6 +199,7 @@ model SchoolMembership {
   userId    String
   role      SchoolRole
   status    SchoolMembershipStatus @default(ACTIVE)
+  classAssignments SchoolClassTeacher[]
   school    School                 @relation(fields: [schoolId], references: [id], onDelete: Restrict)
   user      User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
   createdAt DateTime               @default(now())
@@ -209,6 +228,69 @@ model SchoolInvitation {
 
   @@index([schoolId, status, expiresAt])
   @@index([email, status])
+}
+
+model SchoolClass {
+  id          String            @id @default(uuid())
+  schoolId    String
+  name        String
+  grade       String
+  academicYear String
+  status      SchoolClassStatus @default(ACTIVE)
+  school      School            @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  enrollments SchoolEnrollment[] @relation("SchoolClassEnrollments")
+  teachers    SchoolClassTeacher[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([schoolId, id])
+  @@unique([schoolId, name, academicYear])
+  @@index([schoolId, status, academicYear])
+}
+
+model SchoolStudent {
+  id          String              @id @default(uuid())
+  schoolId    String
+  displayName String
+  localCode   String?
+  status      SchoolStudentStatus @default(ACTIVE)
+  school      School              @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  enrollments SchoolEnrollment[]  @relation("SchoolStudentEnrollments")
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([schoolId, id])
+  @@index([schoolId, status, createdAt])
+}
+
+model SchoolEnrollment {
+  id        String                 @id @default(uuid())
+  schoolId  String
+  studentId String
+  classId   String
+  status    SchoolEnrollmentStatus @default(ACTIVE)
+  startedAt DateTime               @default(now())
+  endedAt   DateTime?
+  school    School                 @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  student   SchoolStudent          @relation("SchoolStudentEnrollments", fields: [schoolId, studentId], references: [schoolId, id], onDelete: Restrict)
+  schoolClass SchoolClass          @relation("SchoolClassEnrollments", fields: [schoolId, classId], references: [schoolId, id], onDelete: Restrict)
+
+  @@index([schoolId, classId, status])
+  @@index([schoolId, studentId, startedAt(sort: Desc)])
+}
+
+model SchoolClassTeacher {
+  id            String          @id @default(uuid())
+  schoolId      String
+  schoolClassId String
+  userId        String
+  school        School          @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  schoolClass   SchoolClass     @relation(fields: [schoolId, schoolClassId], references: [schoolId, id], onDelete: Restrict)
+  membership    SchoolMembership @relation(fields: [schoolId, userId], references: [schoolId, userId], onDelete: Restrict)
+  createdAt     DateTime        @default(now())
+
+  @@unique([schoolId, schoolClassId, userId])
+  @@index([schoolId, userId])
 }
 
 // ─── OTP CODES ───────────────────────────────────────────

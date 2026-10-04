@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { loginSuperAdmin } from '@/actions/auth'
+import { loginAdmin } from '@/actions/auth'
 
 const LOCKOUT_SECONDS = 15 * 60
 
@@ -44,9 +44,9 @@ export default function AdminLoginPage() {
     const formData = new FormData(e.currentTarget)
 
     startTransition(async () => {
-      const result = await loginSuperAdmin(formData)
+      const result = await loginAdmin(formData)
       if (result.success) {
-        router.push('/superadmin')
+        router.push(result.data.redirectTo)
         router.refresh()
       } else {
         if (result.error?.includes('Terlalu banyak')) {
@@ -66,7 +66,7 @@ export default function AdminLoginPage() {
           <span className="text-2xl">🛡️</span>
         </div>
         <h1 className="text-xl font-bold text-white tracking-tight">Admin Panel</h1>
-        <p className="text-gray-500 text-sm mt-1">Misi Pintar — Akses Terbatas</p>
+        <p className="text-gray-500 text-sm mt-1">Platform Admin dan administrator sekolah</p>
       </div>
 
       {/* Card */}

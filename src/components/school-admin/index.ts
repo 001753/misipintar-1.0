@@ -5,6 +5,7 @@ export type { PlatformSchoolWorkspaceProps } from "./platform-school-workspace";
 export type {
   ActionResult,
   FormAction,
+  Invitation,
   Member,
   School,
   SchoolClass,

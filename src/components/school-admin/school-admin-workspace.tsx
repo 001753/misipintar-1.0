@@ -18,6 +18,8 @@ import {
   ActionNotice,
   EmptyState,
   Field,
+  getInvitationPath,
+  InvitationLinkNotice,
   SectionHeading,
   StatusBadge,
   SubmitButton,
@@ -26,16 +28,19 @@ import {
   inputClass,
   useFormActions,
 } from "./shared";
-import type { FormAction, Member, School, SchoolClass, SchoolCounts, SchoolStudent } from "./types";
+import type { FormAction, Invitation, Member, School, SchoolClass, SchoolCounts, SchoolStudent } from "./types";
 
 export type SchoolAdminWorkspaceProps = {
   school: School;
   counts: SchoolCounts;
   members: Member[];
+  invitations: Invitation[];
   classes: SchoolClass[];
   students: SchoolStudent[];
+  currentUserId: string;
   updateSchool: FormAction;
   addMember: FormAction;
+  revokeInvitation: FormAction;
   setMemberStatus: FormAction;
   createClass: FormAction;
   createStudent: FormAction;
@@ -45,7 +50,7 @@ export type SchoolAdminWorkspaceProps = {
 type DialogName = "member" | "class" | "student" | null;
 
 const roleOptions = [
-  ["SCHOOL_ADMIN", "Admin sekolah"],
+  ["ADMIN", "Admin sekolah"],
   ["PRINCIPAL", "Kepala sekolah"],
   ["TEACHER", "Guru"],
   ["HOMEROOM_TEACHER", "Wali kelas"],
@@ -55,10 +60,13 @@ export default function SchoolAdminWorkspace({
   school,
   counts,
   members,
+  invitations,
   classes,
   students,
+  currentUserId,
   updateSchool,
   addMember,
+  revokeInvitation,
   setMemberStatus,
   createClass,
   createStudent,
@@ -67,6 +75,9 @@ export default function SchoolAdminWorkspace({
   const { feedback, isPending, submit } = useFormActions();
   const [dialog, setDialog] = useState<DialogName>(null);
   const [schoolSaved, setSchoolSaved] = useState(false);
+  const memberInvitePath = feedback.kind === "success" && feedback.action === "member"
+    ? getInvitationPath(feedback.data)
+    : null;
 
   function onSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -75,7 +86,12 @@ export default function SchoolAdminWorkspace({
     callback: FormAction,
     reset?: boolean,
     closeDialog = false,
+    confirmMessage?: string,
   ) {
+    if (confirmMessage && !window.confirm(confirmMessage)) {
+      event.preventDefault();
+      return;
+    }
     const form = event.currentTarget;
     handleActionSubmit(event, action, message, callback, submit, () => {
       if (reset) form.reset();
@@ -113,7 +129,19 @@ export default function SchoolAdminWorkspace({
               <div className="mt-1"><StatusBadge status={school.status} /></div>
             </div>
           </div>
+          <a
+            href="/school-admin"
+            className="text-xs font-semibold text-[#39745e] underline decoration-[#a9cabb] underline-offset-2 hover:text-[#205943]"
+          >
+            Pilih sekolah
+          </a>
         </header>
+
+        {school.status === "PENDING_REVIEW" ? (
+          <aside className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950" role="status">
+            Sekolah sedang menunggu tinjauan Platform Admin. Profil, staf, dan kelas dapat disiapkan; roster siswa baru tersedia setelah sekolah disetujui.
+          </aside>
+        ) : null}
 
         <section aria-label="Ringkasan sekolah" className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <SummaryTile icon={<Users className="h-4 w-4" />} label="Anggota staf" value={counts.members} note="Akses sekolah" />
@@ -135,13 +163,14 @@ export default function SchoolAdminWorkspace({
                 onClick={() => setDialog("member")}
                 className="inline-flex min-h-10 items-center justify-center gap-2 self-start rounded-lg border border-[#245b4a] px-3.5 py-2 text-sm font-semibold text-[#245b4a] transition hover:bg-[#edf3ed] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#548575]"
               >
-                <Plus aria-hidden="true" className="h-4 w-4" /> Tambah staf
+                <Plus aria-hidden="true" className="h-4 w-4" /> Undang staf
               </button>
             </div>
             {feedback.kind === "error" && feedback.action === "member" ? <div className="mb-4"><ActionNotice feedback={feedback} /></div> : null}
             {feedback.kind === "success" && feedback.action === "member" ? <div className="mb-4"><ActionNotice feedback={feedback} /></div> : null}
+            {memberInvitePath ? <InvitationLinkNotice path={memberInvitePath} /> : null}
             {members.length === 0 ? (
-              <EmptyState title="Belum ada staf terdaftar" description="Tambahkan anggota staf agar akses administrasi sekolah dapat dibagikan sesuai peran." />
+              <EmptyState title="Belum ada staf aktif" description="Buat undangan untuk memberikan akses setelah calon anggota masuk dengan akun yang sesuai." />
             ) : (
               <div className="overflow-hidden rounded-xl border border-[#e1e6df]">
                 <div className="hidden grid-cols-[minmax(180px,1fr)_minmax(160px,1fr)_130px_132px] gap-4 bg-[#f1f4ee] px-4 py-2.5 text-[10px] font-bold uppercase tracking-[0.13em] text-[#728178] md:grid">
@@ -161,20 +190,22 @@ export default function SchoolAdminWorkspace({
                       <p className="text-xs font-semibold text-[#556a60] md:text-sm">{formatRole(member.role)}</p>
                       <div className="flex items-center justify-between gap-2 md:block">
                         <StatusBadge status={member.status} />
-                        {member.status === "ACTIVE" ? (
+                        {member.status === "ACTIVE" && member.role !== "OWNER" && member.userId !== currentUserId ? (
                           <form
-                            onSubmit={(event) => onSubmit(event, `member-${member.id}`, "Status anggota diperbarui.", setMemberStatus)}
+                            onSubmit={(event) => onSubmit(event, `member-${member.id}`, "Status anggota diperbarui.", setMemberStatus, false, false, "Tangguhkan akses anggota ini ke sekolah?")}
                             className="md:mt-2"
                           >
+                            <input type="hidden" name="schoolId" value={school.id} />
                             <input type="hidden" name="memberId" value={member.id} />
                             <input type="hidden" name="status" value="SUSPENDED" />
                             <button type="submit" disabled={isPending} className="text-xs font-semibold text-[#a4513d] underline decoration-[#d8afa3] underline-offset-2 hover:text-[#833e2f] disabled:opacity-50">Tangguhkan</button>
                           </form>
-                        ) : member.status === "SUSPENDED" ? (
+                        ) : member.status === "SUSPENDED" && member.role !== "OWNER" ? (
                           <form
                             onSubmit={(event) => onSubmit(event, `member-${member.id}`, "Status anggota diperbarui.", setMemberStatus)}
                             className="md:mt-2"
                           >
+                            <input type="hidden" name="schoolId" value={school.id} />
                             <input type="hidden" name="memberId" value={member.id} />
                             <input type="hidden" name="status" value="ACTIVE" />
                             <button type="submit" disabled={isPending} className="text-xs font-semibold text-[#32745b] underline decoration-[#a9cabb] underline-offset-2 hover:text-[#205943] disabled:opacity-50">Aktifkan</button>
@@ -186,7 +217,34 @@ export default function SchoolAdminWorkspace({
                 </div>
               </div>
             )}
-            {feedback.kind !== "idle" && feedback.action.startsWith("member-") ? (
+            {invitations.length > 0 ? (
+              <div className="mt-6">
+                <h3 className="mb-3 text-sm font-bold text-[#344b41]">Undangan menunggu</h3>
+                <div className="space-y-2">
+                  {invitations.map((invitation) => {
+                    return (
+                      <article key={invitation.id} className="flex flex-col gap-3 rounded-xl border border-[#e2e8e1] bg-[#fffefa] p-3.5 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[#30473d]">{invitation.email}</p>
+                          <p className="mt-1 text-xs text-[#748279]">
+                            {formatRole(invitation.role)} · {invitation.expired ? "Kedaluwarsa" : `Berlaku sampai ${formatDate(invitation.expiresAt)}`}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <StatusBadge status={invitation.expired ? "INACTIVE" : "PENDING"} />
+                          <form onSubmit={(event) => onSubmit(event, `invite-${invitation.id}`, "Undangan dicabut.", revokeInvitation, false, false, "Cabut tautan undangan ini? Penerima tidak dapat menggunakannya lagi.")}>
+                            <input type="hidden" name="schoolId" value={school.id} />
+                            <input type="hidden" name="invitationId" value={invitation.id} />
+                            <button type="submit" disabled={isPending} className="text-xs font-semibold text-[#a4513d] underline underline-offset-2 disabled:opacity-50">Cabut</button>
+                          </form>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+            {feedback.kind !== "idle" && (feedback.action.startsWith("member-") || feedback.action.startsWith("invite-")) ? (
               <div className="mt-4"><ActionNotice feedback={feedback} /></div>
             ) : null}
           </section>
@@ -214,7 +272,7 @@ export default function SchoolAdminWorkspace({
               {schoolSaved && feedback.kind === "success" && feedback.action === "school" ? (
                 <p className="flex items-center gap-1.5 text-xs text-[#39745e]"><Check aria-hidden="true" className="h-3.5 w-3.5" /> Perubahan profil sudah tersimpan.</p>
               ) : null}
-              <SubmitButton pending={isPending && feedback.action === "school"} pendingLabel="Menyimpan profil...">Simpan profil</SubmitButton>
+              <SubmitButton pending={isPending && feedback.kind !== "idle" && feedback.action === "school"} pendingLabel="Menyimpan profil...">Simpan profil</SubmitButton>
             </form>
           </section>
         </div>
@@ -226,9 +284,11 @@ export default function SchoolAdminWorkspace({
               <button type="button" onClick={() => setDialog("class")} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d4dfd5] bg-[#fffefa] px-3.5 py-2 text-sm font-semibold text-[#365f4d] transition hover:bg-[#f0f5ef] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#548575]">
                 <Plus aria-hidden="true" className="h-4 w-4" /> Buat kelas
               </button>
-              <button type="button" onClick={() => setDialog("student")} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#b96347] px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-[#a85239] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b96347] focus-visible:ring-offset-2">
-                <Plus aria-hidden="true" className="h-4 w-4" /> Tambah siswa
-              </button>
+              {school.status === "ACTIVE" ? (
+                <button type="button" onClick={() => setDialog("student")} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#b96347] px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-[#a85239] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#b96347] focus-visible:ring-offset-2">
+                  <Plus aria-hidden="true" className="h-4 w-4" /> Tambah siswa
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -287,9 +347,9 @@ export default function SchoolAdminWorkspace({
                         <div className="flex items-center justify-between gap-2 pl-10 sm:pl-0">
                           <StatusBadge status={student.status} />
                           {student.status === "ACTIVE" ? (
-                            <StudentStatusForm studentId={student.id} nextStatus="INACTIVE" pending={isPending} onSubmit={(event) => onSubmit(event, `student-${student.id}`, "Status siswa diperbarui.", setStudentStatus)} />
+                            <StudentStatusForm schoolId={school.id} studentId={student.id} nextStatus="INACTIVE" pending={isPending} onSubmit={(event) => onSubmit(event, `student-${student.id}`, "Status siswa diperbarui.", setStudentStatus, false, false, "Nonaktifkan siswa dan akhiri enrollment aktifnya?")} />
                           ) : student.status === "INACTIVE" ? (
-                            <StudentStatusForm studentId={student.id} nextStatus="ACTIVE" pending={isPending} onSubmit={(event) => onSubmit(event, `student-${student.id}`, "Status siswa diperbarui.", setStudentStatus)} />
+                            <StudentStatusForm schoolId={school.id} studentId={student.id} nextStatus="ACTIVE" pending={isPending} onSubmit={(event) => onSubmit(event, `student-${student.id}`, "Status siswa diperbarui.", setStudentStatus)} />
                           ) : null}
                         </div>
                       </article>
@@ -310,9 +370,9 @@ export default function SchoolAdminWorkspace({
       {dialog ? (
         <DialogShell title={dialogTitle(dialog)} onClose={() => setDialog(null)}>
           {dialog === "member" ? (
-            <form className="space-y-4" onSubmit={(event) => onSubmit(event, "member", "Anggota staf berhasil ditambahkan.", addMember, true, true)}>
-              <Field label="Nama lengkap" name="memberName" required><input id="memberName" name="name" required className={inputClass} autoComplete="name" /></Field>
-              <Field label="Email" name="memberEmail" required><input id="memberEmail" name="email" type="email" required className={inputClass} autoComplete="email" /></Field>
+            <form className="space-y-4" onSubmit={(event) => onSubmit(event, "member", "Undangan staf berhasil dibuat.", addMember, true, true)}>
+              <input type="hidden" name="schoolId" value={school.id} />
+              <Field label="Email akun staf" name="memberEmail" required hint="Akun harus sudah terdaftar. JOBEN tidak mengirim email; tautan undangan perlu dibagikan melalui saluran yang aman."><input id="memberEmail" name="email" type="email" required className={inputClass} autoComplete="email" /></Field>
               <Field label="Peran di sekolah" name="role" required>
                 <select id="role" name="role" required defaultValue="" className={inputClass}>
                   <option value="" disabled>Pilih peran</option>
@@ -320,7 +380,7 @@ export default function SchoolAdminWorkspace({
                 </select>
               </Field>
               {feedback.kind !== "idle" && feedback.action === "member" ? <ActionNotice feedback={feedback} /> : null}
-              <ModalActions pending={isPending && feedback.action === "member"} onCancel={() => setDialog(null)} submitLabel="Tambah staf" pendingLabel="Menambahkan..." />
+              <ModalActions pending={isPending && feedback.kind !== "idle" && feedback.action === "member"} onCancel={() => setDialog(null)} submitLabel="Buat undangan" pendingLabel="Membuat tautan..." />
             </form>
           ) : null}
           {dialog === "class" ? (
@@ -330,7 +390,7 @@ export default function SchoolAdminWorkspace({
               <Field label="Tahun ajaran" name="academicYear" required><input id="academicYear" name="academicYear" required className={inputClass} placeholder="Contoh: 2026/2027" /></Field>
               <input type="hidden" name="schoolId" value={school.id} />
               {feedback.kind !== "idle" && feedback.action === "class" ? <ActionNotice feedback={feedback} /> : null}
-              <ModalActions pending={isPending && feedback.action === "class"} onCancel={() => setDialog(null)} submitLabel="Buat kelas" pendingLabel="Membuat kelas..." />
+              <ModalActions pending={isPending && feedback.kind !== "idle" && feedback.action === "class"} onCancel={() => setDialog(null)} submitLabel="Buat kelas" pendingLabel="Membuat kelas..." />
             </form>
           ) : null}
           {dialog === "student" ? (
@@ -344,13 +404,13 @@ export default function SchoolAdminWorkspace({
               <Field label="Kelas" name="classId" required>
                 <select id="classId" name="classId" required defaultValue="" className={inputClass}>
                   <option value="" disabled>Pilih kelas</option>
-                  {classes.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.academicYear}</option>)}
+                  {classes.filter((item) => item.status === "ACTIVE").map((item) => <option key={item.id} value={item.id}>{item.name} · {item.academicYear}</option>)}
                 </select>
               </Field>
-              {classes.length === 0 ? <p className="text-xs text-[#a4513d]">Buat kelas terlebih dahulu sebelum menambahkan siswa.</p> : null}
+              {classes.every((item) => item.status !== "ACTIVE") ? <p className="text-xs text-[#a4513d]">Buat kelas aktif terlebih dahulu sebelum menambahkan siswa.</p> : null}
               <input type="hidden" name="schoolId" value={school.id} />
               {feedback.kind !== "idle" && feedback.action === "student" ? <ActionNotice feedback={feedback} /> : null}
-              <ModalActions pending={isPending && feedback.action === "student"} onCancel={() => setDialog(null)} submitLabel="Simpan siswa" pendingLabel="Menyimpan siswa..." disabled={classes.length === 0} />
+              <ModalActions pending={isPending && feedback.kind !== "idle" && feedback.action === "student"} onCancel={() => setDialog(null)} submitLabel="Simpan siswa" pendingLabel="Menyimpan siswa..." disabled={school.status !== "ACTIVE" || classes.every((item) => item.status !== "ACTIVE")} />
             </form>
           ) : null}
         </DialogShell>
@@ -376,11 +436,13 @@ function SummaryTile({ icon, label, value, note }: { icon: React.ReactNode; labe
 }
 
 function StudentStatusForm({
+  schoolId,
   studentId,
   nextStatus,
   pending,
   onSubmit,
 }: {
+  schoolId: string;
   studentId: string;
   nextStatus: string;
   pending: boolean;
@@ -388,6 +450,7 @@ function StudentStatusForm({
 }) {
   return (
     <form onSubmit={onSubmit}>
+      <input type="hidden" name="schoolId" value={schoolId} />
       <input type="hidden" name="studentId" value={studentId} />
       <input type="hidden" name="status" value={nextStatus} />
       <button type="submit" disabled={pending} className="whitespace-nowrap text-[11px] font-semibold text-[#a4513d] underline decoration-[#d8afa3] underline-offset-2 hover:text-[#833e2f] disabled:opacity-50">
@@ -409,6 +472,13 @@ function DialogShell({ title, onClose, children }: { title: string; onClose: () 
       </section>
     </div>
   );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+    timeZone: "Asia/Jakarta",
+  }).format(new Date(value));
 }
 
 function ModalActions({
@@ -442,6 +512,8 @@ function dialogTitle(dialog: Exclude<DialogName, null>) {
 function formatRole(role: string) {
   const labels: Record<string, string> = {
     SCHOOL_ADMIN: "Admin sekolah",
+    ADMIN: "Admin sekolah",
+    OWNER: "Pemilik sekolah",
     PRINCIPAL: "Kepala sekolah",
     TEACHER: "Guru",
     HOMEROOM_TEACHER: "Wali kelas",

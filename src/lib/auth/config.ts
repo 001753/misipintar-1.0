@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
+import { createHash } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { normalizePhone } from '@/lib/whatsapp'
@@ -12,6 +13,11 @@ import {
 
 const parentLoginSchema = z.object({
   phone: z.string().min(8),
+  password: z.string().min(1),
+})
+
+const adminLoginSchema = z.object({
+  email: z.string().trim().email(),
   password: z.string().min(1),
 })
 
@@ -41,15 +47,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         await checkLoginRateLimit(normalizedPhone, ip)
 
-        // Cari user via phone (parent baru) atau email (superadmin legacy)
+        // Akses keluarga hanya tersedia bagi akun PARENT yang benar-benar
+        // terhubung ke FamilySpace. Admin masuk lewat provider terpisah.
         const user = await prisma.user.findFirst({
           where: {
-            OR: [{ phone: normalizedPhone }, { email: phone }],
+            phone: normalizedPhone,
           },
           include: { familySpace: true },
         })
 
-        if (!user) {
+        if (!user || user.role !== 'PARENT' || !user.familySpaceId) {
           await recordLoginAttempt(normalizedPhone, ip, false)
           return null
         }
@@ -66,6 +73,72 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return {
           id: user.id,
           email: user.email ?? user.phone ?? '',
+          name: user.name,
+          role: user.role,
+          familySpaceId: user.familySpaceId,
+          childId: null,
+          phone: user.phone,
+        }
+      },
+    }),
+
+    Credentials({
+      id: 'admin-credentials',
+      name: 'Admin',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials, request) {
+        const parsed = adminLoginSchema.safeParse(credentials)
+        if (!parsed.success) return null
+
+        const email = parsed.data.email.toLowerCase()
+        const ip =
+          request?.headers?.get?.('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0'
+        const identifier = `admin:${createHash('sha256').update(email).digest('hex')}`
+
+        await checkLoginRateLimit(identifier, ip)
+
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: 'insensitive' } },
+          include: { familySpace: true },
+        })
+
+        if (!user) {
+          await recordLoginAttempt(identifier, ip, false)
+          return null
+        }
+
+        const isPlatformAdmin = user.role === 'SUPER_ADMIN'
+        const hasSchoolAdminAccess = isPlatformAdmin
+          ? false
+          : Boolean(await prisma.schoolMembership.findFirst({
+              where: {
+                userId: user.id,
+                status: 'ACTIVE',
+                role: { in: ['OWNER', 'ADMIN'] },
+              },
+              select: { id: true },
+            }))
+
+        if (!isPlatformAdmin && !hasSchoolAdminAccess) {
+          await recordLoginAttempt(identifier, ip, false)
+          return null
+        }
+
+        const valid = await bcrypt.compare(parsed.data.password, user.passwordHash)
+        if (!valid) {
+          await recordLoginAttempt(identifier, ip, false)
+          return null
+        }
+
+        await recordLoginAttempt(identifier, ip, true)
+        await clearLoginRateLimit(identifier)
+
+        return {
+          id: user.id,
+          email: user.email ?? '',
           name: user.name,
           role: user.role,
           familySpaceId: user.familySpaceId,

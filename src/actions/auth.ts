@@ -3,7 +3,7 @@
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { signIn, signOut } from '@/lib/auth/config'
+import { auth, signIn, signOut } from '@/lib/auth/config'
 import { validateParentPassword } from '@/lib/auth/passwordPolicy'
 import { normalizePhone, validatePhone, sendWhatsAppOtp } from '@/lib/whatsapp'
 import { createOtp, verifyOtp, markOtpUsedAndCreateResetToken, validateResetToken } from '@/lib/otp'
@@ -166,36 +166,56 @@ export async function loginChild(
   }
 }
 
-// ─── Login SuperAdmin (dedicated — untuk /adm-panel) ─────
+// ─── Login admin Platform dan sekolah (/adm-panel) ────────
 
-export async function loginSuperAdmin(
+export async function loginAdmin(
   formData: FormData
-): Promise<ActionResult<null>> {
-  const email = formData.get('email')?.toString().trim() ?? ''
+): Promise<ActionResult<{ redirectTo: string }>> {
+  const email = formData.get('email')?.toString().trim().toLowerCase() ?? ''
   const password = formData.get('password')?.toString() ?? ''
 
   if (!email || !password) {
-    return { success: false, error: 'Email dan password wajib diisi.' }
-  }
-
-  const user = await prisma.user.findUnique({ where: { email } }).catch(() => null)
-  if (!user || user.role !== 'SUPER_ADMIN') {
-    const ip = '0.0.0.0'
-    await import('@/lib/auth/loginGuard').then((m) =>
-      m.recordLoginAttempt(email || 'unknown', ip, false).catch(() => {})
-    )
     return { success: false, error: 'Email atau password salah.' }
   }
 
-  // SuperAdmin login: masukkan email sebagai "phone" field di credentials
-  // (auth config handles email fallback via OR query)
   try {
-    await signIn('parent-credentials', {
-      phone: email,
+    const loginResult = await signIn('admin-credentials', {
+      email,
       password,
       redirect: false,
+    }) as unknown
+    if (
+      loginResult &&
+      typeof loginResult === 'object' &&
+      'error' in loginResult &&
+      loginResult.error
+    ) {
+      return { success: false, error: 'Email atau password salah.' }
+    }
+
+    const session = await auth()
+    if (!session?.user?.id) return { success: false, error: 'Email atau password salah.' }
+
+    if (session.user.role === 'SUPER_ADMIN') {
+      return { success: true, data: { redirectTo: '/superadmin' } }
+    }
+
+    const memberships = await prisma.schoolMembership.findMany({
+      where: {
+        userId: session.user.id,
+        status: 'ACTIVE',
+        role: { in: ['OWNER', 'ADMIN'] },
+      },
+      select: { school: { select: { slug: true, status: true } } },
+      orderBy: { createdAt: 'asc' },
     })
-    return { success: true, data: null }
+    const { getAdminLandingPath } = await import('@/lib/auth/admin-redirect')
+    const redirectTo = getAdminLandingPath(
+      session.user.role,
+      memberships.map(({ school }) => school),
+    )
+    if (!redirectTo) return { success: false, error: 'Email atau password salah.' }
+    return { success: true, data: { redirectTo } }
   } catch (err: any) {
     const msg = err?.message ?? ''
     if (msg.includes('TOO_MANY_ATTEMPTS') || msg.includes('RATE_LIMITED')) {
