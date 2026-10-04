@@ -75,13 +75,19 @@ const nextConfig: NextConfig = {
       loader: "node-loader",
     });
 
-    // Externals resolver: tangkap semua import yang berakhiran .node
+    // Externals resolver: tangkap import yang berakhiran .node
     // dan semua sub-path dari package yang sudah diexternalize.
     const nativeExternalFn = (
       { request }: { request?: string },
       callback: (err?: Error | null, result?: string) => void
     ) => {
-      if (request && request.endsWith(".node")) {
+      // `server.node` is also a JavaScript entry point in React's RSC package,
+      // not a native addon. Keep it bundled so Next can use its compiled copy.
+      if (
+        request &&
+        request.endsWith(".node") &&
+        request !== "react-server-dom-webpack/server.node"
+      ) {
         return callback(null, `commonjs ${request}`);
       }
       callback();

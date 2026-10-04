@@ -1,0 +1,36 @@
+"use strict";exports.id=9625,exports.ids=[8254,9625],exports.modules={29625:(a,b,c)=>{c.d(b,{j2:()=>s,Y9:()=>r,Jv:()=>t,CI:()=>u});var d=c(56469),e=c(15235),f=c(34013),g=c(77598),h=c(93061),i=c(44107),j=c(74427),k=c(98254);async function l(a,b){if(k.redis)try{let b=`login_attempts:${a}`,c=await k.redis.incr(b);if(1===c&&await k.redis.expire(b,900),c>5)throw Error("RATE_LIMITED");return}catch(a){if(a?.message==="RATE_LIMITED")throw a}let c=new Date(Date.now()-9e5);if(await h.z.loginAttempt.count({where:{identifier:a,success:!1,createdAt:{gte:c}}})>=5)throw Error("RATE_LIMITED")}async function m(a){if(k.redis)try{await k.redis.del(`login_attempts:${a}`)}catch{}}async function n(a,b,c){try{await h.z.loginAttempt.create({data:{identifier:a,ipAddress:b,success:c}})}catch{}}let o=i.Ikc({phone:i.YjP().min(8),password:i.YjP().min(1)}),p=i.Ikc({email:i.YjP().trim().email(),password:i.YjP().min(1)}),q=i.Ikc({spaceCode:i.YjP().length(6),username:i.YjP().min(1),password:i.YjP().min(1)}),{handlers:r,auth:s,signIn:t,signOut:u}=(0,d.Ay)({providers:[(0,e.A)({id:"parent-credentials",name:"Parent",credentials:{phone:{label:"No. WhatsApp",type:"text"},password:{label:"Password",type:"password"}},async authorize(a,b){let c=o.safeParse(a);if(!c.success)return null;let{phone:d,password:e}=c.data,g=(0,j.cz)(d),i=b?.headers?.get?.("x-forwarded-for")?.split(",")[0]?.trim()??"0.0.0.0";await l(g,i);let k=await h.z.user.findFirst({where:{phone:g},include:{familySpace:!0}});return k&&"PARENT"===k.role&&k.familySpaceId&&await f.Ay.compare(e,k.passwordHash)?(await n(g,i,!0),await m(g),{id:k.id,email:k.email??k.phone??"",name:k.name,role:k.role,familySpaceId:k.familySpaceId,childId:null,phone:k.phone}):(await n(g,i,!1),null)}}),(0,e.A)({id:"admin-credentials",name:"Admin",credentials:{email:{label:"Email",type:"email"},password:{label:"Password",type:"password"}},async authorize(a,b){let c=p.safeParse(a);if(!c.success)return null;let d=c.data.email.toLowerCase(),e=b?.headers?.get?.("x-forwarded-for")?.split(",")[0]?.trim()??"0.0.0.0",i=`admin:${(0,g.createHash)("sha256").update(d).digest("hex")}`;await l(i,e);let j=await h.z.user.findFirst({where:{email:{equals:d,mode:"insensitive"}},include:{familySpace:!0}});if(!j)return await n(i,e,!1),null;let k="SUPER_ADMIN"===j.role,o=!k&&!!await h.z.schoolMembership.findFirst({where:{userId:j.id,status:"ACTIVE",role:{in:["OWNER","ADMIN"]}},select:{id:!0}});return(k||o)&&await f.Ay.compare(c.data.password,j.passwordHash)?(await n(i,e,!0),await m(i),{id:j.id,email:j.email??"",name:j.name,role:j.role,familySpaceId:j.familySpaceId,childId:null,phone:j.phone}):(await n(i,e,!1),null)}}),(0,e.A)({id:"child-credentials",name:"Child",credentials:{spaceCode:{label:"Kode Keluarga",type:"text"},username:{label:"Username",type:"text"},password:{label:"Password",type:"password"}},async authorize(a,b){let c=q.safeParse(a);if(!c.success)return null;let{spaceCode:d,username:e,password:g}=c.data,i=`${d}:${e}`,j=b?.headers?.get?.("x-forwarded-for")?.split(",")[0]?.trim()??"0.0.0.0";await l(i,j);let k=await h.z.familySpace.findUnique({where:{spaceCode:d}});if(!k)return await n(i,j,!1),null;let o=await h.z.child.findUnique({where:{familySpaceId_username:{familySpaceId:k.id,username:e}}});return o&&!o.deletedAt&&await f.Ay.compare(g,o.passwordHash)?(await n(i,j,!0),await m(i),{id:o.id,name:o.name,email:null,role:"CHILD",familySpaceId:k.id,childId:o.id,phone:null}):(await n(i,j,!1),null)}})],callbacks:{jwt:async({token:a,user:b})=>(b&&(a.id=b.id,a.role=b.role,a.familySpaceId=b.familySpaceId??null,a.childId=b.childId??null,a.phone=b.phone??null),a),session:async({session:a,token:b})=>(a.user.id=b.id,a.user.role=b.role,a.user.familySpaceId=b.familySpaceId??null,a.user.childId=b.childId??null,a.user.phone=b.phone??null,a)},pages:{signIn:"/login",error:"/login"},session:{strategy:"jwt",maxAge:604800,updateAge:3600},secret:process.env.NEXTAUTH_SECRET??process.env.SESSION_SECRET,trustHost:!0})},74427:(a,b,c)=>{c.d(b,{FY:()=>f,cz:()=>e,m9:()=>h,xl:()=>g});let d="https://api.fonnte.com/send";function e(a){let b=a.replace(/\s+/g,"").replace(/-/g,"");return b.startsWith("+")&&(b=b.slice(1)),b.startsWith("0")&&(b="62"+b.slice(1)),b.startsWith("62")||(b="62"+b),b}function f(a){let b=e(a);return/^62\d{8,13}$/.test(b)}async function g(a){let b,c=process.env.FONNTE_TOKEN,{userPhone:f,familyName:g,action:h,planType:i,billingCycle:j,totalAmount:k,periodEnd:l,adminNote:m,dashboardUrl:n}=a,o="YEARLY"===j?"Tahunan":"Bulanan",p="EDUCATOR"===i?"Educator":"PRO"===i?"Pro":i,q=`Rp ${k.toLocaleString("id-ID")}`;if("APPROVED"===h){let a=l?l.toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"}):"-";b=`✅ *Pembayaran Berhasil Diverifikasi!*
+
+Halo, keluarga *${g}*!
+
+Pembayaran Anda telah *disetujui* oleh admin.
+
+📦 Paket: *${p} ${o}*
+💰 Nominal: *${q}*
+📅 Aktif hingga: *${a}*
+
+Selamat! Fitur premium Anda sudah aktif.
+Klik link berikut untuk masuk ke dashboard:
+${n}
+
+_Terima kasih telah menggunakan Misi Pintar!_ 🎉`}else b=`❌ *Pembayaran Tidak Dapat Diverifikasi*
+
+Halo, keluarga *${g}*!
+
+Maaf, pembayaran Anda *tidak dapat disetujui* saat ini.
+
+📦 Paket: *${p} ${o}*
+💰 Nominal: *${q}*
+`+(m?`📝 Keterangan: _${m}_
+`:"")+`
+Silakan hubungi admin atau coba transfer ulang.
+`+`${n}
+
+`+"_Misi Pintar Admin System_";if(!c){console.warn("[QRIS User Notif] FONNTE_TOKEN tidak di-set — notif WA dilewati"),console.warn(`  ➜ Pesan yang akan dikirim ke ${f}:
+${b}`);return}let r=e(f);try{let a=await fetch(d,{method:"POST",headers:{Authorization:c,"Content-Type":"application/json"},body:JSON.stringify({target:r,message:b,countryCode:"62"})});if(!a.ok){let b=await a.text().catch(()=>"");console.error(`[QRIS User Notif] Fonnte error ${a.status}: ${b}`);return}let e=await a.json().catch(()=>({}));e?.status===!1&&console.error(`[QRIS User Notif] Fonnte gagal: ${e?.reason??"unknown"}`)}catch(a){console.error("[QRIS User Notif] Gagal kirim WA:",a)}}async function h(a,b){let c=process.env.FONNTE_TOKEN,f=e(a),g=`🔐 *Kode OTP Misi Pintar*
+
+Kode verifikasi Anda: *${b}*
+
+Kode berlaku selama *10 menit*.
+Jangan bagikan kode ini kepada siapapun.
+
+_Jika Anda tidak meminta kode ini, abaikan pesan ini._`;if(!c){console.warn("[WhatsApp OTP] FONNTE_TOKEN not set — dev mode, printing OTP:"),console.warn(`  ➜ Phone: ${f}  |  OTP: ${b}`);return}let h=await fetch(d,{method:"POST",headers:{Authorization:c,"Content-Type":"application/json"},body:JSON.stringify({target:f,message:g,countryCode:"62"})});if(!h.ok){let a=await h.text().catch(()=>"");throw Error(`Fonnte API error ${h.status}: ${a}`)}let i=await h.json().catch(()=>({}));if(i?.status===!1)throw Error(`Fonnte gagal: ${i?.reason??"unknown"}`)}},93061:(a,b,c)=>{let d;c.d(b,{z:()=>f});let e=globalThis,f=new Proxy({},{get:(a,b)=>(d||(d=e.prisma??function(){if(!process.env.DATABASE_URL)throw Error("DATABASE_URL environment variable is not set");let{PrismaClient:a}=c(96330);return new a({log:["error"]})}(),e.prisma=d),Reflect.get(d,b,d))})},98254:(a,b,c)=>{c.d(b,{redis:()=>d});let d=globalThis.redis??function(){if("1"===process.env.NEXT_BUILD)return;let a=process.env.REDIS_URL;return a?new(c(37659)).default(a,{maxRetriesPerRequest:3,retryStrategy:a=>Math.min(50*a,2e3),lazyConnect:!0}):void console.warn("[redis] REDIS_URL not set — rate limiting disabled")}()}};

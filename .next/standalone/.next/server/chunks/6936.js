@@ -1,0 +1,1 @@
+"use strict";exports.id=6936,exports.ids=[6936],exports.modules={56936:(a,b,c)=>{c.d(b,{getAdminLandingPath:()=>d});function d(a,b){return"SUPER_ADMIN"===a?"/superadmin":"PARENT"!==a||0===b.length?null:1===b.length&&"SUSPENDED"!==b[0].status?`/school-admin/${b[0].slug}`:"/school-admin"}}};

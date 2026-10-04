@@ -19,6 +19,7 @@ self.__SERVER_FILES_MANIFEST={
       "jsx",
       "js"
     ],
+    "instrumentationClientInject": [],
     "poweredByHeader": true,
     "compress": true,
     "images": {
@@ -129,6 +130,7 @@ self.__SERVER_FILES_MANIFEST={
       "mp.jobenapp.cloud",
       "*.jobenapp.cloud"
     ],
+    "enablePrerenderSourceMaps": true,
     "cacheComponents": false,
     "cacheLife": {
       "default": {
@@ -169,7 +171,9 @@ self.__SERVER_FILES_MANIFEST={
     },
     "cacheHandlers": {},
     "experimental": {
-      "appNewScrollHandler": false,
+      "appNewScrollHandler": true,
+      "coldCacheBadge": false,
+      "devValidationWorker": true,
       "useSkewCookie": false,
       "cssChunking": true,
       "multiZoneDraftMode": false,
@@ -179,10 +183,15 @@ self.__SERVER_FILES_MANIFEST={
       "linkNoTouchStart": false,
       "caseSensitiveRoutes": false,
       "cachedNavigations": false,
-      "partialFallbacks": false,
       "dynamicOnHover": false,
-      "varyParams": false,
-      "prefetchInlining": false,
+      "useOffline": false,
+      "varyParams": true,
+      "optimisticRouting": true,
+      "instrumentationClientRouterTransitionEvents": false,
+      "prefetchInlining": {
+        "maxSize": 2048,
+        "maxBundleSize": 10240
+      },
       "preloadEntriesOnStart": true,
       "clientRouterFilter": true,
       "clientRouterFilterRedirects": false,
@@ -193,16 +202,17 @@ self.__SERVER_FILES_MANIFEST={
       "cpus": 1,
       "memoryBasedWorkersCount": false,
       "imgOptConcurrency": null,
+      "imgOptOperationCache": null,
       "imgOptTimeoutInSeconds": 7,
       "imgOptMaxInputPixels": 268402689,
       "imgOptSequentialRead": null,
-      "imgOptSkipMetadata": null,
       "isrFlushToDisk": true,
       "workerThreads": false,
       "optimizeCss": false,
       "nextScriptWorkers": false,
       "scrollRestoration": false,
       "externalDir": false,
+      "devMemoryThresholdRestart": true,
       "disableOptimizedLoading": false,
       "gzipSize": true,
       "craCompat": false,
@@ -210,6 +220,7 @@ self.__SERVER_FILES_MANIFEST={
       "fullySpecified": false,
       "swcTraceProfiling": false,
       "forceSwcTransforms": false,
+      "requestInsights": false,
       "largePageDataBytes": 128000,
       "typedEnv": false,
       "parallelServerCompiles": false,
@@ -219,15 +230,16 @@ self.__SERVER_FILES_MANIFEST={
       "webpackMemoryOptimizations": false,
       "optimizeServerReact": true,
       "strictRouteTypes": false,
-      "viewTransition": false,
+      "useTypeScriptCli": true,
       "removeUncaughtErrorAndRejectionListeners": false,
-      "validateRSCRequestHeaders": false,
+      "validateRSCRequestHeaders": true,
       "staleTimes": {
         "dynamic": 0,
         "static": 300
       },
       "reactDebugChannel": true,
       "serverComponentsHmrCache": true,
+      "serverComponentsHmrCancellation": false,
       "staticGenerationMaxConcurrency": 8,
       "staticGenerationMinPagesPerWorker": 25,
       "transitionIndicator": false,
@@ -241,7 +253,7 @@ self.__SERVER_FILES_MANIFEST={
       "hideLogsAfterAbort": false,
       "mcpServer": true,
       "turbopackFileSystemCacheForDev": true,
-      "turbopackFileSystemCacheForBuild": false,
+      "turbopackFileSystemCacheForBuild": true,
       "turbopackInferModuleSideEffects": true,
       "turbopackPluginRuntimeStrategy": "childProcesses",
       "serverActions": {
@@ -249,6 +261,7 @@ self.__SERVER_FILES_MANIFEST={
           "*"
         ]
       },
+      "turbopackMemoryEvictionMode": "auto",
       "optimizePackageImports": [
         "lucide-react",
         "date-fns",
@@ -326,6 +339,10 @@ self.__SERVER_FILES_MANIFEST={
         "react-icons/vsc",
         "react-icons/wi"
       ],
+      "useCacheTimeout": 54,
+      "instantInsights": {
+        "validationLevel": "warning"
+      },
       "trustHostHeader": false,
       "isExperimentalCompile": false
     },
@@ -343,10 +360,12 @@ self.__SERVER_FILES_MANIFEST={
       "firebase-admin",
       "ioredis"
     ],
+    "repoRoot": "/home/runner/workspace",
     "turbopack": {
       "root": "/home/runner/workspace"
     },
-    "distDirRoot": ".next"
+    "distDirRoot": ".next",
+    "supportsImmutableAssets": false
   },
   "appDir": "/home/runner/workspace",
   "relativeAppDir": "",

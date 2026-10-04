@@ -46,6 +46,11 @@ Edit kode di Replit → npm run build di Replit → commit & push ke GitHub → 
 > `deploy.sh` di cPanel TIDAK melakukan build — ia hanya git pull + restart.
 > Kalau lupa build, produksi akan menampilkan versi lama meskipun git pull sudah berhasil.
 
+### Menjalankan aplikasi development di Replit
+- Workflow `Start application` menjalankan `npm run dev` pada port 5000; gunakan tombol **Run** untuk membuka preview.
+- Untuk database development yang masih kosong, pastikan `DATABASE_URL` menunjuk ke PostgreSQL development Replit, lalu jalankan `npm run db:deploy` dan `node scripts/seed-plans.js`.
+- Perintah migration memakai `DATABASE_URL` dari environment aktif. Jangan jalankan terhadap database production sebagai bagian dari setup development.
+
 ### Build HARUS di Replit (bukan cPanel)
 cPanel tidak bisa build Next.js (batas thread). Build dilakukan di Replit:
 ```bash
@@ -142,12 +147,18 @@ bash deploy.sh
 | `0002_cron_lock_and_file_upload` | Tambah CronLock + FileUpload |
 | `0003_add_user_phone` | Tambah kolom `phone` ke User (terlewat di 0001) |
 | `20260628092551_fix_user_email_nullable` | Email User jadi nullable, tambah tabel OtpCode + enum OtpPurpose, tambah kolom qrisQrString + qrisQrUrl ke Invoice |
+| `20260723000000_add_doku_payment_provider` | Tambah provider pembayaran DOKU |
+| `20260723100000_add_doku_invoice_columns` | Tambah kolom invoice untuk Checkout DOKU |
+| `20260724000000_add_doku_webhook_request_id` | Simpan Request-Id webhook untuk idempotensi |
+| `20260724010000_add_invoice_checkout_key` | Tambah kunci checkout invoice |
+| `20261004000000_joben_school_phase1` | Tambah skema sekolah dan undangan |
 
 ### Aturan Migration
 - **SELALU** buat migration baru dengan `npx prisma migrate dev --name <nama>`
 - **JANGAN** edit migration yang sudah ada
 - Gunakan `IF NOT EXISTS` di SQL custom jika migration perlu idempoten
-- Replit DB di-baseline (sudah ditandai applied) — `prisma migrate deploy` aman dijalankan
+- Pada database development baru, cek `npx prisma migrate status`, lalu gunakan `npm run db:deploy` untuk menerapkan migration yang sudah ada.
+- Jangan menganggap database Replit selalu sudah di-baseline; verifikasi status dan environment sebelum migration.
 
 ### Data Awal Yang Wajib Ada di DB Produksi
 Sudah di-seed otomatis oleh `deploy.sh`:

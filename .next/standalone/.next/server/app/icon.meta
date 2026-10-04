@@ -1,1 +1,1 @@
-{"status":200,"headers":{"cache-control":"public, max-age=0, must-revalidate","content-type":"image/png","x-next-cache-tags":"_N_T_/layout,_N_T_/icon/layout,_N_T_/icon/route,_N_T_/icon"}}
+{"status":200,"headers":{"cache-control":"public, max-age=0, must-revalidate","content-type":"image/png","x-next-cache-tags":"_N_T_/layout,_N_T_/icon/layout,_N_T_/icon/route,_N_T_/icon"},"routeCache":{"key":"/route-cache/APP_ROUTE/b43138404a95f2f25c06ecae445d0ac061ba0a43875f66d68db76f589f585868/$/icon","owner":{"kind":"APP_ROUTE","sourceRoute":"/icon/route"},"isFallback":false}}

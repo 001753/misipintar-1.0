@@ -124,6 +124,22 @@
       "namedRegex": "^/dashboard/history/(?<nxtPchildId>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/school-admin/[schoolSlug]",
+      "regex": "^/school\\-admin/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPschoolSlug": "nxtPschoolSlug"
+      },
+      "namedRegex": "^/school\\-admin/(?<nxtPschoolSlug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/school-invite/[token]",
+      "regex": "^/school\\-invite/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPtoken": "nxtPtoken"
+      },
+      "namedRegex": "^/school\\-invite/(?<nxtPtoken>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/superadmin/families/[id]",
       "regex": "^/superadmin/families/([^/]+?)(?:/)?$",
       "routeKeys": {
@@ -446,6 +462,18 @@
       "namedRegex": "^/robots\\.txt(?:/)?$"
     },
     {
+      "page": "/school-admin",
+      "regex": "^/school\\-admin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/school\\-admin(?:/)?$"
+    },
+    {
+      "page": "/school-invite/accepted",
+      "regex": "^/school\\-invite/accepted(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/school\\-invite/accepted(?:/)?$"
+    },
+    {
       "page": "/sitemap.xml",
       "regex": "^/sitemap\\.xml(?:/)?$",
       "routeKeys": {},
@@ -492,6 +520,12 @@
       "regex": "^/superadmin/qris\\-payments(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/superadmin/qris\\-payments(?:/)?$"
+    },
+    {
+      "page": "/superadmin/schools",
+      "regex": "^/superadmin/schools(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/superadmin/schools(?:/)?$"
     },
     {
       "page": "/superadmin/security/login-attempts",
