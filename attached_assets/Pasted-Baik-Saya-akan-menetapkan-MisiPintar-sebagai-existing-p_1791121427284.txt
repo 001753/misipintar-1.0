@@ -1,0 +1,3273 @@
+Baik. Saya akan menetapkan **MisiPintar sebagai existing product baseline** dan membangun PRD evolusinya menjadi **JOBEN School–Family–Child Ecosystem** tanpa menghapus fitur yang sudah ada.
+
+Satu koreksi penting terlebih dahulu: **menghapus upload foto anak selain foto profil tidak membuat aplikasi “bebas UU PDP”**. UU PDP Indonesia secara eksplisit menggolongkan **data anak sebagai Data Pribadi spesifik**, dan pemrosesan data anak memiliki persyaratan khusus termasuk persetujuan orang tua/wali. Karena itu PRD di bawah menggunakan prinsip **data minimization + privacy by design**, bukan mengklaim menghindari UU PDP. ([JDIH Kemkomdigi][1])
+
+Untuk foto profil: saya tetapkan **satu foto profil opsional**, tanpa face recognition, face embedding, biometric analysis, public gallery, atau upload foto/video aktivitas anak. Ini sangat mengurangi attack surface dan kompleksitas privasi.
+
+# JOBEN — MASTER PRD
+
+## Child Development & School–Family Ecosystem
+
+**Status:** Production Specification
+**Target:** Real Work / Completed / Full Feature
+**Baseline:** MisiPintar existing functionality preserved
+**Target stack:** Node.js 24 + PostgreSQL
+**SaaS model:** Per active student / per school
+**Architecture:** Multi-tenant SaaS
+**Primary market:** TK & SD
+**Primary users:** School, Teacher, Parent, Child
+**Language:** Bahasa Indonesia + English-ready architecture
+
+# JOBEN
+
+## CHILD DEVELOPMENT & SCHOOL–FAMILY ECOSYSTEM
+
+### Production-Grade Product Requirements Document
+
+---
+
+# 1. EXECUTIVE PRODUCT DEFINITION
+
+## 1.1 Product Name
+
+**JOBEN**
+
+Working ecosystem:
+
+* JOBEN School
+* JOBEN Family
+* JOBEN Kids
+* JOBEN Development
+* JOBEN Missions
+
+Existing **MisiPintar** becomes the foundational Mission / Habit / Reward engine.
+
+---
+
+# 2. PRODUCT VISION
+
+JOBEN adalah platform SaaS yang menghubungkan:
+
+**Sekolah + Guru + Anak + Orang Tua**
+
+dalam satu sistem perkembangan anak.
+
+Tujuan utama bukan hanya mengelola sekolah, tetapi:
+
+> **memahami, mendukung, dan memantau perjalanan perkembangan setiap anak secara longitudinal melalui evidence dari sekolah dan rumah.**
+
+JOBEN harus menjawab:
+
+1. Apa yang sedang dipelajari anak?
+2. Bagaimana karakter dan kebiasaannya berkembang?
+3. Apa kekuatannya?
+4. Area apa yang masih berkembang?
+5. Apa evidence yang mendukung kesimpulan tersebut?
+6. Apa yang dapat dilakukan guru?
+7. Apa yang dapat dilakukan orang tua?
+8. Aktivitas apa yang cocok dilakukan anak berikutnya?
+9. Bagaimana perkembangan anak dari waktu ke waktu?
+
+---
+
+# 3. PRODUCT PRINCIPLE
+
+## 3.1 Existing functionality is protected
+
+Tidak boleh menghapus atau merusak fitur MisiPintar yang sudah berjalan.
+
+Existing capability menjadi:
+
+> **FOUNDATION / LEGACY-COMPATIBLE MODULE**
+
+Fitur existing yang harus dipertahankan:
+
+* Mission
+* Mission completion
+* Child activity
+* Parent approval
+* Evidence submission yang sudah ada, dengan perubahan media sesuai privacy policy
+* XP
+* Level
+* Streak
+* Achievement
+* Badge
+* Reward
+* Virtual money / financial literacy
+* Child progress
+* Parent dashboard
+* Child dashboard
+* Mission history
+* Leaderboard apabila sudah ada
+* Existing navigation yang masih relevan
+* Existing authentication flow
+* Existing business logic yang tidak bertentangan dengan privacy architecture
+
+Tidak boleh dilakukan:
+
+* rewrite total tanpa alasan
+* mengganti database tanpa migration plan
+* menghapus existing endpoint
+* menghapus existing user account
+* menghilangkan existing mission
+* menghilangkan XP
+* menghilangkan reward
+* mengubah formula existing tanpa migration specification
+* mengubah UX existing secara destruktif
+
+---
+
+# 4. PRIVACY-FIRST PRODUCT POLICY
+
+## 4.1 Media restriction
+
+JOBEN TIDAK menyediakan:
+
+* upload foto aktivitas anak
+* upload video anak
+* photo evidence
+* video evidence
+* public child gallery
+* classroom photo gallery
+* social feed dengan foto anak
+* face recognition
+* face detection untuk profiling
+* face embedding
+* biometric identification
+* AI analysis wajah
+* emotion recognition dari wajah
+* upload dokumen identitas anak
+* upload KTP/KK sebagai fitur normal
+* upload kartu identitas siswa sebagai fitur normal
+
+## 4.2 Profile photo
+
+Foto profil anak diperbolehkan sebagai:
+
+* optional
+* private
+* account/profile purpose only
+
+Restrictions:
+
+* hanya satu profile photo aktif
+* tidak public
+* tidak searchable
+* tidak masuk leaderboard
+* tidak digunakan AI
+* tidak digunakan facial recognition
+* tidak dibuat biometric embedding
+* tidak digunakan untuk assessment
+* tidak dianalisis karakteristik wajah
+* tidak boleh menjadi dasar keputusan perkembangan anak
+
+Jika sekolah tidak ingin menyimpan foto anak:
+
+> gunakan default avatar.
+
+---
+
+# 5. DATA MINIMIZATION
+
+Data anak yang diperlukan harus seminimal mungkin.
+
+Minimum child profile:
+
+* internal child ID
+* display name
+* preferred name
+* date of birth / age jika diperlukan
+* gender hanya jika benar-benar dibutuhkan
+* grade
+* class
+* school relationship
+* parent relationship
+* enrollment status
+* optional profile avatar/photo
+* learning/development records
+* mission records
+* achievements
+* progress records
+
+Tidak mengumpulkan secara default:
+
+* NIK
+* NISN
+* nomor paspor
+* alamat rumah lengkap
+* data kesehatan
+* diagnosis psikologis
+* diagnosis medis
+* biometrik
+* data keluarga yang tidak diperlukan
+* informasi finansial pribadi orang tua yang tidak diperlukan untuk layanan
+* lokasi real-time anak
+
+---
+
+# 6. LEGAL / PRIVACY POSITION
+
+JOBEN menerapkan:
+
+### Privacy by Design
+
+Prinsip:
+
+* purpose limitation
+* data minimization
+* access control
+* encryption
+* auditability
+* retention
+* deletion
+* consent management
+* least privilege
+
+Karena data anak termasuk Data Pribadi spesifik menurut UU PDP, sistem tidak boleh dipasarkan dengan klaim "bebas UU PDP". ([JDIH Kemkomdigi][1])
+
+Pemrosesan data anak harus mempunyai dasar pemrosesan yang sesuai dan mekanisme persetujuan orang tua/wali sebagaimana diwajibkan oleh UU PDP. ([BPK Regulation Database][2])
+
+---
+
+# 7. TENANT MODEL
+
+JOBEN adalah:
+
+> Multi-tenant SaaS.
+
+Hierarchy:
+
+```text
+JOBEN PLATFORM
+│
+├── PLATFORM ADMIN
+│
+├── SCHOOL TENANT
+│   │
+│   ├── SCHOOL ADMIN
+│   ├── PRINCIPAL
+│   ├── TEACHERS
+│   ├── CLASSES
+│   ├── STUDENTS
+│   └── PARENTS
+│
+└── FOUNDATION / GROUP
+    ├── SCHOOL A
+    ├── SCHOOL B
+    └── SCHOOL C
+```
+
+Setiap tenant harus memiliki isolation boundary.
+
+---
+
+# 8. CORE TENANT ENTITY
+
+School:
+
+```text
+school_id
+name
+legal_name
+slug
+address
+city
+province
+country
+timezone
+email
+phone
+logo
+status
+subscription_plan
+billing_status
+price_per_student
+billing_cycle
+student_count
+created_at
+updated_at
+```
+
+---
+
+# 9. SCHOOL SUBSCRIPTION MODEL
+
+## 9.1 Pricing principle
+
+Sekolah membayar berdasarkan:
+
+> **jumlah siswa aktif yang ditagihkan.**
+
+Harga per siswa ditentukan oleh PLATFORM ADMIN.
+
+Contoh konfigurasi:
+
+```text
+Harga dasar:
+Rp 10.000 / siswa / bulan
+```
+
+Angka tersebut hanya contoh.
+
+Platform Admin dapat mengubah:
+
+* base price
+* billing cycle
+* minimum student count
+* maximum student count
+* tier pricing
+* promotional discount
+* effective date
+
+---
+
+# 10. SCHOOL BILLING FLOW
+
+Saat sekolah mendaftar:
+
+```text
+School creates account
+        ↓
+School profile
+        ↓
+Select / create student count
+        ↓
+System calculates subscription
+        ↓
+Price displayed immediately
+        ↓
+School confirms
+        ↓
+Invoice generated
+        ↓
+Payment
+        ↓
+Subscription activated
+```
+
+---
+
+# 11. AUTOMATIC STUDENT COUNT
+
+Jumlah siswa aktif harus dihitung otomatis dari database.
+
+Formula:
+
+```text
+billable_students =
+COUNT(active enrolled students)
+```
+
+Bukan angka manual.
+
+School Admin dapat melihat:
+
+```text
+Active Students
+128
+
+Price / Student
+Rp10.000
+
+Monthly Subscription
+Rp1.280.000
+```
+
+---
+
+# 12. BILLING SAFETY
+
+School Admin tidak boleh mengubah:
+
+* harga per siswa
+* pricing formula
+* invoice amount
+* subscription status
+
+School Admin hanya boleh melihat:
+
+* current student count
+* current price
+* estimated monthly amount
+* invoice
+* payment status
+* subscription period
+
+Pricing hanya dapat diubah Platform Admin.
+
+---
+
+# 13. STUDENT COUNT CHANGE
+
+Jika:
+
+```text
+January = 100 students
+February = 125 students
+```
+
+system menghitung sesuai billing policy.
+
+Billing policy harus configurable:
+
+### Option A
+
+Current active students at invoice generation.
+
+### Option B
+
+Average active students during billing period.
+
+Default:
+
+> Current active students at billing snapshot.
+
+Billing snapshot harus disimpan agar invoice historis tidak berubah ketika jumlah siswa berubah.
+
+---
+
+# 14. BILLING SNAPSHOT
+
+Invoice menyimpan immutable:
+
+```text
+invoice_id
+school_id
+billing_period
+student_count
+price_per_student
+subtotal
+discount
+tax
+total
+currency
+generated_at
+due_at
+status
+```
+
+Jika harga kemudian berubah:
+
+> invoice lama tidak berubah.
+
+---
+
+# 15. SCHOOL ADMIN
+
+School Admin dapat:
+
+### School Settings
+
+* school name
+* logo
+* address
+* contact
+* timezone
+* academic year
+* class
+* grade
+* school calendar
+* notification preferences
+* basic branding
+
+### User Management
+
+* invite teacher
+* deactivate teacher
+* assign teacher
+* assign class
+* manage parent relationship
+* manage student enrollment
+
+### Subscription
+
+* view student count
+* view current price
+* view billing status
+* view invoices
+* view payment history
+
+Tidak dapat:
+
+* change platform pricing
+* access other schools
+* access platform administration
+* access raw database
+* bypass permission
+
+---
+
+# 16. PLATFORM ADMIN
+
+Platform Admin dapat:
+
+### Tenant management
+
+* create school
+* suspend school
+* reactivate school
+* configure school
+* view subscription
+* configure price
+
+### Pricing
+
+```text
+pricing_id
+name
+price_per_student
+currency
+billing_cycle
+minimum_students
+maximum_students
+effective_from
+effective_until
+status
+```
+
+### Billing
+
+* invoices
+* payments
+* failed payments
+* overdue
+* refunds
+* adjustments
+* discounts
+
+### System
+
+* feature flags
+* global settings
+* curriculum framework
+* competency framework
+* notification templates
+
+---
+
+# 17. USER ROLES
+
+Minimum RBAC:
+
+```text
+PLATFORM_ADMIN
+
+SCHOOL_OWNER
+SCHOOL_ADMIN
+PRINCIPAL
+
+TEACHER
+HOMEROOM_TEACHER
+
+PARENT
+
+CHILD
+```
+
+Optional future:
+
+```text
+COUNSELOR
+CURRICULUM_ADMIN
+FOUNDATION_ADMIN
+FINANCE_ADMIN
+```
+
+---
+
+# 18. PERMISSION PRINCIPLE
+
+Every request must be checked against:
+
+```text
+user
++
+role
++
+tenant
++
+resource
++
+relationship
++
+permission
+```
+
+Example:
+
+Teacher A cannot access Student B if Student B is outside Teacher A's authorized class scope.
+
+Parent A cannot access Child B.
+
+School A cannot access School B.
+
+---
+
+# 19. CHILD DEVELOPMENT MODEL
+
+Core development dimensions:
+
+## A. CHARACTER
+
+* responsibility
+* discipline
+* honesty
+* empathy
+* caring
+* resilience
+* independence
+
+## B. KNOWLEDGE
+
+* literacy
+* numeracy
+* science
+* language
+* social knowledge
+* digital literacy
+* financial literacy
+
+## C. THINKING
+
+* critical thinking
+* problem solving
+* reasoning
+* creativity
+* decision making
+* computational thinking
+
+## D. SKILLS
+
+* communication
+* collaboration
+* creativity
+* presentation
+* practical skills
+* digital skills
+
+## E. WELLBEING
+
+Non-diagnostic only:
+
+* healthy habits
+* physical activity
+* emotional self-regulation observations
+* social interaction
+* learning engagement
+
+## F. HABITS
+
+* waking routine
+* reading
+* learning
+* exercise
+* responsibility
+* helping family
+* bedtime routine
+
+---
+
+# 20. DEVELOPMENT SCALE
+
+Do NOT represent child development as a single ranking score.
+
+Use:
+
+```text
+NOT YET OBSERVED
+EMERGING
+DEVELOPING
+CONSISTENT
+STRONG
+```
+
+Bahasa Indonesia:
+
+```text
+BELUM TERAMATI
+MULAI TUMBUH
+BERKEMBANG
+KONSISTEN
+KUAT
+```
+
+---
+
+# 21. DEVELOPMENT EVIDENCE
+
+Evidence can be:
+
+### School
+
+* teacher observation
+* assignment
+* project
+* assessment result
+* classroom participation
+* mission
+* reflection
+
+### Home
+
+* parent confirmation
+* home mission
+* habit completion
+* parent observation
+* child reflection
+
+### Child
+
+* project
+* quiz
+* written response
+* reflection
+* portfolio item
+* self-assessment
+
+NO mandatory photo/video evidence.
+
+---
+
+# 22. EVIDENCE OBJECT
+
+```text
+evidence_id
+child_id
+tenant_id
+source_type
+source_user_id
+competency_id
+activity_id
+observation_text
+rating
+created_at
+updated_at
+visibility
+status
+```
+
+Source:
+
+```text
+SCHOOL
+HOME
+CHILD
+```
+
+---
+
+# 23. EVIDENCE RULE
+
+Every development insight should be traceable to evidence.
+
+System should never say:
+
+> "Child has weak collaboration."
+
+without evidence.
+
+Instead:
+
+> "Collaboration is currently developing based on 4 recent observations."
+
+---
+
+# 24. CHILD DEVELOPMENT PASSPORT
+
+Every child receives:
+
+# DEVELOPMENT PASSPORT
+
+Contains:
+
+* development dimensions
+* strengths
+* current focus
+* milestones
+* learning progress
+* habit progress
+* mission progress
+* portfolio
+* timeline
+* teacher observations
+* parent observations
+
+---
+
+# 25. DEVELOPMENT TIMELINE
+
+Timeline:
+
+```text
+DATE
+↓
+ACTIVITY
+↓
+OBSERVATION
+↓
+EVIDENCE
+↓
+DEVELOPMENT CHANGE
+```
+
+Example:
+
+```text
+March
+Completed reading activity
+
+April
+Teacher observed increased participation
+
+May
+Child independently presented a story
+
+June
+Communication marked CONSISTENT
+```
+
+---
+
+# 26. LONGITUDINAL PROFILE
+
+Development data must survive:
+
+```text
+TK A
+ ↓
+TK B
+ ↓
+SD 1
+ ↓
+SD 2
+ ↓
+SD 3
+...
+```
+
+provided the child's legal relationship and data processing basis remain valid.
+
+Historical data must be immutable except for controlled correction/audit.
+
+---
+
+# 27. MISSION ENGINE
+
+Existing MisiPintar Mission engine is preserved.
+
+Mission:
+
+```text
+mission_id
+title
+description
+category
+difficulty
+duration
+xp
+reward
+target_age
+target_grade
+competencies
+status
+created_by
+```
+
+Mission types:
+
+* learning
+* character
+* habit
+* family
+* project
+* financial literacy
+* creativity
+* problem solving
+* collaboration
+
+---
+
+# 28. MISSION FLOW
+
+```text
+MISSION ASSIGNED
+       ↓
+CHILD STARTS
+       ↓
+CHILD COMPLETES
+       ↓
+SELF REFLECTION
+       ↓
+PARENT / TEACHER REVIEW
+       ↓
+XP
+       ↓
+ACHIEVEMENT
+       ↓
+DEVELOPMENT EVIDENCE
+```
+
+---
+
+# 29. EXISTING REWARD SYSTEM
+
+Existing:
+
+* XP
+* level
+* streak
+* reward
+* virtual money
+
+must remain available.
+
+But reward must be configurable.
+
+School may choose:
+
+```text
+XP only
+XP + Badge
+XP + Reward
+XP + Virtual Money
+```
+
+---
+
+# 30. LEADERBOARD POLICY
+
+Existing leaderboard should not be deleted.
+
+However:
+
+* tenant configurable
+* class configurable
+* parent visibility configurable
+* child identity minimization
+* no public leaderboard
+* no public ranking
+* no cross-school leaderboard
+
+Recommended default:
+
+> personal progress instead of competitive ranking.
+
+---
+
+# 31. CHILD APPLICATION
+
+Main navigation:
+
+```text
+Home
+My Missions
+My Learning
+My Growth
+My Achievements
+My Portfolio
+My Habits
+My Rewards
+```
+
+---
+
+# 32. CHILD HOME
+
+Displays:
+
+* greeting
+* today's missions
+* progress
+* XP
+* streak
+* achievements
+* recommended activity
+* current development goal
+
+No unnecessary administrative information.
+
+---
+
+# 33. PARENT APPLICATION
+
+Main navigation:
+
+```text
+Home
+Children
+Development
+Activities
+School
+Messages
+Insights
+Account
+```
+
+---
+
+# 34. PARENT HOME
+
+Displays:
+
+```text
+Child status
+Today's activity
+Recent school updates
+Development highlights
+Mission progress
+Recommended family activity
+```
+
+---
+
+# 35. PARENT WEEKLY INSIGHT
+
+Example:
+
+```text
+Aisha had a productive week.
+
+Strength:
+Independence
+
+Growing:
+Communication
+
+School:
+2 observations
+
+Home:
+4 activities completed
+
+Suggested:
+Try a short family problem-solving activity.
+```
+
+Insights must be evidence-based.
+
+---
+
+# 36. PARENT–SCHOOL COMMUNICATION
+
+Features:
+
+* announcement
+* targeted announcement
+* class announcement
+* parent notification
+* teacher-to-parent message
+* read status
+* notification history
+
+No public social feed required.
+
+---
+
+# 37. TEACHER APPLICATION
+
+Main navigation:
+
+```text
+Dashboard
+My Classes
+Students
+Attendance
+Activities
+Assignments
+Observations
+Development
+Messages
+Reports
+```
+
+---
+
+# 38. TEACHER OBSERVATION
+
+Teacher workflow must be extremely fast.
+
+```text
+Select Class
+↓
+Select Student
+↓
+Select Competency
+↓
+Select Development Level
+↓
+Optional Note
+↓
+Save
+```
+
+Target:
+
+> observation input < 20 seconds.
+
+---
+
+# 39. BULK OBSERVATION
+
+Teacher can observe multiple students in one operation.
+
+Example:
+
+```text
+Today's observation
+
+Collaboration
+
+☑ Aisha
+☑ Budi
+☐ Citra
+☑ Dimas
+
+Level:
+Developing
+```
+
+System creates individual evidence records.
+
+---
+
+# 40. SCHOOL DASHBOARD
+
+School Admin / Principal:
+
+```text
+Students
+Teachers
+Attendance
+Learning
+Development
+Parent Engagement
+Missions
+School Activity
+Subscription
+```
+
+---
+
+# 41. SCHOOL DEVELOPMENT DASHBOARD
+
+Metrics:
+
+* active students
+* mission participation
+* parent engagement
+* teacher observation activity
+* development distribution
+* learning activity
+* attendance
+* trend
+
+Avoid ranking children.
+
+---
+
+# 42. CLASS DEVELOPMENT
+
+Principal can drill:
+
+```text
+School
+ ↓
+Grade
+ ↓
+Class
+ ↓
+Development dimension
+ ↓
+Student
+ ↓
+Evidence
+```
+
+---
+
+# 43. ATTENDANCE
+
+Existing or future attendance module must support:
+
+* present
+* absent
+* sick
+* permission
+* late
+* excused
+* unexcused
+
+Parent notification configurable.
+
+Attendance should not automatically produce psychological conclusions.
+
+---
+
+# 44. ACADEMIC MODULE
+
+Support:
+
+* academic year
+* semester
+* subject
+* curriculum
+* learning outcome
+* assignment
+* assessment
+* score
+* grade
+* teacher feedback
+* report
+
+---
+
+# 45. CURRICULUM ENGINE
+
+Do not hard-code curriculum directly into application logic.
+
+Model:
+
+```text
+Curriculum
+ └── Phase
+      └── Grade
+           └── Subject
+                └── Learning Outcome
+                     └── Competency
+```
+
+This allows curriculum updates without application rewrite.
+
+---
+
+# 46. REPORTING
+
+Reports:
+
+### Child report
+
+* academic
+* development
+* habits
+* mission
+* achievements
+* teacher feedback
+
+### Parent report
+
+Readable, non-technical.
+
+### School report
+
+Aggregated and anonymized where appropriate.
+
+---
+
+# 47. PORTFOLIO
+
+Child portfolio supports:
+
+* title
+* description
+* project
+* text reflection
+* teacher feedback
+* achievement
+* date
+* competency mapping
+
+No child activity photo/video upload.
+
+---
+
+# 48. AI ARCHITECTURE
+
+AI is assistant, not authority.
+
+AI may:
+
+* summarize evidence
+* suggest activities
+* draft teacher feedback
+* explain development
+* generate parent insights
+* generate learning activity
+* personalize age-appropriate content
+
+AI must NOT:
+
+* diagnose
+* classify mental health
+* determine disability
+* infer personality from photo
+* analyze face
+* make high-impact automated decisions
+* assign permanent labels
+* automatically punish/reward based solely on inference
+
+---
+
+# 49. AI TEACHER COPILOT
+
+Input:
+
+```text
+Teacher notes:
+"Aisha aktif saat diskusi dan membantu teman."
+```
+
+Output:
+
+```text
+Potential observations:
+
+Collaboration — Developing/Consistent
+Communication — Developing
+
+Suggested evidence:
+Peer assistance
+Group discussion
+```
+
+Teacher must approve.
+
+AI output is marked:
+
+> AI-generated draft.
+
+---
+
+# 50. AI PARENT INSIGHT
+
+AI can summarize:
+
+* recent observations
+* mission completion
+* academic activity
+* habits
+
+Output:
+
+```text
+WHAT HAPPENED
+WHAT IS GROWING
+WHAT TO TRY NEXT
+```
+
+Never:
+
+> "Your child has ADHD."
+
+or equivalent diagnosis.
+
+---
+
+# 51. RECOMMENDATION ENGINE
+
+Inputs:
+
+* age
+* grade
+* competency
+* previous activity
+* current development stage
+* interests
+* teacher recommendation
+* parent preferences
+
+Output:
+
+```text
+Recommended Activity
+Duration
+Objective
+Competencies
+Instructions
+Reflection
+```
+
+---
+
+# 52. NOTIFICATION ENGINE
+
+Events:
+
+```text
+Mission assigned
+Mission completed
+Parent approval required
+Teacher observation
+New achievement
+School announcement
+Attendance event
+Invoice generated
+Payment received
+Payment failed
+Subscription warning
+```
+
+Channels:
+
+* in-app
+* email
+* optional future WhatsApp/SMS integration
+
+Notifications must be tenant-configurable.
+
+---
+
+# 53. AUTHENTICATION
+
+Support:
+
+* email/password
+* password reset
+* email verification
+* session management
+* logout all sessions
+* optional future SSO
+
+Parent-child relationship requires explicit authorization.
+
+---
+
+# 54. ACCOUNT SECURITY
+
+Must support:
+
+* secure password hashing
+* rate limiting
+* brute-force protection
+* session expiration
+* refresh token rotation
+* CSRF protection where applicable
+* secure cookies
+* audit logs
+* suspicious login monitoring
+
+---
+
+# 55. DATABASE
+
+PostgreSQL is the system of record.
+
+Core entities:
+
+```text
+users
+roles
+permissions
+user_roles
+
+schools
+school_settings
+school_members
+
+students
+student_profiles
+student_school_enrollments
+
+parents
+parent_student_relationships
+
+teachers
+teacher_class_assignments
+
+academic_years
+grades
+classes
+subjects
+curricula
+learning_outcomes
+
+missions
+mission_assignments
+mission_completions
+mission_reviews
+
+xp_transactions
+levels
+streaks
+badges
+achievements
+rewards
+wallets
+wallet_transactions
+
+competencies
+development_dimensions
+development_observations
+development_evidence
+
+portfolios
+portfolio_items
+
+notifications
+messages
+
+subscriptions
+pricing_plans
+billing_snapshots
+invoices
+invoice_items
+payments
+
+consents
+privacy_requests
+audit_logs
+
+ai_requests
+ai_outputs
+
+feature_flags
+system_settings
+```
+
+---
+
+# 56. TENANT ISOLATION
+
+Every tenant-owned record must carry:
+
+```text
+tenant_id / school_id
+```
+
+Where appropriate.
+
+Database query layer must enforce tenant scope.
+
+No endpoint may rely solely on frontend filtering.
+
+---
+
+# 57. DATABASE CONSTRAINTS
+
+Use:
+
+* foreign keys
+* unique constraints
+* check constraints
+* indexes
+* partial indexes
+* transactional writes
+
+Examples:
+
+```text
+unique(school_id, student_id, active_enrollment)
+```
+
+where logically appropriate.
+
+---
+
+# 58. SOFT DELETE
+
+Use soft delete for business entities where historical integrity matters.
+
+Example:
+
+```text
+deleted_at
+deleted_by
+deletion_reason
+```
+
+Do not physically delete billing records casually.
+
+---
+
+# 59. AUDIT LOG
+
+Record:
+
+```text
+who
+what
+when
+tenant
+resource
+resource_id
+before
+after
+ip
+user_agent
+reason
+```
+
+Sensitive values must not be logged unnecessarily.
+
+---
+
+# 60. DATA RETENTION
+
+Each data category requires retention policy.
+
+Examples:
+
+* active student profile: while needed for service
+* billing records: according to legal/accounting requirements
+* audit records: defined retention period
+* deleted account: deletion/anonymization workflow
+* expired temporary tokens: automatic cleanup
+
+Retention must be configurable.
+
+---
+
+# 61. PRIVACY RIGHTS WORKFLOW
+
+System should support:
+
+* access request
+* correction
+* deletion request
+* consent withdrawal
+* processing restriction where applicable
+* export request
+
+Requests become trackable:
+
+```text
+REQUESTED
+UNDER_REVIEW
+APPROVED
+PROCESSING
+COMPLETED
+REJECTED
+```
+
+---
+
+# 62. CONSENT MANAGEMENT
+
+For child data:
+
+```text
+Parent / Guardian
+        ↓
+Consent Request
+        ↓
+Purpose displayed
+        ↓
+Consent
+        ↓
+Timestamp
+        ↓
+Version
+        ↓
+Audit record
+```
+
+Store:
+
+```text
+consent_id
+subject_id
+guardian_id
+purpose
+policy_version
+consent_status
+consented_at
+withdrawn_at
+source
+```
+
+---
+
+# 63. PHOTO PROFILE CONSENT
+
+Profile photo must have separate purpose declaration.
+
+Parent sees:
+
+> Foto profil digunakan untuk identifikasi tampilan akun anak dan tidak digunakan untuk pengenalan wajah, analisis AI, atau penilaian perkembangan.
+
+If parent declines:
+
+> default avatar.
+
+---
+
+# 64. FILE STORAGE
+
+Since child activity photo/video is prohibited:
+
+Allowed uploads should be limited to:
+
+* optional profile photo
+* non-child-content school assets
+* curriculum files where required
+* administrative assets
+
+Profile photo storage:
+
+* private object storage
+* signed URLs
+* authorization check
+* size limit
+* MIME validation
+* malware scanning
+* automatic thumbnail generation
+* no public bucket
+
+---
+
+# 65. API ARCHITECTURE
+
+Backend:
+
+> Node.js 24
+
+API should be versioned:
+
+```text
+/api/v1
+```
+
+Domains:
+
+```text
+/auth
+/users
+/schools
+/students
+/parents
+/teachers
+/classes
+/curriculum
+/missions
+/development
+/portfolio
+/attendance
+/notifications
+/messages
+/subscriptions
+/billing
+/ai
+/admin
+/privacy
+```
+
+---
+
+# 66. API RULES
+
+Every endpoint:
+
+1. authenticate
+2. authorize
+3. validate
+4. tenant-scope
+5. execute transaction if required
+6. audit sensitive operation
+7. return standardized response
+
+---
+
+# 67. STANDARD API RESPONSE
+
+Success:
+
+```json
+{
+  "success": true,
+  "data": {},
+  "meta": {}
+}
+```
+
+Error:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "STUDENT_NOT_FOUND",
+    "message": "Student not found"
+  }
+}
+```
+
+Never leak stack traces to users.
+
+---
+
+# 68. BILLING CALCULATION ENGINE
+
+Function:
+
+```text
+calculateSubscription(
+  activeStudentCount,
+  pricingPlan,
+  billingPeriod
+)
+```
+
+Must be deterministic.
+
+Example:
+
+```text
+students = 150
+price = 10000
+
+subtotal = 1,500,000
+```
+
+Pricing configuration is read from effective pricing version.
+
+---
+
+# 69. PRICE PREVIEW
+
+School onboarding must immediately show:
+
+```text
+Jumlah siswa
+[ 150 ]
+
+Harga / siswa
+Rp10.000
+
+Estimasi langganan / bulan
+Rp1.500.000
+```
+
+If tiered:
+
+```text
+1–100     Rp12.000
+101–300   Rp10.000
+301–1000  Rp8.000
+```
+
+Calculation must be visible and deterministic.
+
+---
+
+# 70. SUBSCRIPTION STATES
+
+```text
+TRIAL
+ACTIVE
+PAST_DUE
+GRACE_PERIOD
+SUSPENDED
+CANCELLED
+EXPIRED
+```
+
+System behavior must be explicitly defined per state.
+
+Example:
+
+### PAST_DUE
+
+* application remains accessible
+* billing warning shown
+* payment retry
+* no data deletion
+
+### SUSPENDED
+
+* read-only or configured restricted mode
+* billing page accessible
+* no destructive deletion
+
+---
+
+# 71. PAYMENT ARCHITECTURE
+
+Payment provider must be abstracted:
+
+```text
+PaymentProvider
+ ├── createPayment
+ ├── checkPayment
+ ├── refund
+ └── handleWebhook
+```
+
+Webhook must be:
+
+* authenticated
+* idempotent
+* logged
+* transaction-safe
+
+Never trust frontend payment status.
+
+---
+
+# 72. IDEMPOTENCY
+
+Required for:
+
+* invoice generation
+* payment
+* reward transaction
+* XP transaction
+* webhook
+* notification sending
+
+Use idempotency keys where appropriate.
+
+---
+
+# 73. XP TRANSACTION MODEL
+
+Never simply mutate:
+
+```text
+student.xp += 10
+```
+
+without transaction history.
+
+Use:
+
+```text
+xp_transactions
+```
+
+Then calculate/maintain balance safely.
+
+Every XP grant needs:
+
+```text
+source
+source_id
+amount
+created_at
+```
+
+---
+
+# 74. WALLET / VIRTUAL MONEY
+
+Existing virtual money preserved.
+
+Use ledger:
+
+```text
+wallet_transactions
+```
+
+Types:
+
+```text
+EARN
+SPEND
+ADJUSTMENT
+REVERSAL
+```
+
+Balance must be derivable/auditable.
+
+---
+
+# 75. GAMIFICATION SAFETY
+
+Prevent:
+
+* XP duplication
+* reward duplication
+* replay attacks
+* repeated mission completion
+* parent approval abuse
+* self-approval
+* teacher self-awarding
+
+---
+
+# 76. SCHOOL ADMIN BASIC SETTINGS
+
+School Admin may configure:
+
+### General
+
+* school name
+* logo
+* contact
+* timezone
+
+### Academic
+
+* academic year
+* semester
+* grades
+* classes
+* subjects
+
+### Users
+
+* teacher assignment
+* parent invitation
+* student enrollment
+
+### Missions
+
+* enable/disable
+* reward policy
+* approval policy
+
+### Notifications
+
+* school announcements
+* parent notification preferences
+
+### Development
+
+* enable selected competency framework
+
+---
+
+# 77. PLATFORM CONFIGURATION
+
+Platform Admin controls:
+
+* pricing
+* feature flags
+* competency framework
+* curriculum framework
+* global notification templates
+* system limits
+* AI settings
+* retention policies
+* security settings
+
+---
+
+# 78. FEATURE FLAG SYSTEM
+
+Feature flags:
+
+```text
+feature_name
+tenant_id
+enabled
+configuration
+effective_from
+effective_until
+```
+
+Allows gradual rollout.
+
+---
+
+# 79. OBSERVABILITY
+
+Production must include:
+
+### Logs
+
+Structured JSON logs.
+
+### Metrics
+
+* request latency
+* error rate
+* DB latency
+* queue latency
+* notification failure
+* payment failure
+
+### Health checks
+
+```text
+/health
+/ready
+```
+
+---
+
+# 80. PERFORMANCE TARGETS
+
+Target:
+
+### API p95
+
+< 500 ms for normal CRUD.
+
+### Database
+
+Most normal queries < 200 ms.
+
+### Dashboard
+
+Initial useful content < 2 seconds under normal load.
+
+### Heavy reports
+
+Asynchronous where necessary.
+
+---
+
+# 81. BACKGROUND JOBS
+
+Use queue/background worker for:
+
+* email
+* notification
+* invoice generation
+* report generation
+* AI processing
+* data export
+* cleanup
+* scheduled summaries
+
+Never block HTTP request unnecessarily.
+
+---
+
+# 82. CACHING
+
+Cache:
+
+* school settings
+* curriculum metadata
+* feature flags
+* pricing configuration
+
+Do NOT blindly cache sensitive child data.
+
+Cache invalidation must be explicit.
+
+---
+
+# 83. SEARCH
+
+Search must be tenant scoped.
+
+Examples:
+
+School Admin:
+
+> search student.
+
+Teacher:
+
+> search assigned students.
+
+Parent:
+
+> search own children only.
+
+No global student search.
+
+---
+
+# 84. INTERNATIONALIZATION
+
+Architecture must support:
+
+```text
+id-ID
+en-US
+```
+
+All user-facing strings must come from localization keys.
+
+Do not hardcode visible text into business logic.
+
+---
+
+# 85. MOBILE-FIRST
+
+Parent and Child:
+
+> mobile-first.
+
+Teacher:
+
+> tablet/mobile friendly.
+
+Admin:
+
+> desktop optimized but responsive.
+
+---
+
+# 86. CHILD UX PRINCIPLE
+
+For TK:
+
+* visual
+* minimal text
+* large controls
+* audio-friendly future
+* simple navigation
+
+For SD:
+
+* increasing independence
+* progress visualization
+* missions
+* learning
+* reflection
+
+---
+
+# 87. SCHOOL ONBOARDING
+
+Flow:
+
+```text
+Create Account
+↓
+Verify Email
+↓
+School Information
+↓
+Choose Subscription
+↓
+Input / Import Student Count
+↓
+Price Preview
+↓
+Create School
+↓
+Configure Academic Year
+↓
+Create Classes
+↓
+Invite Teachers
+↓
+Invite Parents
+↓
+Activate
+```
+
+---
+
+# 88. STUDENT IMPORT
+
+Support CSV import.
+
+Required:
+
+```text
+student_name
+grade
+class
+parent_email (optional)
+```
+
+Do NOT require unnecessary identity fields.
+
+Import validation:
+
+* duplicate detection
+* invalid row report
+* preview
+* confirm
+* transaction
+* rollback on fatal error
+
+---
+
+# 89. PARENT INVITATION
+
+School:
+
+```text
+Student
+↓
+Parent relationship
+↓
+Invite parent
+↓
+Parent accepts
+↓
+Account created
+↓
+Child linked
+```
+
+Parent cannot self-link arbitrary child.
+
+---
+
+# 90. CHILD ACCOUNT
+
+Child account must be created/managed through authorized school/parent relationship.
+
+Avoid collecting unnecessary child contact information.
+
+---
+
+# 91. REPORTING SECURITY
+
+Reports must respect role scope.
+
+Parent:
+
+> own child.
+
+Teacher:
+
+> assigned students.
+
+Principal:
+
+> school.
+
+Platform Admin:
+
+> operational metadata; avoid unnecessary exposure of child content.
+
+---
+
+# 92. DATA EXPORT
+
+School export:
+
+* student list
+* academic data
+* development data
+* mission data
+* billing-related school data
+
+Exports must:
+
+* require permission
+* be logged
+* be time-limited
+* be generated securely
+* expire automatically
+
+---
+
+# 93. ADMIN AUDIT DASHBOARD
+
+Platform Admin can search:
+
+```text
+user
+tenant
+action
+resource
+date
+IP
+```
+
+Examples:
+
+> Who changed pricing?
+
+> Who accessed student record?
+
+> Who changed school subscription?
+
+---
+
+# 94. ERROR HANDLING
+
+User-facing error must be:
+
+* clear
+* actionable
+* non-technical
+
+Example:
+
+Bad:
+
+> PostgreSQL foreign key violation.
+
+Good:
+
+> Data siswa tidak dapat disimpan karena kelas yang dipilih sudah tidak tersedia.
+
+---
+
+# 95. EMPTY STATES
+
+Every major module requires:
+
+* meaningful empty state
+* explanation
+* primary action
+
+Example:
+
+> Belum ada aktivitas minggu ini.
+
+Button:
+
+> Buat Aktivitas
+
+---
+
+# 96. SECURITY REQUIREMENTS
+
+Minimum:
+
+* TLS
+* encrypted secrets
+* secure password hashing
+* RBAC
+* tenant isolation
+* rate limiting
+* input validation
+* output encoding
+* SQL injection protection
+* XSS protection
+* CSRF strategy
+* secure file upload
+* dependency scanning
+* audit logs
+* backup
+* disaster recovery
+
+---
+
+# 97. BACKUP
+
+PostgreSQL:
+
+* automated backup
+* point-in-time recovery where supported
+* tested restore process
+* encrypted backup
+* backup monitoring
+
+Target:
+
+```text
+RPO ≤ 15 minutes
+RTO ≤ 4 hours
+```
+
+for production tier, subject to infrastructure cost.
+
+---
+
+# 98. DISASTER RECOVERY
+
+Document:
+
+```text
+Database failure
+Storage failure
+Application failure
+Payment provider failure
+Email provider failure
+AI provider failure
+```
+
+System should degrade gracefully.
+
+Example:
+
+AI unavailable:
+
+> Core school functionality remains operational.
+
+---
+
+# 99. AI FAILURE POLICY
+
+AI outage must NOT block:
+
+* attendance
+* mission
+* development observation
+* parent access
+* school access
+* billing
+
+AI is an enhancement layer.
+
+---
+
+# 100. ACCEPTANCE CRITERIA — CORE
+
+The product is not considered completed unless:
+
+### Tenant
+
+* [ ] school isolation verified
+* [ ] cross-tenant access impossible
+* [ ] RBAC tested
+
+### Student
+
+* [ ] student creation
+* [ ] enrollment
+* [ ] class assignment
+* [ ] parent relationship
+
+### Parent
+
+* [ ] invitation
+* [ ] child linking
+* [ ] access restriction
+
+### Teacher
+
+* [ ] class assignment
+* [ ] observation
+* [ ] mission
+* [ ] report
+
+### Child
+
+* [ ] mission
+* [ ] XP
+* [ ] streak
+* [ ] achievement
+* [ ] reward
+
+### Development
+
+* [ ] competency
+* [ ] observation
+* [ ] evidence
+* [ ] development level
+* [ ] timeline
+* [ ] passport
+
+---
+
+# 101. ACCEPTANCE CRITERIA — BILLING
+
+* [ ] Admin pricing configurable
+* [ ] School price never manually editable
+* [ ] Active student count calculated automatically
+* [ ] Price preview immediate
+* [ ] Invoice snapshot immutable
+* [ ] Student count changes handled correctly
+* [ ] Payment status server-authoritative
+* [ ] Webhook idempotent
+* [ ] Historical invoices unchanged
+* [ ] Suspended subscription policy works
+* [ ] School Admin can view billing
+* [ ] Platform Admin can configure billing
+
+---
+
+# 102. ACCEPTANCE CRITERIA — PRIVACY
+
+* [ ] No child activity photo upload
+* [ ] No child activity video upload
+* [ ] Profile photo optional only
+* [ ] Profile photo private
+* [ ] No face recognition
+* [ ] No biometric extraction
+* [ ] No child public gallery
+* [ ] Parent authorization enforced
+* [ ] Consent records auditable
+* [ ] Data export available
+* [ ] Deletion workflow available
+* [ ] Access logs available
+* [ ] Retention policy implemented
+
+---
+
+# 103. ACCEPTANCE CRITERIA — MISSION
+
+* [ ] Existing missions remain usable
+* [ ] Existing XP remains functional
+* [ ] Existing reward remains functional
+* [ ] Existing streak remains functional
+* [ ] Existing achievements remain functional
+* [ ] Existing parent approval remains functional
+* [ ] Existing child progress remains available
+* [ ] No existing user loses historical mission data
+
+---
+
+# 104. TESTING STRATEGY
+
+Required layers:
+
+### Unit test
+
+Business logic.
+
+### Integration test
+
+Database + services.
+
+### API test
+
+All endpoint authorization.
+
+### E2E test
+
+Critical workflows.
+
+### Security test
+
+Tenant isolation.
+
+### Billing test
+
+Pricing and invoice.
+
+### Regression test
+
+Existing MisiPintar features.
+
+---
+
+# 105. CRITICAL E2E TEST
+
+Scenario:
+
+```text
+Platform Admin creates pricing
+        ↓
+School registers
+        ↓
+School has 100 students
+        ↓
+System shows 100 × configured price
+        ↓
+School subscribes
+        ↓
+Student becomes active
+        ↓
+Billing count becomes 101
+        ↓
+Invoice snapshot reflects billing rule
+```
+
+Must pass.
+
+---
+
+# 106. CRITICAL SECURITY E2E
+
+Scenario:
+
+```text
+Parent A
+attempts accessing Child B
+```
+
+Expected:
+
+```text
+403 Forbidden
+```
+
+No child data returned.
+
+---
+
+# 107. CRITICAL TENANT TEST
+
+```text
+School A user
+requests School B student
+```
+
+Expected:
+
+```text
+404 or 403
+```
+
+No existence leakage where appropriate.
+
+---
+
+# 108. CRITICAL MISSION REGRESSION
+
+Existing child:
+
+```text
+XP = 500
+Level = 5
+Streak = 7
+```
+
+After migration:
+
+```text
+XP = 500
+Level = 5
+Streak = 7
+```
+
+No data loss.
+
+---
+
+# 109. CRITICAL BILLING REGRESSION
+
+If pricing changes:
+
+```text
+Old invoice:
+100 students × Rp10,000
+```
+
+remains:
+
+```text
+Rp1,000,000
+```
+
+even if current pricing becomes:
+
+```text
+Rp12,000
+```
+
+---
+
+# 110. MIGRATION PRINCIPLE
+
+Existing database must be migrated.
+
+Never:
+
+> drop existing tables and recreate.
+
+Migration process:
+
+```text
+BACKUP
+↓
+SCHEMA MIGRATION
+↓
+DATA MIGRATION
+↓
+VALIDATION
+↓
+REGRESSION TEST
+↓
+CUTOVER
+```
+
+---
+
+# 111. FEATURE PRIORITY
+
+## P0 — MUST HAVE
+
+* multi-tenancy
+* authentication
+* RBAC
+* school
+* student
+* parent
+* teacher
+* class
+* mission
+* XP
+* reward
+* parent approval
+* development profile
+* observation
+* subscription
+* student-based billing
+* pricing admin
+* invoice
+* privacy controls
+* audit log
+* backup
+* security
+
+## P1 — HIGH VALUE
+
+* curriculum engine
+* academic module
+* attendance
+* portfolio
+* development timeline
+* parent insights
+* teacher dashboard
+* school dashboard
+* notifications
+* recommendation engine
+
+## P2 — ADVANCED
+
+* AI teacher copilot
+* AI parent insight
+* foundation dashboard
+* advanced analytics
+* API ecosystem
+* integrations
+
+---
+
+# 112. WHAT MUST NOT BE BUILT IN V1
+
+To maintain focus:
+
+* public social network
+* child public profiles
+* child photo feed
+* video feed
+* facial recognition
+* biometric system
+* medical record system
+* psychological diagnosis
+* public child leaderboard
+* advertising based on child data
+* selling child data
+* unnecessary location tracking
+
+---
+
+# 113. NORTH STAR METRIC
+
+Primary:
+
+> **Weekly Active Child Development**
+
+Definition:
+
+Number of active children with at least one meaningful development interaction per week.
+
+Meaningful interaction:
+
+* mission completed
+* learning activity
+* teacher observation
+* parent activity
+* reflection
+* achievement
+* academic activity
+
+---
+
+# 114. SECONDARY METRICS
+
+### School
+
+* active schools
+* active teachers
+* active students
+* retention
+
+### Parent
+
+* parent weekly active rate
+* parent response rate
+* parent activity completion
+
+### Child
+
+* weekly activity
+* mission completion
+* learning engagement
+* development evidence
+
+### Business
+
+* MRR
+* ARPA
+* student count
+* school retention
+* expansion revenue
+* payment success
+
+---
+
+# 115. PRODUCT SUCCESS
+
+JOBEN is successful when:
+
+> Teachers can understand students with less administrative work.
+
+> Parents understand their child's development without being overwhelmed.
+
+> Children enjoy learning and building habits.
+
+> Schools can see development at school level.
+
+> Historical development follows the child's journey.
+
+> The platform becomes more valuable with continued usage.
+
+---
+
+# 116. COMPETITIVE MOAT
+
+Primary moat:
+
+# LONGITUDINAL CHILD DEVELOPMENT GRAPH
+
+Not:
+
+* chatbot
+* dashboard
+* gamification
+
+But:
+
+```text
+Years of
+School Evidence
+       +
+Family Evidence
+       +
+Child Activity
+       +
+Learning Data
+       +
+Development History
+       ↓
+Child Development Graph
+```
+
+This becomes the strategic asset of JOBEN.
+
+---
+
+# 117. PRODUCT ARCHITECTURE
+
+```text
+                    JOBEN
+                      │
+          ┌───────────┼───────────┐
+          │           │           │
+       SCHOOL       FAMILY       KIDS
+          │           │           │
+          └───────────┼───────────┘
+                      │
+              DEVELOPMENT ENGINE
+                      │
+       ┌──────────────┼──────────────┐
+       │              │              │
+    ACTIVITY       EVIDENCE        INSIGHT
+       │              │              │
+       └──────────────┼──────────────┘
+                      │
+               CHILD GRAPH
+                      │
+              DEVELOPMENT PASSPORT
+```
+
+---
+
+# 118. EXISTING MISIPINTAR POSITION
+
+MisiPintar becomes:
+
+# JOBEN MISSIONS
+
+Core:
+
+```text
+Mission
+↓
+Action
+↓
+Completion
+↓
+Reflection
+↓
+Approval
+↓
+XP
+↓
+Achievement
+↓
+Development Evidence
+```
+
+Existing product value remains intact.
+
+---
+
+# 119. FUTURE ECOSYSTEM
+
+Later:
+
+```text
+JOBEN SCHOOL
+JOBEN FAMILY
+JOBEN KIDS
+JOBEN MISSIONS
+JOBEN DEVELOPMENT
+JOBEN LEARN
+JOBEN ACADEMY
+JOBEN FOUNDATION
+JOBEN API
+```
+
+---
+
+# 120. IMPLEMENTATION ORDER
+
+## STEP 1
+
+Protect and inventory existing MisiPintar.
+
+Create:
+
+```text
+Existing Feature Registry
+Existing API Registry
+Existing Database Registry
+Existing User Flow Registry
+```
+
+No existing feature may disappear unnoticed.
+
+## STEP 2
+
+Introduce tenant architecture.
+
+## STEP 3
+
+Introduce RBAC.
+
+## STEP 4
+
+Introduce student/parent/teacher relationship.
+
+## STEP 5
+
+Introduce subscription/billing.
+
+## STEP 6
+
+Integrate existing MisiPintar engine.
+
+## STEP 7
+
+Introduce development framework.
+
+## STEP 8
+
+Introduce evidence engine.
+
+## STEP 9
+
+Introduce school/parent/child dashboards.
+
+## STEP 10
+
+Introduce academic/attendance/curriculum.
+
+## STEP 11
+
+Introduce analytics.
+
+## STEP 12
+
+Introduce AI.
+
+---
+
+# 121. DEFINITION OF DONE
+
+A feature is DONE only if:
+
+* database implemented
+* API implemented
+* authorization implemented
+* frontend implemented
+* loading state implemented
+* empty state implemented
+* error state implemented
+* validation implemented
+* audit requirements implemented
+* localization implemented
+* tests implemented
+* security test implemented
+* mobile responsive
+* accessibility considered
+* production logging implemented
+* documentation completed
+
+"UI terlihat selesai" is NOT Definition of Done.
+
+---
+
+# 122. PRODUCTION READINESS GATE
+
+Before production:
+
+```text
+[ ] No critical security vulnerabilities
+[ ] No cross-tenant data leakage
+[ ] Billing tested
+[ ] Existing MisiPintar regression passed
+[ ] Database migrations tested
+[ ] Backup restore tested
+[ ] Payment webhook tested
+[ ] Consent workflow tested
+[ ] Parent-child authorization tested
+[ ] Rate limits tested
+[ ] Error handling tested
+[ ] Monitoring active
+[ ] Audit logs active
+[ ] Privacy policy integrated
+[ ] Terms integrated
+[ ] Data retention policy configured
+```
+
+---
+
+# 123. FINAL PRODUCT POSITIONING
+
+JOBEN is NOT:
+
+> just school management software.
+
+JOBEN is:
+
+> **A Child Development Operating System connecting school, family and child.**
+
+Indonesian positioning:
+
+> **Ekosistem digital yang membantu sekolah dan keluarga memahami serta membangun perkembangan anak secara berkelanjutan.**
+
+---
+
+# 124. CORE PRODUCT PROMISE
+
+### SCHOOL
+
+> Understand every child better.
+
+### PARENT
+
+> Know how your child is growing.
+
+### CHILD
+
+> Learn. Grow. Discover.
+
+### JOBEN
+
+> **Every child has a journey.**
+
+---
+
+# 125. FINAL ARCHITECTURAL PRINCIPLE
+
+The system must always preserve this hierarchy:
+
+```text
+CHILD
+  ↓
+RELATIONSHIPS
+  ↓
+ACTIVITIES
+  ↓
+EVIDENCE
+  ↓
+DEVELOPMENT
+  ↓
+INSIGHT
+  ↓
+ACTION
+```
+
+Not:
+
+```text
+Dashboard
+↓
+Charts
+↓
+More charts
+```
+
+The database, API, UI, AI, billing, and reporting architecture must all support the first model.
+
+---
+
+# 126. RELEASE TARGET
+
+## V1 — Production SaaS
+
+Must contain:
+
+* existing MisiPintar
+* School
+* Parent
+* Child
+* Teacher
+* multi-tenant
+* RBAC
+* missions
+* XP
+* rewards
+* development
+* evidence without child activity media
+* subscription
+* per-student pricing
+* billing
+* school admin settings
+* platform admin
+* notifications
+* audit
+* privacy
+* security
+* reporting
+
+## V1.5
+
+* academic
+* attendance
+* curriculum
+* portfolio
+* development timeline
+* parent insights
+
+## V2
+
+* AI
+* recommendation engine
+* advanced analytics
+* foundation/multi-school
+* ecosystem APIs
+
+---
+
+# 127. NON-NEGOTIABLE BUSINESS RULES
+
+1. Existing MisiPintar features are not removed.
+2. New functionality must be additive unless explicitly replacing a security-risky implementation.
+3. Student billing is automatic.
+4. Price per student is controlled by Platform Admin.
+5. School Admin cannot manipulate pricing.
+6. Active student count is system-derived.
+7. Invoice stores an immutable billing snapshot.
+8. Parent can access only authorized children.
+9. Teacher can access only authorized students.
+10. Tenant isolation is mandatory.
+11. Child activity photos/videos are prohibited.
+12. Only optional profile photo is allowed.
+13. No facial recognition.
+14. No biometric profiling.
+15. No medical/psychological diagnosis.
+16. AI cannot make high-impact decisions about children.
+17. Development conclusions must be evidence-based.
+18. No public child ranking by default.
+19. Historical billing cannot change.
+20. Historical development records must remain auditable.
+21. AI failure must never bring down core school operations.
+22. Core school operations must remain usable if third-party AI/payment/notification services fail.
+23. Every sensitive operation must be auditable.
+24. Data collection must be purpose-limited.
+25. Privacy must be designed into architecture, not added after development.
+
+# END OF PRD
+
+### Penilaian saya
+
+Dengan spesifikasi di atas, saya akan menilai **arah PRD ini sekitar 98/100 untuk product/engineering readiness**, dengan catatan satu hal yang tidak boleh kita palsukan: **98/100 bukan berarti siap production tanpa implementasi dan legal review**. Masih diperlukan finalisasi detail provider pembayaran, cloud/infrastruktur, SLA, dokumen privacy/consent, dan audit keamanan sebelum production.
+
+Yang paling penting, saya **tidak mengubah MisiPintar menjadi aplikasi baru yang kehilangan identitasnya**. Saya menjadikannya **engine yang sudah terbukti** di dalam JOBEN.
+
+Dan keputusan Anda untuk **tidak mengizinkan upload foto/video aktivitas anak** menurut saya sangat tepat secara product architecture: selain memperkecil risiko privasi, storage, moderation, abuse, dan AI misuse, produk menjadi lebih fokus pada **evidence berbasis observasi, aktivitas, reflection, dan confirmation**. Tetapi tetap perlakukan seluruh data anak sebagai data yang tunduk pada rezim PDP; penghapusan foto aktivitas saja tidak menghilangkan kewajiban tersebut. ([JDIH Kemkomdigi][1])
+
+**Prioritas teknis pertama saya setelah PRD ini adalah bukan membuat dashboard.** Yang harus dikunci lebih dulu adalah **database/domain model + tenant isolation + RBAC + student billing engine + migration map MisiPintar**. Kalau empat fondasi itu benar, modul TK, SD, Parent, Child, Development Passport, AI, dan analytics bisa ditambahkan tanpa membuat platform berantakan.
+
+[1]: https://jdih.komdigi.go.id/produk_hukum/view/id/832/t/undangundang%2Bnomor%2B27%2Btahun%2B2022?search=nanti+kita+harus+tetap+menjaga&utm_source=chatgpt.com "JDIH Kemkomdigi - Undang-Undang Nomor 27 Tahun 2022"
+[2]: https://peraturan.bpk.go.id/Home/Download/224884/UU%20Nomor%2027%20Tahun%202022.pdf?utm_source=chatgpt.com "PRESIDEN REPUBLIK INDONESIA"
