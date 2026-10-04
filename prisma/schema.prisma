@@ -17,6 +17,32 @@ enum Role {
   SUPER_ADMIN
 }
 
+enum SchoolStatus {
+  PENDING_REVIEW
+  ACTIVE
+  SUSPENDED
+}
+
+enum SchoolRole {
+  OWNER
+  ADMIN
+  PRINCIPAL
+  TEACHER
+  HOMEROOM_TEACHER
+}
+
+enum SchoolMembershipStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum SchoolInvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
 enum PlanType {
   STARTER
   PRO
@@ -120,12 +146,69 @@ model User {
   fcmTokens     FcmToken[]
   notifications Notification[]
   auditLogs     AdminAuditLog[]
+  schoolMemberships SchoolMembership[]
+  schoolClassAssignments SchoolClassTeacher[]
+  createdSchoolInvitations SchoolInvitation[] @relation("SchoolInvitationCreator")
+  acceptedSchoolInvitations SchoolInvitation[] @relation("SchoolInvitationAcceptor")
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
   @@index([phone])
   @@index([email])
   @@index([familySpaceId, role])
+}
+
+// ─── SCHOOL TENANTS ───────────────────────────────────────
+model School {
+  id          String             @id @default(uuid())
+  name        String
+  slug        String             @unique
+  email       String?
+  phone       String?
+  timezone    String             @default("Asia/Jakarta")
+  status      SchoolStatus       @default(PENDING_REVIEW)
+  memberships SchoolMembership[]
+  invitations SchoolInvitation[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model SchoolMembership {
+  id        String                 @id @default(uuid())
+  schoolId  String
+  userId    String
+  role      SchoolRole
+  status    SchoolMembershipStatus @default(ACTIVE)
+  school    School                 @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  @@unique([schoolId, userId])
+  @@index([userId, status])
+  @@index([schoolId, role, status])
+}
+
+model SchoolInvitation {
+  id             String                 @id @default(uuid())
+  schoolId       String
+  email          String
+  role           SchoolRole
+  tokenHash      String                 @unique
+  status         SchoolInvitationStatus @default(PENDING)
+  expiresAt      DateTime
+  createdById    String
+  acceptedById   String?
+  acceptedAt     DateTime?
+  school         School                 @relation(fields: [schoolId], references: [id], onDelete: Restrict)
+  createdBy      User                   @relation("SchoolInvitationCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  acceptedBy     User?                  @relation("SchoolInvitationAcceptor", fields: [acceptedById], references: [id], onDelete: Restrict)
+  createdAt      DateTime               @default(now())
+
+  @@index([schoolId, status, expiresAt])
+  @@index([email, status])
 }
 
 // ─── OTP CODES ───────────────────────────────────────────
