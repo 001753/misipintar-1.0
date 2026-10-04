@@ -50,19 +50,19 @@ export async function transferToSavings(
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const current = await tx.child.findUniqueOrThrow({
-        where: { id: childId },
-        select: { balance: true, savingsBalance: true, charityBalance: true },
-      });
-
-      if (current.balance < amount) throw new Error("INSUFFICIENT_BALANCE");
-
-      const updated = await tx.child.update({
-        where: { id: childId },
+      const debited = await tx.child.updateMany({
+        where: { id: childId, deletedAt: null, balance: { gte: amount } },
         data: { balance: { decrement: amount }, savingsBalance: { increment: amount } },
+      });
+      if (debited.count !== 1) throw new Error("INSUFFICIENT_BALANCE");
+
+      const updated = await tx.child.findUniqueOrThrow({
+        where: { id: childId },
         select: { balance: true, savingsBalance: true, charityBalance: true },
       });
 
+      const balanceBefore = updated.balance + amount;
+      const savingsBalanceBefore = updated.savingsBalance - amount;
       await tx.transactionLedger.createMany({
         data: [
           {
@@ -70,7 +70,7 @@ export async function transferToSavings(
             childId,
             type: "SAVINGS_DEPOSIT",
             amount,
-            balanceBefore: current.savingsBalance,
+            balanceBefore: savingsBalanceBefore,
             balanceAfter: updated.savingsBalance,
             description: `Transfer ke tabungan: Rp ${amount.toLocaleString("id-ID")}`,
           },
@@ -79,7 +79,7 @@ export async function transferToSavings(
             childId,
             type: "ADJUSTMENT",
             amount: -amount,
-            balanceBefore: current.balance,
+            balanceBefore,
             balanceAfter: updated.balance,
             description: `Pengurangan saldo utama (transfer ke tabungan): Rp ${amount.toLocaleString("id-ID")}`,
           },
@@ -125,19 +125,19 @@ export async function transferToCharity(
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const current = await tx.child.findUniqueOrThrow({
-        where: { id: childId },
-        select: { balance: true, savingsBalance: true, charityBalance: true },
-      });
-
-      if (current.balance < amount) throw new Error("INSUFFICIENT_BALANCE");
-
-      const updated = await tx.child.update({
-        where: { id: childId },
+      const debited = await tx.child.updateMany({
+        where: { id: childId, deletedAt: null, balance: { gte: amount } },
         data: { balance: { decrement: amount }, charityBalance: { increment: amount } },
+      });
+      if (debited.count !== 1) throw new Error("INSUFFICIENT_BALANCE");
+
+      const updated = await tx.child.findUniqueOrThrow({
+        where: { id: childId },
         select: { balance: true, savingsBalance: true, charityBalance: true },
       });
 
+      const balanceBefore = updated.balance + amount;
+      const charityBalanceBefore = updated.charityBalance - amount;
       await tx.transactionLedger.createMany({
         data: [
           {
@@ -145,7 +145,7 @@ export async function transferToCharity(
             childId,
             type: "CHARITY",
             amount,
-            balanceBefore: current.charityBalance,
+            balanceBefore: charityBalanceBefore,
             balanceAfter: updated.charityBalance,
             description: `Transfer ke sedekah: Rp ${amount.toLocaleString("id-ID")}`,
           },
@@ -154,7 +154,7 @@ export async function transferToCharity(
             childId,
             type: "ADJUSTMENT",
             amount: -amount,
-            balanceBefore: current.balance,
+            balanceBefore,
             balanceAfter: updated.balance,
             description: `Pengurangan saldo utama (transfer ke sedekah): Rp ${amount.toLocaleString("id-ID")}`,
           },
@@ -200,19 +200,19 @@ export async function withdrawFromSavings(
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const current = await tx.child.findUniqueOrThrow({
-        where: { id: childId },
-        select: { balance: true, savingsBalance: true, charityBalance: true },
-      });
-
-      if (current.savingsBalance < amount) throw new Error("INSUFFICIENT_BALANCE");
-
-      const updated = await tx.child.update({
-        where: { id: childId },
+      const debited = await tx.child.updateMany({
+        where: { id: childId, deletedAt: null, savingsBalance: { gte: amount } },
         data: { savingsBalance: { decrement: amount }, balance: { increment: amount } },
+      });
+      if (debited.count !== 1) throw new Error("INSUFFICIENT_BALANCE");
+
+      const updated = await tx.child.findUniqueOrThrow({
+        where: { id: childId },
         select: { balance: true, savingsBalance: true, charityBalance: true },
       });
 
+      const balanceBefore = updated.balance - amount;
+      const savingsBalanceBefore = updated.savingsBalance + amount;
       await tx.transactionLedger.createMany({
         data: [
           {
@@ -220,7 +220,7 @@ export async function withdrawFromSavings(
             childId,
             type: "SAVINGS_WITHDRAW",
             amount: -amount,
-            balanceBefore: current.savingsBalance,
+            balanceBefore: savingsBalanceBefore,
             balanceAfter: updated.savingsBalance,
             description: `Penarikan dari tabungan: Rp ${amount.toLocaleString("id-ID")}`,
           },
@@ -229,7 +229,7 @@ export async function withdrawFromSavings(
             childId,
             type: "ADJUSTMENT",
             amount,
-            balanceBefore: current.balance,
+            balanceBefore,
             balanceAfter: updated.balance,
             description: `Penambahan saldo utama (tarik dari tabungan): Rp ${amount.toLocaleString("id-ID")}`,
           },

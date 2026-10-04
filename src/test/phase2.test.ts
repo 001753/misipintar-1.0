@@ -128,7 +128,6 @@ beforeAll(async () => {
 afterAll(async () => {
   // Clean up test data (order matters due to FK constraints)
   if (testFamilySpaceId) {
-    await prisma.adminAuditLog.deleteMany({ where: {} }).catch(() => {})
     await prisma.notification.deleteMany({ where: { familySpaceId: testFamilySpaceId } })
     await prisma.notification.deleteMany({ where: { familySpaceId: otherFamilySpaceId } })
     await prisma.transactionLedger.deleteMany({ where: { familySpaceId: testFamilySpaceId } })

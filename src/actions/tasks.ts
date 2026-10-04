@@ -97,14 +97,17 @@ export async function claimTask(
     return { success: false, error: 'Tugas ini tidak bisa diklaim saat ini.' }
   }
 
-  await prisma.task.update({
-    where: { id: taskId },
+  const claimed = await prisma.task.updateMany({
+    where: { id: taskId, childId, familySpaceId, status: 'PENDING' },
     data: {
       status: 'CLAIMED',
       claimedAt: new Date(),
       proofPhotoUrl: proofPhotoUrl ?? null,
     },
   })
+  if (claimed.count !== 1) {
+    return { success: false, error: 'Tugas ini tidak bisa diklaim saat ini.' }
+  }
 
   // Notifikasi ke parent (non-fatal — gagal tidak membatalkan klaim)
   try {
@@ -176,26 +179,24 @@ export async function approveTask(
   }
 
   const result = await prisma.$transaction(async (tx) => {
-    // 1. Update status tugas
-    await tx.task.update({
-      where: { id: taskId },
+    // Atomically claim this approval so concurrent requests cannot credit twice.
+    const approved = await tx.task.updateMany({
+      where: { id: taskId, familySpaceId, status: 'CLAIMED' },
       data: { status: 'APPROVED', approvedAt: new Date() },
     })
+    if (approved.count !== 1) return null
 
-    // 2. Baca saldo anak dalam transaksi yang sama (untuk konsistensi)
-    const child = await tx.child.findUnique({ where: { id: task.childId } })
-    if (!child) throw new Error('Child not found in transaction')
-
-    const balanceBefore = child.balance
-    const balanceAfter = balanceBefore + task.rewardAmount
-
-    // 3. Update saldo anak
-    await tx.child.update({
+    // Atomic increment prevents separate approved tasks for one child from
+    // overwriting each other's balance when approvals happen concurrently.
+    const child = await tx.child.update({
       where: { id: task.childId },
-      data: { balance: balanceAfter },
+      data: { balance: { increment: task.rewardAmount } },
+      select: { balance: true },
     })
+    const balanceAfter = child.balance
+    const balanceBefore = balanceAfter - task.rewardAmount
 
-    // 4. Buat baris TransactionLedger (IMMUTABLE — tidak ada delete/update)
+    // Record the exact before/after values from the atomic increment.
     await tx.transactionLedger.create({
       data: {
         familySpaceId,
@@ -221,6 +222,9 @@ export async function approveTask(
 
     return { balanceAfter, childId: task.childId }
   })
+  if (!result) {
+    return { success: false, error: 'Tugas ini tidak bisa disetujui lagi.' }
+  }
 
   // Non-fatal: FCM + SSE setelah transaksi selesai
   try {
@@ -271,14 +275,17 @@ export async function rejectTask(
     return { success: false, error: 'Hanya tugas yang sudah diklaim yang bisa ditolak.' }
   }
 
-  await prisma.task.update({
-    where: { id: taskId },
+  const rejected = await prisma.task.updateMany({
+    where: { id: taskId, familySpaceId, status: 'CLAIMED' },
     data: {
       status: 'REJECTED',
       rejectedAt: new Date(),
       rejectedReason: reason.trim() || 'Tidak ada alasan.',
     },
   })
+  if (rejected.count !== 1) {
+    return { success: false, error: 'Hanya tugas yang sudah diklaim yang bisa ditolak.' }
+  }
 
   // Non-fatal: Notifikasi DB + FCM ke child
   try {
